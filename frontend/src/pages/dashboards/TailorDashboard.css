@@ -1,0 +1,120 @@
+.tailor-dashboard {
+  padding: 20px;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background-color: #f8fffa; /* soft mint */
+  min-height: 100vh;
+  border-radius: 8px;
+}
+
+/* Page heading */
+.tailor-dashboard h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #064e3b; /* dark teal */
+}
+
+/* Section headings */
+.tailor-dashboard h3 {
+  margin-top: 30px;
+  margin-bottom: 12px;
+  font-size: 18px;
+  color: #065f46;
+}
+
+/* Summary cards */
+.summary-cards {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.summary-cards .card {
+  flex: 1;
+  padding: 15px;
+  background: #ecfdf5; /* pale green */
+  border: 1px solid #d1fae5;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 600;
+  color: #047857; /* teal */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Orders table */
+.orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.orders-table th {
+  background: #ecfdf5;
+  padding: 10px;
+  text-align: left;
+  font-size: 14px;
+  color: #064e3b;
+}
+
+.orders-table td {
+  padding: 10px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+.orders-table tr:hover {
+  background: #f0fdfa; /* very light mint hover */
+}
+
+/* Dropdown for status */
+.orders-table select {
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid #d1fae5;
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Schedule list */
+.tailor-dashboard ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tailor-dashboard ul li {
+  background: #ecfdf5;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  color: #065f46;
+  font-size: 14px;
+}
+
+/* Notifications */
+.tailor-dashboard ul li {
+  border-left: 4px solid #059669; /* teal highlight */
+}
+
+/* New additions */
+.tailor-header-actions { display: flex; align-items: center; gap: 10px; }
+.bell { position: relative; font-size: 1.2rem; cursor: pointer; }
+.badge { position: absolute; top: -6px; right: -8px; background: #e53e3e; color: #fff; border-radius: 999px; font-size: 10px; padding: 2px 5px; line-height: 1; }
+.profile-chip { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 999px; }
+.profile-chip .avatar { width: 28px; height: 28px; border-radius: 50%; background: #047857; color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+.profile-chip .name { font-weight: 600; color: #065f46; }
+.filters-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+.truncate { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.progress { width: 120px; height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+.progress .bar { height: 100%; background: #10b981; }
+.alert { padding: 10px 12px; border-radius: 8px; margin: 10px 0; font-weight: 600; }
+.alert.warning { background: #fff5f5; border: 1px solid #fed7d7; color: #c53030; }
+.notifications { list-style: none; padding-left: 0; }
+.tailor-footer { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; color: #065f46; }
+.tailor-footer .links { display: flex; gap: 12px; }
+.tailor-footer .links a { color: #047857; text-decoration: none; }
+.tailor-footer .links a:hover { text-decoration: underline; }

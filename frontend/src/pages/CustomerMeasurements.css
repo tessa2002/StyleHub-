@@ -1,0 +1,138 @@
+/* Customer Measurements - Boutique Theme */
+
+.cm-toolbar {
+  display: flex;
+  gap: 10px;
+}
+
+.cm-loading {
+  padding: 24px;
+}
+
+.cm-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 20px;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+  padding: 18px 18px 0 18px;
+}
+
+.card-header h3 {
+  margin: 0 0 4px 0;
+  color: var(--color-text-primary);
+}
+
+.card-subtitle {
+  color: var(--color-text-secondary);
+}
+
+.cm-form {
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.cm-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.cm-field {
+  display: grid;
+  gap: 6px;
+}
+
+.cm-label {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.cm-input, .cm-textarea {
+  width: 100%;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  outline: none;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.cm-input:focus, .cm-textarea:focus {
+  border-color: rgba(108,43,217,0.45);
+  box-shadow: 0 0 0 4px rgba(108,43,217,0.12);
+}
+
+.cm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.cm-error {
+  color: #b91c1c;
+}
+
+.table-wrapper {
+  padding: 18px;
+}
+
+.cm-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.cm-table thead th {
+  text-align: left;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  background: rgba(108,43,217,0.06);
+  padding: 10px 12px;
+}
+
+.cm-table tbody td {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+.cm-table tbody tr:nth-child(2n) td {
+  background: #fafafa;
+}
+
+.cm-notes {
+  max-width: 320px;
+}
+
+.cm-empty {
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 1024px) {
+  .cm-grid {
+    grid-template-columns: 1fr;
+  }
+  .cm-form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .cm-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+
+
+

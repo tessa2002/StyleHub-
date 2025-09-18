@@ -1,0 +1,64 @@
+/* frontend/src/pages/Login.css */
+.auth-container {
+  max-width: 400px;
+  margin: 80px auto;
+  padding: 40px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  font-family: Arial, sans-serif;
+}
+
+.auth-container h1 {
+  margin-bottom: 10px;
+  color: var(--color-text-primary);
+}
+
+.auth-container p {
+  margin-bottom: 20px;
+  color: #555;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.auth-form button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border: 1px solid rgba(108,43,217,0.25);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--color-brand), var(--color-brand-600));
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.auth-form button:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.error-msg {
+  color: red;
+  margin-bottom: 10px;
+}
+
+.auth-footer {
+  margin-top: 15px;
+  color: #555;
+}
+
+.auth-footer a {
+  color: var(--color-brand);
+  text-decoration: none;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}

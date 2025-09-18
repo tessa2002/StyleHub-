@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="title desc" role="img">
+  <title id="title">Style Hub Boutique Logo</title>
+  <desc id="desc">Minimal hanger with needle and thread forming an S-shape, representing a boutique and tailoring brand.</desc>
+  <g stroke="#0D9488" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Hanger top -->
+    <path d="M64 24c0-7 6-12 13-12 6 0 11 4 11 10 0 6-5 9-9 11l-6 3"/>
+    <!-- Hanger arms -->
+    <path d="M20 64c6-10 22-18 40-18s34 8 40 18"/>
+    <!-- Hanger bar -->
+    <path d="M16 80h96"/>
+    <!-- Needle -->
+    <path d="M88 94l16 16"/>
+    <circle cx="105" cy="111" r="3" fill="#0D9488" stroke="none"/>
+    <!-- Thread forming subtle S -->
+    <path d="M28 96c10 8 28 8 38 0s20-8 30 0"/>
+  </g>
+</svg>
