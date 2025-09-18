@@ -15,18 +15,25 @@ const roleToPath = {
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, loading } = useAuth();
 
+  console.log('ProtectedRoute - user:', user, 'loading:', loading, 'allowedRoles:', allowedRoles);
+
   if (loading) return <div>Loading...</div>; // Show loading while checking auth
 
   // Not logged in → go to login
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    console.log('ProtectedRoute - No user, redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
 
   // Enforce roles if provided
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    console.log('ProtectedRoute - Role mismatch. User role:', user.role, 'Required:', allowedRoles);
     // If role doesn't match route, send user to their dashboard instead of home
     const fallback = roleToPath[user.role] || '/';
     return <Navigate to={fallback} replace />;
   }
 
+  console.log('ProtectedRoute - Access granted for user:', user.role);
   return children;
 };
 

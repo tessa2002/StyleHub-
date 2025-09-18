@@ -20,6 +20,7 @@ const BookAppointmentForm = () => {
     notes: ''
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData({
@@ -30,23 +31,43 @@ const BookAppointmentForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.service || !formData.datetime) {
-      toast.error('Service and Date & Time are required.');
+    setError('');
+
+    // Basic validations
+    if (!formData.service) {
+      toast.error('Please select a service.');
       return;
     }
+    if (!formData.datetime) {
+      toast.error('Please select date and time.');
+      return;
+    }
+    const selectedDate = new Date(formData.datetime);
+    if (isNaN(selectedDate.getTime())) {
+      toast.error('Invalid date and time.');
+      return;
+    }
+    if (selectedDate <= new Date()) {
+      toast.error('Please select a future date and time.');
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
         service: formData.service,
-        scheduledAt: new Date(formData.datetime).toISOString(),
+        scheduledAt: selectedDate.toISOString(),
         notes: formData.notes
       };
-      const response = await axios.post('/api/appointments', payload);
+      const response = await axios.post('/api/portal/appointments', payload);
       toast.success('Appointment booked successfully!');
       setFormData({ service: '', datetime: '', notes: '' });
-    } catch (error) {
-      const msg = error.response?.data?.message || 'Failed to save appointment. Please try again.';
-      toast.error(`Failed to save appointment: ${msg}`);
+    } catch (err) {
+      const msg = err.response?.data?.message
+        ? `Failed to save appointment: ${err.response.data.message}`
+        : 'Failed to save appointment. Please try again.';
+      toast.error(msg);
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -71,6 +92,7 @@ const BookAppointmentForm = () => {
           value={formData.datetime}
           onChange={handleChange}
           required
+          min={new Date().toISOString().slice(0,16)}
         />
       </div>
       <div>

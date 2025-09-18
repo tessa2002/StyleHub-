@@ -52,6 +52,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/appointments', appointmentsRoutes);
 app.use('/api/portal', require('./routes/portal'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/staff', require('./routes/staff'));
+app.use('/api/tailor', require('./routes/tailor'));
 app.use('/api/bills', require('./routes/bills'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/fabrics', require('./routes/fabrics'));

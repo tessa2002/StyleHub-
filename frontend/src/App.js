@@ -18,9 +18,18 @@ import OrderDetail from './pages/OrderDetail';
 import Reports from './pages/Reports';
 import Fabrics from './pages/Fabrics';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
-import TailorDashboard from './pages/dashboards/TailorDashboard';
-import StaffDashboard from './pages/dashboards/StaffDashboard';
+import TailorDashboard from './pages/tailor/TailorDashboard';
+import NewOrder from './pages/tailor/Orders/NewOrder';
+import AllOrders from './pages/tailor/Orders/AllOrders';
+import CustomerList from './pages/tailor/Customers/CustomerList';
+import StaffDashboard from './pages/staff/StaffDashboard';
 import CustomerDashboard from './pages/dashboards/CustomerDashboard';
+// New Admin Dashboard Components
+import Dashboard from './pages/admin/DashboardSimple';
+import UsersList from './pages/admin/Users/UsersList';
+import UserDetail from './pages/admin/Users/UserDetail';
+import UserForm from './pages/admin/Users/UserForm';
+import Settings from './pages/admin/Settings';
 import PortalDashboard from './pages/portal/Dashboard';
 import ProfilePage from './pages/portal/Profile';
 import OrdersPage from './pages/portal/Orders';
@@ -145,15 +154,73 @@ function App() {
             path="/dashboard/admin"
             element={
               <ProtectedRoute allowedRoles={["Admin"]}>
-                <AdminDashboard />
+                <Dashboard />
               </ProtectedRoute>
             }
           />
+          
+          {/* New Admin Dashboard Routes */}
           <Route
             path="/admin/users"
             element={
               <ProtectedRoute allowedRoles={["Admin"]}>
-                <ManageUsers />
+                <UsersList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users/new"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <UserForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users/:id"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <UserDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users/:id/edit"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <UserForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <Orders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/appointments"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AppointmentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/billing"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <Settings />
               </ProtectedRoute>
             }
           />
@@ -162,6 +229,56 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["Tailor"]}>
                 <TailorDashboard />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* New Tailor Dashboard Routes */}
+          <Route
+            path="/tailor/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["Tailor"]}>
+                <TailorDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tailor/orders"
+            element={
+              <ProtectedRoute allowedRoles={["Tailor"]}>
+                <AllOrders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tailor/orders/new"
+            element={
+              <ProtectedRoute allowedRoles={["Tailor"]}>
+                <NewOrder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tailor/orders/pending"
+            element={
+              <ProtectedRoute allowedRoles={["Tailor"]}>
+                <AllOrders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tailor/orders/completed"
+            element={
+              <ProtectedRoute allowedRoles={["Tailor"]}>
+                <AllOrders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tailor/customers"
+            element={
+              <ProtectedRoute allowedRoles={["Tailor"]}>
+                <CustomerList />
               </ProtectedRoute>
             }
           />

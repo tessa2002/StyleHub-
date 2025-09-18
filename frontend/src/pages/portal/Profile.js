@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import DashboardLayout from '../../components/DashboardLayout';
 import './Profile.css';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -47,9 +49,18 @@ export default function ProfilePage() {
           status: error.response?.status,
           statusText: error.response?.statusText,
           url: error.config?.url,
-          method: error.config?.method
+          method: error.config?.method,
+          data: error.response?.data
         });
-        setError('Failed to load profile data. Please try again.');
+
+        // More specific error messages
+        let message = error.response?.data?.message || 'Failed to load profile data. Please try again.';
+        if (error.response?.status === 401) {
+          message = 'Your session has expired. Please log in again.';
+        } else if (error.response?.status === 403) {
+          message = 'You are not authorized to access this page.';
+        }
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -101,11 +112,13 @@ export default function ProfilePage() {
     
     try {
       setSaving(true);
-      await axios.put('/api/portal/profile', form);
+      const { data } = await axios.put('/api/portal/profile', form);
+      // Update auth context user so other pages reflect immediately
+      if (data?.user) setUser(data.user);
       setSuccess('Profile updated successfully!');
       setTimeout(() => {
         navigate('/dashboard/customer');
-      }, 1500);
+      }, 1000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update profile. Please try again.');
     } finally {

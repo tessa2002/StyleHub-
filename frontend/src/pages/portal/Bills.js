@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import './Bills.css';
 
 function statusBadge(status) {
   const map = {
@@ -22,12 +23,22 @@ export default function BillsPage() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [bill, setBill] = useState(null);
 
+  // Billing address edit
+  const [editingAddress, setEditingAddress] = useState(false);
+  const [billingAddress, setBillingAddress] = useState('');
+  const [addressSaving, setAddressSaving] = useState(false);
+  const [addressError, setAddressError] = useState('');
+
+  // Payment methods (stubbed UI)
+  const [methods, setMethods] = useState([]); // [{id,type,last4,brand,expiry}]
+
   async function load() {
     setLoading(true);
     setError('');
     try {
-      const { data } = await axios.get('http://localhost:5000/api/portal/bills');
-      setRows(data.bills || []);
+      const { data } = await axios.get('/api/portal/bills');
+      const bills = data.bills || [];
+      setRows(bills);
     } catch (e) {
       setError(e.response?.data?.message || 'Failed to load bills');
     } finally {
@@ -58,7 +69,7 @@ export default function BillsPage() {
     setDetailsLoading(true);
     setBill(null);
     try {
-      const { data } = await axios.get(`http://localhost:5000/api/portal/bills/${id}`);
+      const { data } = await axios.get(`/api/portal/bills/${id}`);
       setBill(data.bill);
     } catch (e) {
       setDetailsOpen(false);
@@ -70,62 +81,166 @@ export default function BillsPage() {
 
   const formatCurrency = (n) => (n ?? 0).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
+  // Summary metrics
+  const summary = useMemo(() => {
+    const totalBilled = rows.reduce((s, r) => s + (r.amount || 0), 0);
+    const totalPaid = rows.reduce((s, r) => s + (r.amountPaid || 0), 0);
+    const outstanding = Math.max(0, totalBilled - totalPaid);
+    // Next due: pick the earliest created unpaid as placeholder (until dueDate exists)
+    const unpaid = rows.filter(r => r.status !== 'Paid').sort((a,b) => new Date(a.createdAt)-new Date(b.createdAt));
+    const nextDue = unpaid[0] ? new Date(unpaid[0].createdAt) : null;
+    return { totalPaid, outstanding, nextDue };
+  }, [rows]);
+
+  // Load initial billing address from profile once at mount (lazy)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { data } = await axios.get('/api/portal/profile');
+        if (mounted) setBillingAddress(data.user?.billingAddress || data.customer?.address || '');
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const saveBillingAddress = async () => {
+    setAddressError('');
+    if (!billingAddress || billingAddress.trim().length < 5) {
+      setAddressError('Please enter a valid billing address (min 5 characters).');
+      return;
+    }
+    setAddressSaving(true);
+    try {
+      await axios.put('/api/portal/profile', { billingAddress });
+      setEditingAddress(false);
+    } catch (e) {
+      setAddressError(e.response?.data?.message || 'Failed to save billing address');
+    } finally {
+      setAddressSaving(false);
+    }
+  };
+
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h2>Bills & Invoices</h2>
-        <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-          <input placeholder="Search bill/order/date/status/amount" value={q} onChange={(e) => setQ(e.target.value)} />
+    <div className="bills-page">
+      <div className="bills-header">
+        <h2>Bills & Payments</h2>
+        <input className="search-input" placeholder="Search bill/order/date/status/amount" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+
+      {/* Summary */}
+      <div className="summary-grid">
+        <div className="card kpi">
+          <div className="kpi-title">Total Paid</div>
+          <div className="kpi-value">{formatCurrency(summary.totalPaid)}</div>
+        </div>
+        <div className="card kpi">
+          <div className="kpi-title">Outstanding Balance</div>
+          <div className="kpi-value warning">{formatCurrency(summary.outstanding)}</div>
+          {summary.outstanding > 0 && (
+            <div className="kpi-subtext">{summary.nextDue ? `Next due approx: ${summary.nextDue.toLocaleDateString()}` : 'No due date available'}</div>
+          )}
+        </div>
+        <div className="card kpi">
+          <div className="kpi-title">Invoices</div>
+          <div className="kpi-value">{rows.length}</div>
         </div>
       </div>
 
+      {/* Invoices List */}
       {loading ? (
-        <div>Loading...</div>
+        <div className="loading">Loading…</div>
       ) : error ? (
-        <div className="field-error" role="alert">{error}</div>
+        <div className="alert alert-error" role="alert">{error}</div>
       ) : (
         <div className="card">
           <div className="table-responsive">
             <table className="table responsive-table">
               <thead>
                 <tr>
-                  <th>Bill / Invoice No</th>
-                  <th>Order ID</th>
-                  <th>Date Issued</th>
-                  <th>Total Amount</th>
-                  <th>Paid Amount</th>
+                  <th>Invoice</th>
+                  <th>Order</th>
+                  <th>Issued</th>
+                  <th>Amount</th>
+                  <th>Paid</th>
                   <th>Balance</th>
-                  <th>Payment Status</th>
+                  <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r) => {
                   const balance = (r.amount || 0) - (r.amountPaid || 0);
+                  const overdue = r.status !== 'Paid' && new Date(r.createdAt) < new Date(Date.now() - 14*24*60*60*1000);
                   return (
-                    <tr key={r._id}>
-                      <td data-label="Bill / Invoice No" style={{ fontFamily:'monospace', color:'#6b7280' }}>{r._id}</td>
-                      <td data-label="Order ID" style={{ fontFamily:'monospace' }}>{r.order?._id || '-'}</td>
-                      <td data-label="Date Issued">{new Date(r.createdAt).toLocaleDateString()}</td>
-                      <td data-label="Total Amount">{formatCurrency(r.amount)}</td>
-                      <td data-label="Paid Amount">{formatCurrency(r.amountPaid)}</td>
+                    <tr key={r._id} className={overdue ? 'row-overdue' : ''}>
+                      <td data-label="Invoice"><button className="link" onClick={() => openDetails(r._id)}>{r._id}</button></td>
+                      <td data-label="Order">{r.order?._id || '-'}</td>
+                      <td data-label="Issued">{new Date(r.createdAt).toLocaleDateString()}</td>
+                      <td data-label="Amount">{formatCurrency(r.amount)}</td>
+                      <td data-label="Paid">{formatCurrency(r.amountPaid)}</td>
                       <td data-label="Balance">{formatCurrency(balance)}</td>
-                      <td data-label="Payment Status">{statusBadge(r.status)}</td>
-                      <td data-label="Actions" style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                        <button className="btn btn-sm" onClick={() => openDetails(r._id)}>View Details</button>
-                        {/* Mini: omit Pay Now and PDF */}
+                      <td data-label="Status">{statusBadge(r.status)}</td>
+                      <td data-label="Actions" className="actions">
+                        <button className="btn btn-light" onClick={() => openDetails(r._id)}>View</button>
+                        {r._id && (
+                          <a className="btn btn-light" href={`/api/bills/${r._id}`} target="_blank" rel="noreferrer">Download</a>
+                        )}
                       </td>
                     </tr>
                   );
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan="8" style={{ textAlign:'center', padding: 16 }}>No bills found</td></tr>
+                  <tr><td colSpan="8" className="empty">No bills found</td></tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
       )}
+
+      {/* Payment Methods (stub UI) */}
+      <div className="card methods">
+        <div className="card-header">
+          <h3>Payment Methods</h3>
+          <button className="btn btn-primary" onClick={() => setMethods(m => [...m, { id: Date.now(), type: 'Card', brand: 'Visa', last4: '4242', expiry: '12/29' }])}>Add Method</button>
+        </div>
+        <div className="methods-list">
+          {methods.length === 0 ? (
+            <div className="empty">No saved payment methods</div>
+          ) : (
+            methods.map(m => (
+              <div key={m.id} className="method-item">
+                <div>{m.brand || m.type} •••• {m.last4} <span className="muted">Exp {m.expiry}</span></div>
+                <div className="actions">
+                  <button className="btn btn-light" onClick={() => setMethods(list => list.filter(x => x.id !== m.id))}>Remove</button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="note">Note: This is a demo UI; wiring to a real payment vault is required for production.</div>
+      </div>
+
+      {/* Billing Address */}
+      <div className="card address">
+        <div className="card-header"><h3>Billing Address</h3></div>
+        {!editingAddress ? (
+          <div className="address-view">
+            <div className="addr-box">{billingAddress || 'No billing address set'}</div>
+            <button className="btn btn-light" onClick={() => setEditingAddress(true)}>Edit</button>
+          </div>
+        ) : (
+          <div className="address-edit">
+            <textarea value={billingAddress} onChange={e => setBillingAddress(e.target.value)} rows={3} />
+            {addressError && <div className="alert alert-error" role="alert">{addressError}</div>}
+            <div className="actions">
+              <button className="btn" onClick={() => setEditingAddress(false)}>Cancel</button>
+              <button className="btn btn-primary" disabled={addressSaving} onClick={saveBillingAddress}>{addressSaving ? 'Saving…' : 'Save'}</button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Details Modal */}
       {detailsOpen && (

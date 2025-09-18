@@ -23,6 +23,7 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [livePasswordError, setLivePasswordError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,10 +52,24 @@ const Login = () => {
     setErrors(errs);
     if (Object.keys(errs).length) return;
 
-    const result = await login(formData.email, formData.password);
-    if (result.success) {
-      const path = roleToPath[result.user.role] || "/";
-      navigate(path, { replace: true });
+    setIsLoading(true);
+    try {
+      const result = await login(formData.email, formData.password);
+      if (result.success) {
+        console.log('Login successful, user role:', result.user.role);
+        const path = roleToPath[result.user.role] || "/";
+        console.log('Navigating to:', path);
+        
+        // Navigate immediately - the auth context now handles the timing
+        navigate(path, { replace: true });
+      } else {
+        setErrors({ general: result.error || 'Login failed' });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrors({ general: 'An unexpected error occurred' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -74,6 +89,12 @@ const Login = () => {
           <span className="brand-name">Style Hub</span>
         </div>
         <h2 className="auth-title">Sign In</h2>
+
+        {errors.general && (
+          <div className="field-error" style={{ marginBottom: '16px', textAlign: 'center' }}>
+            {errors.general}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <input
@@ -131,8 +152,8 @@ const Login = () => {
             </div>
           )}
 
-          <button type="submit" className="btn btn-primary btn-block">
-            Login
+          <button type="submit" className="btn btn-primary btn-block" disabled={isLoading}>
+            {isLoading ? 'Signing In...' : 'Login'}
           </button>
         </form>
 

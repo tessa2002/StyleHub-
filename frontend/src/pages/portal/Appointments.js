@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import DashboardLayout from '../../components/DashboardLayout';
 import './Appointments.css';
+import { toast } from 'react-toastify';
 
 const Appointments = () => {
   const navigate = useNavigate();
@@ -288,9 +289,16 @@ const Appointments = () => {
 
 // Booking/Edit Form Component
 const BookingForm = ({ appointment, services, onClose, onSuccess }) => {
+  // Helper to format a Date into local datetime-local value (YYYY-MM-DDTHH:mm)
+  const toLocalInputValue = (dt) => {
+    const d = new Date(dt);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
   const [formData, setFormData] = useState({
     service: appointment?.service || '',
-    scheduledAt: appointment?.scheduledAt ? new Date(appointment.scheduledAt).toISOString().slice(0, 16) : '',
+    scheduledAt: appointment?.scheduledAt ? toLocalInputValue(appointment.scheduledAt) : '',
     notes: appointment?.notes || ''
   });
   const [loading, setLoading] = useState(false);
@@ -304,6 +312,29 @@ const BookingForm = ({ appointment, services, onClose, onSuccess }) => {
     try {
       console.log('🔍 Submitting appointment:', formData);
       
+      // Validate required fields
+      if (!formData.service) {
+        setError('Please select a service');
+        setLoading(false);
+        return;
+      }
+      
+      if (!formData.scheduledAt) {
+        setError('Please select a date and time');
+        setLoading(false);
+        return;
+      }
+      
+      // Validate date is at least 1 minute in the future
+      const selectedDate = new Date(formData.scheduledAt);
+      const now = new Date();
+      const minFuture = new Date(now.getTime() + 60 * 1000); // 1 minute buffer
+      if (selectedDate < minFuture) {
+        setError('Please select a date and time at least 1 minute in the future');
+        setLoading(false);
+        return;
+      }
+      
       if (appointment) {
         // Reschedule existing appointment
         console.log('📅 Rescheduling appointment:', appointment._id);
@@ -311,11 +342,26 @@ const BookingForm = ({ appointment, services, onClose, onSuccess }) => {
           scheduledAt: formData.scheduledAt
         });
         console.log('✅ Reschedule successful:', response.data);
+        
+        // Show success message
+        toast.success('Appointment rescheduled successfully!');
       } else {
         // Create new appointment
-        console.log('➕ Creating new appointment');
-        const response = await axios.post('/api/portal/appointments', formData);
+        console.log('➕ Creating new appointment with data:', {
+          service: formData.service,
+          scheduledAt: formData.scheduledAt,
+          notes: formData.notes
+        });
+        
+        const response = await axios.post('/api/portal/appointments', {
+          service: formData.service,
+          scheduledAt: formData.scheduledAt,
+          notes: formData.notes
+        });
         console.log('✅ Booking successful:', response.data);
+        
+        // Show success message
+        toast.success('Appointment booked successfully!');
       }
       
       onSuccess();
@@ -327,9 +373,26 @@ const BookingForm = ({ appointment, services, onClose, onSuccess }) => {
         statusText: err.response?.statusText,
         url: err.config?.url,
         method: err.config?.method,
-        data: err.response?.data
+        requestData: err.config?.data,
+        responseData: err.response?.data
       });
-      setError(err.response?.data?.message || 'Failed to save appointment. Please try again.');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to save appointment. Please try again.';
+      
+      if (err.response?.status === 400) {
+        errorMessage = err.response?.data?.message || 'Invalid appointment data. Please check your inputs.';
+      } else if (err.response?.status === 401) {
+        errorMessage = 'You need to be logged in to book appointments.';
+      } else if (err.response?.status === 404) {
+        errorMessage = 'Customer profile not found. Please complete your profile first.';
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -389,7 +452,7 @@ const BookingForm = ({ appointment, services, onClose, onSuccess }) => {
               onChange={handleChange}
               className="form-input"
               required
-              min={new Date().toISOString().slice(0, 16)}
+              min={toLocalInputValue(new Date(Date.now() + 60 * 1000))}
             />
           </div>
 

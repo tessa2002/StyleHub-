@@ -1,0 +1,59 @@
+/* Bills & Payments Page Styles */
+
+.bills-page { display: grid; gap: 16px; }
+.bills-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.bills-header h2 { margin: 0; }
+.search-input { width: 320px; max-width: 80vw; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; }
+
+.summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.card { background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 12px; }
+.kpi-title { color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+.kpi-value { font-size: 24px; font-weight: 700; color: #0f172a; }
+.kpi-value.warning { color: #b45309; }
+.kpi-subtext { color: #64748b; font-size: 12px; margin-top: 4px; }
+
+.table-responsive { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; text-align: left; vertical-align: top; }
+.table thead th { background: #f8fafc; color: #334155; font-weight: 600; position: sticky; top: 0; z-index: 1; }
+.responsive-table .link { background: none; border: 0; color: #2563eb; text-decoration: underline; cursor: pointer; }
+.row-overdue { background: #fff7ed; }
+
+.badge { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #e2e8f0; color: #0f172a; font-size: 12px; font-weight: 600; }
+.badge-success { background: #ecfdf5; color: #065f46; }
+.badge-warning { background: #fff7ed; color: #b45309; }
+.badge-danger { background: #fef2f2; color: #b91c1c; }
+
+.btn { border: 1px solid #e2e8f0; background: #fff; color: #0f172a; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+.btn:hover { background: #f8fafc; }
+.btn-light { background: #fff; }
+.btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-secondary { background: #6b7280; color: #fff; border-color: #6b7280; }
+
+.actions { display: flex; gap: 8px; align-items: center; }
+.alert { padding: 12px; border-radius: 8px; }
+.alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+.loading { color: #475569; padding: 12px; }
+.empty { color: #64748b; padding: 12px; }
+.muted { color: #94a3b8; font-size: 12px; margin-left: 8px; }
+
+/* Payment Methods */
+.methods .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.methods-list { display: grid; gap: 8px; }
+.method-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; }
+
+/* Billing Address */
+.address .card-header { margin-bottom: 8px; }
+.address-view { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.addr-box { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; color: #0f172a; }
+.address-edit textarea { width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; }
+
+/* Modal */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.4); display: grid; place-items: center; z-index: 999; }
+.modal { width: min(900px, 95vw); max-height: 90vh; overflow: auto; background: #fff; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); padding: 16px; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .summary-grid { grid-template-columns: 1fr; }
+}

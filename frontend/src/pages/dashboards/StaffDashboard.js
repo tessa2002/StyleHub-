@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { FaSignOutAlt } from 'react-icons/fa';
 import './StaffDashboard.css';
 
 export default function StaffDashboard() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const staffId = user?._id || "123"; // Logged-in staff
   const [orders, setOrders] = useState([]);
   const [tailors, setTailors] = useState([]);
@@ -172,6 +175,13 @@ export default function StaffDashboard() {
     return acc;
   }, {});
 
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      logout();
+      navigate('/login');
+    }
+  };
+
   return (
     <>
       {showNewTask ? (
@@ -230,6 +240,14 @@ export default function StaffDashboard() {
                 <span className="avatar">{(user?.name || 'S').slice(0,1).toUpperCase()}</span>
                 <span className="name">{user?.name || 'Staff'}</span>
               </div>
+              <button 
+                className="logout-btn"
+                onClick={handleLogout}
+                title="Logout"
+              >
+                <FaSignOutAlt />
+                <span>Logout</span>
+              </button>
             </div>
           }
         >

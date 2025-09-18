@@ -11,10 +11,16 @@ const userSchema = new mongoose.Schema(
       enum: ["Customer", "Admin", "Tailor", "Staff"],
       default: "Customer",
     },
+    status: {
+      type: String,
+      enum: ["Active", "Suspended", "Pending"],
+      default: "Active",
+    },
 
     // Customer profile fields
     phone: { type: String, trim: true, default: "" },
     whatsapp: { type: String, trim: true, default: "" },
+    address: { type: String, trim: true, default: "" }, // Combined address field
     deliveryAddress: { type: String, trim: true, default: "" },
     billingAddress: { type: String, trim: true, default: "" },
     gender: {

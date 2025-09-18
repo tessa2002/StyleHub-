@@ -1,6 +1,9 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 
+// Ensure baseURL is set before any component effects run
+axios.defaults.baseURL = 'http://localhost:5000';
+
 // 1. Create Auth Context
 const AuthContext = createContext();
 
@@ -22,11 +25,13 @@ export const AuthProvider = ({ children }) => {
         const checkLoggedIn = async () => {
             const token = localStorage.getItem('token');
             console.log('🔑 Token found:', token ? 'Yes' : 'No');
+            // Always set a baseURL so we don't rely on the dev proxy
+            axios.defaults.baseURL = 'http://localhost:5000';
             if (token) {
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
                 try {
                     console.log('🔍 Verifying token with backend...');
-                    const response = await axios.get('http://localhost:5000/api/auth/verify');
+                    const response = await axios.get('/api/auth/verify');
                     console.log('✅ Token verified, user:', response.data.user);
                     setUser(response.data.user); // set user with role
                 } catch (error) {
@@ -45,13 +50,19 @@ export const AuthProvider = ({ children }) => {
         try {
             setError('');
             console.log('🔍 Attempting login for:', email);
-            const response = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+            axios.defaults.baseURL = 'http://localhost:5000';
+            const response = await axios.post('/api/auth/login', { email, password });
             const { token, user } = response.data;
 
             console.log('✅ Login successful, setting token and user');
             localStorage.setItem('token', token);
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            
+            // Ensure user state is set before returning
             setUser(user);
+            
+            // Wait a tick to ensure state is updated
+            await new Promise(resolve => setTimeout(resolve, 50));
 
             return { success: true, user }; // return user for role-based redirect
         } catch (err) {
@@ -66,7 +77,8 @@ export const AuthProvider = ({ children }) => {
     const loginWithGoogle = async (profile) => {
         try {
             setError('');
-            const response = await axios.post('http://localhost:5000/api/auth/google', profile);
+            axios.defaults.baseURL = 'http://localhost:5000';
+            const response = await axios.post('/api/auth/google', profile);
             const { token, user } = response.data;
             localStorage.setItem('token', token);
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -83,10 +95,11 @@ export const AuthProvider = ({ children }) => {
     const register = async (userData) => {
         try {
             setError('');
-            const response = await axios.post('http://localhost:5000/api/auth/register', userData);
+            axios.defaults.baseURL = 'http://localhost:5000';
+            const response = await axios.post('/api/auth/register', userData);
             
             // After successful registration, automatically log in the user
-            const loginResponse = await axios.post('http://localhost:5000/api/auth/login', {
+            const loginResponse = await axios.post('/api/auth/login', {
                 email: userData.email,
                 password: userData.password
             });
@@ -112,7 +125,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     // 7. Context value
-    const value = { user, login, loginWithGoogle, register, logout, error, loading };
+    const value = { user, setUser, login, loginWithGoogle, register, logout, error, loading };
 
     // 8. Render children only after loading check
     return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

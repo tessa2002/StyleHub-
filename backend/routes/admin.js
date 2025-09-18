@@ -108,16 +108,79 @@ router.post('/users', auth, allowRoles('Admin'), async (req, res) => {
   }
 });
 
-// GET /api/admin/users - list staff/tailor/admin (exclude Customers)
+// GET /api/admin/users - list users with filters, search, pagination, sorting
 router.get('/users', auth, allowRoles('Admin'), async (req, res) => {
   try {
-    const { role } = req.query;
-    const roleFilter = role ? { role } : { role: { $in: ['Admin', 'Staff', 'Tailor'] } };
-    const users = await User.find(roleFilter)
-      .select('name email role phone createdAt')
-      .sort({ createdAt: -1 })
-      .lean();
-    res.json({ users });
+    const { 
+      role, 
+      status, 
+      q, 
+      from, 
+      to, 
+      sort = 'createdAt', 
+      order = 'desc', 
+      page = 1, 
+      limit = 10 
+    } = req.query;
+
+    // Build filter
+    const filter = {};
+    
+    // Role filter - now includes Customer, Staff, Tailor
+    if (role && ['Customer', 'Staff', 'Tailor', 'Admin'].includes(role)) {
+      filter.role = role;
+    }
+    
+    // Status filter
+    if (status && ['Active', 'Suspended', 'Pending'].includes(status)) {
+      filter.status = status;
+    }
+    
+    // Search by name or email
+    if (q && q.trim()) {
+      const searchRegex = new RegExp(q.trim(), 'i');
+      filter.$or = [
+        { name: searchRegex },
+        { email: searchRegex }
+      ];
+    }
+    
+    // Date range filter
+    if (from || to) {
+      filter.createdAt = {};
+      if (from) filter.createdAt.$gte = new Date(from);
+      if (to) filter.createdAt.$lte = new Date(new Date(to).getTime() + 24*60*60*1000 - 1);
+    }
+
+    // Sorting
+    const sortOrder = order === 'asc' ? 1 : -1;
+    const sortField = ['createdAt', 'name', 'email'].includes(sort) ? sort : 'createdAt';
+    
+    // Pagination
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Execute query
+    const [users, totalCount] = await Promise.all([
+      User.find(filter)
+        .select('name email role phone address status createdAt')
+        .sort({ [sortField]: sortOrder })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      User.countDocuments(filter)
+    ]);
+
+    res.json({ 
+      users,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: totalCount,
+        pages: Math.ceil(totalCount / limitNum)
+      }
+    });
   } catch (e) {
     console.error('List users error:', e.message);
     res.status(500).json({ message: 'Server error' });
@@ -153,6 +216,43 @@ router.put('/users/:id', auth, allowRoles('Admin'), async (req, res) => {
   }
 });
 
+// PATCH /api/admin/users/:id/status - update user status
+router.patch('/users/:id/status', auth, allowRoles('Admin'), async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['Active', 'Suspended', 'Pending'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+    
+    const user = await User.findByIdAndUpdate(
+      req.params.id, 
+      { status }, 
+      { new: true, runValidators: true }
+    ).select('name email role status');
+    
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ user });
+  } catch (e) {
+    console.error('Update user status error:', e.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET /api/admin/users/:id - get single user details
+router.get('/users/:id', auth, allowRoles('Admin'), async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('name email role phone address status createdAt updatedAt')
+      .lean();
+    
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ user });
+  } catch (e) {
+    console.error('Get user error:', e.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // DELETE /api/admin/users/:id - delete staff/tailor/admin
 router.delete('/users/:id', auth, allowRoles('Admin'), async (req, res) => {
   try {
@@ -176,6 +276,145 @@ router.delete('/users/:id', auth, allowRoles('Admin'), async (req, res) => {
     res.json({ message: 'User deleted' });
   } catch (e) {
     console.error('Delete user error:', e.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET /api/admin/metrics/overview - dashboard summary metrics
+router.get('/metrics/overview', auth, allowRoles('Admin'), async (req, res) => {
+  try {
+    const [
+      customers,
+      staff,
+      tailors,
+      orders,
+      upcomingAppointments,
+      revenueAgg,
+      pendingPayments
+    ] = await Promise.all([
+      User.countDocuments({ role: 'Customer' }),
+      User.countDocuments({ role: 'Staff' }),
+      User.countDocuments({ role: 'Tailor' }),
+      Order.countDocuments({}),
+      Appointment.countDocuments({ 
+        scheduledAt: { $gte: new Date() } 
+      }),
+      Bill.aggregate([
+        { $match: { status: 'Paid' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      Bill.countDocuments({ status: { $in: ['Unpaid', 'Partial'] } })
+    ]);
+
+    const revenue = revenueAgg?.[0]?.total || 0;
+    const notificationsCount = pendingPayments; // Simple notification count
+
+    res.json({
+      customers,
+      staff,
+      tailors,
+      orders,
+      upcomingAppointments,
+      revenue,
+      pendingPayments,
+      notificationsCount
+    });
+  } catch (e) {
+    console.error('Metrics overview error:', e.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET /api/admin/metrics/charts - dashboard charts data
+router.get('/metrics/charts', auth, allowRoles('Admin'), async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    // Revenue over time (last 6 months)
+    const revenueOverTime = await Bill.aggregate([
+      {
+        $match: {
+          status: 'Paid',
+          createdAt: { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          revenue: { $sum: '$amount' }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ]);
+
+    // Order status distribution
+    const orderStatusData = await Order.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Customer growth (last 6 months)
+    const customerGrowth = await User.aggregate([
+      {
+        $match: {
+          role: 'Customer',
+          createdAt: { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          customers: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ]);
+
+    // Format data for charts
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    const formattedRevenue = revenueOverTime.map(item => ({
+      month: monthNames[item._id.month - 1],
+      revenue: item.revenue
+    }));
+
+    const statusColors = {
+      'Completed': '#10b981',
+      'In Progress': '#3b82f6',
+      'Pending': '#f59e0b',
+      'Cancelled': '#ef4444'
+    };
+
+    const formattedOrderStatus = orderStatusData.map(item => ({
+      name: item._id || 'Unknown',
+      value: item.count,
+      color: statusColors[item._id] || '#6b7280'
+    }));
+
+    const formattedCustomerGrowth = customerGrowth.map(item => ({
+      month: monthNames[item._id.month - 1],
+      customers: item.customers
+    }));
+
+    res.json({
+      revenueOverTime: formattedRevenue,
+      orderStatus: formattedOrderStatus,
+      customerGrowth: formattedCustomerGrowth
+    });
+  } catch (e) {
+    console.error('Charts data error:', e.message);
     res.status(500).json({ message: 'Server error' });
   }
 });

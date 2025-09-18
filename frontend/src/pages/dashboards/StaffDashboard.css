@@ -5,6 +5,31 @@
 .profile-chip .avatar { width: 28px; height: 28px; border-radius: 50%; background: #4a5568; color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
 .profile-chip .name { font-weight: 600; color: #2d3748; }
 
+/* Logout Button */
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  background: white;
+  color: #dc2626;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.logout-btn:hover {
+  background: #dc2626;
+  color: white;
+}
+
+.logout-btn svg {
+  font-size: 14px;
+}
+
 .btn { padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; cursor: pointer; }
 .btn.primary { background: #2b6cb0; color: white; border-color: #2b6cb0; }
 .btn.danger { background: #e53e3e; color: white; border-color: #e53e3e; }

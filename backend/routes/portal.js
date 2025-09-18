@@ -67,28 +67,61 @@ router.get('/profile', auth, allowRoles('Customer'), async (req, res) => {
 });
 
 router.put('/profile', auth, allowRoles('Customer'), async (req, res) => {
-  const { name, email, phone, whatsapp, deliveryAddress, billingAddress, gender, dob, avatarUrl } = req.body;
-  // Update user fields (core account + customer profile fields stored on user)
-  const user = await User.findByIdAndUpdate(
-    req.user.id,
-    { name, email, phone, whatsapp, deliveryAddress, billingAddress, gender, dob, avatarUrl },
-    { new: true, runValidators: true }
-  ).select('name email phone whatsapp deliveryAddress billingAddress gender dob avatarUrl role');
+  try {
+    let { name, email, phone, whatsapp, deliveryAddress, billingAddress, gender, dob, avatarUrl } = req.body;
 
-  // Keep backward-compatibility with Customer collection for phone/address
-  let customer = await getCustomerByUser(req.user.id);
-  if (!customer) {
-    customer = await Customer.create({ name, email, phone, address: deliveryAddress || '', user: req.user.id });
-  } else {
-    customer.name = name ?? customer.name;
-    customer.email = email ?? customer.email;
-    customer.phone = phone ?? customer.phone;
-    // store a simple address fallback
-    customer.address = (deliveryAddress ?? customer.address);
-    await customer.save();
+    // Normalize inputs
+    name = typeof name === 'string' ? name.trim() : name;
+    email = typeof email === 'string' ? email.trim().toLowerCase() : email;
+    phone = typeof phone === 'string' ? phone.trim() : phone;
+    whatsapp = typeof whatsapp === 'string' ? whatsapp.trim() : whatsapp;
+    deliveryAddress = typeof deliveryAddress === 'string' ? deliveryAddress.trim() : deliveryAddress;
+    billingAddress = typeof billingAddress === 'string' ? billingAddress.trim() : billingAddress;
+    gender = typeof gender === 'string' ? gender.trim() : gender;
+    avatarUrl = typeof avatarUrl === 'string' ? avatarUrl.trim() : avatarUrl;
+    // Convert empty dob to null and cast to Date
+    if (dob === '' || dob === undefined || dob === null) {
+      dob = null;
+    } else {
+      const parsed = new Date(dob);
+      if (isNaN(parsed.getTime())) {
+        return res.status(400).json({ message: 'Invalid date of birth format' });
+      }
+      dob = parsed;
+    }
+
+    // Update user fields
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { name, email, phone, whatsapp, deliveryAddress, billingAddress, gender, dob, avatarUrl },
+      { new: true, runValidators: true }
+    ).select('name email phone whatsapp deliveryAddress billingAddress gender dob avatarUrl role');
+
+    // Keep backward-compatibility with Customer collection for phone/address
+    let customer = await getCustomerByUser(req.user.id);
+    if (!customer) {
+      customer = await Customer.create({ name, email, phone, address: deliveryAddress || '', user: req.user.id });
+    } else {
+      customer.name = name ?? customer.name;
+      customer.email = email ?? customer.email;
+      customer.phone = phone ?? customer.phone;
+      // store a simple address fallback
+      customer.address = (deliveryAddress ?? customer.address);
+      await customer.save();
+    }
+
+    res.json({ user, customer });
+  } catch (e) {
+    console.error('❌ Profile update error:', e);
+    if (e.code === 11000 && e.keyPattern && e.keyPattern.email) {
+      return res.status(400).json({ message: 'Email is already in use' });
+    }
+    if (e.name === 'ValidationError') {
+      const messages = Object.values(e.errors).map(err => err.message).join(', ');
+      return res.status(400).json({ message: `Validation error: ${messages}` });
+    }
+    return res.status(500).json({ message: 'Failed to update profile. Please try again.' });
   }
-
-  res.json({ user, customer });
 });
 
 // Password
@@ -297,30 +330,76 @@ router.post('/orders', auth, allowRoles('Customer'), async (req, res) => {
 router.post('/appointments', auth, allowRoles('Customer'), async (req, res) => {
   try {
     console.log('🔍 Creating appointment for user:', req.user.id);
-    console.log('📝 Request body:', req.body);
+    console.log('📝 Request body:', JSON.stringify(req.body, null, 2));
     
     const customer = await getCustomerByUser(req.user.id);
     if (!customer) {
       console.log('❌ Customer profile not found for user:', req.user.id);
-      return res.status(404).json({ message: 'Customer profile not found' });
+      return res.status(404).json({ message: 'Customer profile not found. Please complete your profile first.' });
     }
     
     console.log('👥 Customer found:', customer._id);
     
     const { service, scheduledAt, notes } = req.body;
     
-    if (!service || !scheduledAt) {
-      console.log('❌ Missing required fields:', { service, scheduledAt });
-      return res.status(400).json({ message: 'Service and scheduledAt are required' });
+    // Validate required fields
+    if (!service) {
+      console.log('❌ Missing service field');
+      return res.status(400).json({ message: 'Service is required' });
     }
     
-    const appt = await Appointment.create({ customer: customer._id, service, scheduledAt, notes });
-    console.log('✅ Appointment created:', appt._id);
+    if (!scheduledAt) {
+      console.log('❌ Missing scheduledAt field');
+      return res.status(400).json({ message: 'Date and time are required' });
+    }
     
-    res.status(201).json({ appointment: appt });
+    // Validate date format and future date
+    const appointmentDate = new Date(scheduledAt);
+    if (isNaN(appointmentDate.getTime())) {
+      console.log('❌ Invalid date format:', scheduledAt);
+      return res.status(400).json({ message: 'Invalid date format' });
+    }
+    
+    const now = new Date();
+    if (appointmentDate <= now) {
+      console.log('❌ Past date provided:', scheduledAt);
+      return res.status(400).json({ message: 'Appointment date must be in the future' });
+    }
+    
+    console.log('✅ Validation passed, creating appointment...');
+    
+    const appointmentData = {
+      customer: customer._id,
+      service: service.trim(),
+      scheduledAt: appointmentDate,
+      notes: notes ? notes.trim() : '',
+      status: 'Scheduled'
+    };
+    
+    console.log('📝 Appointment data:', JSON.stringify(appointmentData, null, 2));
+    
+    const appt = await Appointment.create(appointmentData);
+    console.log('✅ Appointment created successfully:', appt._id);
+    
+    res.status(201).json({ 
+      message: 'Appointment booked successfully!',
+      appointment: appt 
+    });
   } catch (error) {
     console.error('❌ Appointment creation error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('❌ Error stack:', error.stack);
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ message: `Validation error: ${messages.join(', ')}` });
+    }
+    
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'An appointment with these details already exists' });
+    }
+    
+    res.status(500).json({ message: 'Server error while saving appointment. Please try again.' });
   }
 });
 
