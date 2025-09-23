@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/DashboardLayout";
-import DebugPanel from "../../components/DebugPanel";
+
 import "./CustomerDashboard.css";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
@@ -88,7 +88,7 @@ export default function CustomerDashboard() {
   return (
     <DashboardLayout title="Customer Dashboard">
       {/* Temporary Debug Panel - Remove after fixing issues */}
-      <DebugPanel />
+     
       
       {loading ? (
         <div className="loading">Loading dashboard...</div>
