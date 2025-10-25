@@ -1,0 +1,43 @@
+services:
+  # Backend Service
+  - type: web
+    name: stylehub-backend
+    runtime: node
+    plan: free
+    region: singapore  # or oregon, frankfurt, etc.
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false  # Add this manually in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: RAZORPAY_KEY_ID
+        sync: false  # Add this manually
+      - key: RAZORPAY_KEY_SECRET
+        sync: false  # Add this manually
+    
+  # Frontend Service (Static Site)
+  - type: web
+    name: stylehub-frontend
+    runtime: static
+    plan: free
+    region: singapore  # same as backend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REACT_APP_API_URL
+        value: https://stylehub-backend.onrender.com  # Update with your actual backend URL
+

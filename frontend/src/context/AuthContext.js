@@ -1,8 +1,12 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 
+// Configure API URL based on environment
+// In production, REACT_APP_API_URL should be set in Render environment variables
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 // Ensure baseURL is set before any component effects run
-axios.defaults.baseURL = 'http://localhost:5000';
+axios.defaults.baseURL = API_URL;
 
 // 1. Create Auth Context
 const AuthContext = createContext();
@@ -26,7 +30,7 @@ export const AuthProvider = ({ children }) => {
             const token = localStorage.getItem('token');
             console.log('🔑 Token found:', token ? 'Yes' : 'No');
             // Always set a baseURL so we don't rely on the dev proxy
-            axios.defaults.baseURL = 'http://localhost:5000';
+            axios.defaults.baseURL = API_URL;
             if (token) {
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
                 try {
@@ -50,7 +54,7 @@ export const AuthProvider = ({ children }) => {
         try {
             setError('');
             console.log('🔍 Attempting login for:', email);
-            axios.defaults.baseURL = 'http://localhost:5000';
+            axios.defaults.baseURL = API_URL;
             const response = await axios.post('/api/auth/login', { email, password });
             const { token, user } = response.data;
 
@@ -77,7 +81,7 @@ export const AuthProvider = ({ children }) => {
     const loginWithGoogle = async (profile) => {
         try {
             setError('');
-            axios.defaults.baseURL = 'http://localhost:5000';
+            axios.defaults.baseURL = API_URL;
             const response = await axios.post('/api/auth/google', profile);
             const { token, user } = response.data;
             localStorage.setItem('token', token);
@@ -95,7 +99,7 @@ export const AuthProvider = ({ children }) => {
     const register = async (userData) => {
         try {
             setError('');
-            axios.defaults.baseURL = 'http://localhost:5000';
+            axios.defaults.baseURL = API_URL;
             const response = await axios.post('/api/auth/register', userData);
             
             // After successful registration, automatically log in the user
