@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import logo from "../logo.svg";
 
 const roleToPath = {
-  Admin: "/dashboard/admin",
+  Admin: "/admin/dashboard",
   Tailor: "/dashboard/tailor",
   Staff: "/dashboard/staff",
   Customer: "/dashboard/customer",

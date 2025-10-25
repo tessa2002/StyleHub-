@@ -1,133 +1,302 @@
 const express = require('express');
-const { auth, allowRoles } = require('../middleware/auth');
-const Fabric = require('../models/Fabric');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
 const router = express.Router();
+const Fabric = require('../models/Fabric');
+const Notification = require('../models/Notification');
+const User = require('../models/User');
+const { auth } = require('../middleware/auth');
 
-// upload setup
-const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    cb(null, unique + '-' + safe);
-  }
-});
-const upload = multer({ storage });
-
-// Create fabric (Admin/Staff)
-router.post('/', auth, allowRoles('Admin', 'Staff'), upload.single('image'), async (req, res) => {
+// @route   GET /api/fabrics
+// @desc    Get all fabrics with search and filters
+// @access  Public
+router.get('/', async (req, res) => {
   try {
-    const { name, type, color = '', stock = 0, price = 0, supplier = '', description = '', status = 'Available', tags } = req.body;
-    if (!name) return res.status(400).json({ success: false, message: 'Name is required' });
-    if (!type) return res.status(400).json({ success: false, message: 'Type is required' });
-    const imageUrl = req.file ? ((process.env.PUBLIC_URL || '') + '/uploads/' + req.file.filename) : '';
-    const parsedTags = typeof tags === 'string' ? tags.split(',').map(s => s.trim()).filter(Boolean) : Array.isArray(tags) ? tags : [];
-
-    const fabric = await Fabric.create({ name, type, color, stock, price, supplier, description, status, imageUrl, tags: parsedTags });
-    res.status(201).json({ success: true, fabric });
-  } catch (e) {
+    const { search, category, minPrice, maxPrice, inStock, page = 1, limit = 20 } = req.query;
+    
+    let query = { isActive: true };
+    
+    // Search functionality
+    if (search) {
+      query.$text = { $search: search };
+    }
+    
+    // Category filter
+    if (category) {
+      query.category = category;
+    }
+    
+    // Price range filter
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = Number(minPrice);
+      if (maxPrice) query.price.$lte = Number(maxPrice);
+    }
+    
+    // Stock filter
+    if (inStock === 'true') {
+      query.stock = { $gt: 0 };
+    }
+    
+    const skip = (page - 1) * limit;
+    
+    const fabrics = await Fabric.find(query)
+      .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .populate('createdBy', 'name email')
+      .populate('updatedBy', 'name email');
+    
+    const total = await Fabric.countDocuments(query);
+    
+    res.json({
+      success: true,
+      fabrics,
+      pagination: {
+        current: Number(page),
+        pages: Math.ceil(total / limit),
+        total
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching fabrics:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// List fabrics (All roles incl. Tailor & Customer). Supports search & pagination
-router.get('/', auth, allowRoles('Admin', 'Staff', 'Tailor', 'Customer'), async (req, res) => {
+// @route   GET /api/fabrics/:id
+// @desc    Get single fabric
+// @access  Public
+router.get('/:id', async (req, res) => {
   try {
-    const { q = '', page = 1, limit = 10, inStock } = req.query;
-    const p = Math.max(1, Number(page));
-    const l = Math.max(1, Math.min(100, Number(limit)));
-    const skip = (p - 1) * l;
-
-    const base = q
-      ? { $or: [
-          { name: { $regex: q, $options: 'i' } },
-          { type: { $regex: q, $options: 'i' } },
-          { color: { $regex: q, $options: 'i' } },
-          { supplier: { $regex: q, $options: 'i' } },
-        ] }
-      : {};
-
-    const query = (inStock === '1' || inStock === 'true') ? { ...base, stock: { $gt: 0 } } : base;
-
-    const [items, total] = await Promise.all([
-      Fabric.find(query).sort({ createdAt: -1 }).skip(skip).limit(l).lean(),
-      Fabric.countDocuments(query),
-    ]);
-
-    res.json({ success: true, items, total, page: p, pages: Math.ceil(total / l) });
-  } catch (e) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// Get one fabric
-router.get('/:id', auth, allowRoles('Admin', 'Staff', 'Tailor'), async (req, res) => {
-  try {
-    const fabric = await Fabric.findById(req.params.id);
-    if (!fabric) return res.status(404).json({ success: false, message: 'Not found' });
+    const fabric = await Fabric.findById(req.params.id)
+      .populate('createdBy', 'name email')
+      .populate('updatedBy', 'name email');
+    
+    if (!fabric) {
+      return res.status(404).json({ success: false, message: 'Fabric not found' });
+    }
+    
     res.json({ success: true, fabric });
-  } catch (e) {
+  } catch (error) {
+    console.error('Error fetching fabric:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Update fabric (Admin/Staff)
-router.put('/:id', auth, allowRoles('Admin', 'Staff'), upload.single('image'), async (req, res) => {
+// @route   POST /api/fabrics
+// @desc    Create new fabric
+// @access  Private (Admin/Staff)
+router.post('/', auth, async (req, res) => {
   try {
-    const { name, type, color, stock, price, supplier, description, status, tags } = req.body;
-    const update = {};
-    if (name !== undefined) update.name = name;
-    if (type !== undefined) update.type = type;
-    if (color !== undefined) update.color = color;
-    if (stock !== undefined) update.stock = stock;
-    if (price !== undefined) update.price = price;
-    if (supplier !== undefined) update.supplier = supplier;
-    if (description !== undefined) update.description = description;
-    if (status !== undefined) update.status = status;
-    if (tags !== undefined) update.tags = typeof tags === 'string' ? tags.split(',').map(s => s.trim()).filter(Boolean) : tags;
-    if (req.file) update.imageUrl = ((process.env.PUBLIC_URL || '') + '/uploads/' + req.file.filename);
-
-    const fabric = await Fabric.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
-    if (!fabric) return res.status(404).json({ success: false, message: 'Not found' });
-    res.json({ success: true, fabric });
-  } catch (e) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// Use fabric (decrement stock) - Admin/Staff/Tailor can record usage
-router.post('/:id/use', auth, allowRoles('Admin', 'Staff', 'Tailor'), async (req, res) => {
-  try {
-    const { quantity = 1 } = req.body;
-    const qty = Math.max(0, Number(quantity));
-    if (!qty) return res.status(400).json({ success: false, message: 'Quantity must be > 0' });
-
-    const fabric = await Fabric.findById(req.params.id);
-    if (!fabric) return res.status(404).json({ success: false, message: 'Not found' });
-    if (fabric.stock < qty) return res.status(400).json({ success: false, message: 'Insufficient stock' });
-
-    fabric.stock -= qty;
+    const {
+      name,
+      material,
+      color,
+      pattern,
+      price,
+      stock,
+      unit,
+      category,
+      description,
+      images,
+      supplier,
+      lowStockThreshold
+    } = req.body;
+    
+    // Check if user has permission (Admin or Staff)
+    if (!['Admin', 'Staff'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    const fabric = new Fabric({
+      name,
+      material,
+      color,
+      pattern,
+      price,
+      stock,
+      unit,
+      category,
+      description,
+      images,
+      supplier,
+      lowStockThreshold,
+      createdBy: req.user.id
+    });
+    
     await fabric.save();
-    res.json({ success: true, fabric });
-  } catch (e) {
+    
+    // Send notification to all users about new fabric
+    try {
+      const users = await User.find({ 
+        _id: { $ne: req.user.id },
+        role: { $in: ['Customer', 'Staff', 'Tailor'] }
+      });
+
+      await Promise.all(
+        users.map(user => 
+          Notification.createNotification({
+            recipientId: user._id,
+            message: `New fabric "${fabric.name}" has been added to inventory`,
+            type: 'success',
+            priority: 'medium',
+            createdBy: req.user.id,
+            actionUrl: '/fabrics'
+          })
+        )
+      );
+    } catch (notificationError) {
+      console.error('Error sending fabric notification:', notificationError);
+      // Don't fail the fabric creation if notification fails
+    }
+    
+    res.status(201).json({ success: true, fabric });
+  } catch (error) {
+    console.error('Error creating fabric:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Delete fabric (Admin/Staff)
-router.delete('/:id', auth, allowRoles('Admin', 'Staff'), async (req, res) => {
+// @route   PUT /api/fabrics/:id
+// @desc    Update fabric
+// @access  Private (Admin/Staff)
+router.put('/:id', auth, async (req, res) => {
   try {
-    const fabric = await Fabric.findByIdAndDelete(req.params.id);
-    if (!fabric) return res.status(404).json({ success: false, message: 'Not found' });
-    res.json({ success: true, message: 'Deleted' });
-  } catch (e) {
+    // Check if user has permission
+    if (!['Admin', 'Staff'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    const fabric = await Fabric.findById(req.params.id);
+    if (!fabric) {
+      return res.status(404).json({ success: false, message: 'Fabric not found' });
+    }
+    
+    const updateData = {
+      ...req.body,
+      updatedBy: req.user.id
+    };
+    
+    const updatedFabric = await Fabric.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+    
+    // Send notification about fabric update
+    try {
+      const users = await User.find({ 
+        _id: { $ne: req.user.id },
+        role: { $in: ['Customer', 'Staff', 'Tailor'] }
+      });
+
+      let message = `Fabric "${updatedFabric.name}" has been updated`;
+      let type = 'info';
+      let priority = 'medium';
+
+      // Check if price was changed
+      if (req.body.price && req.body.price !== fabric.price) {
+        message = `Fabric "${updatedFabric.name}" price updated from ₹${fabric.price} to ₹${req.body.price}`;
+        type = 'info';
+        priority = 'high';
+      }
+
+      await Promise.all(
+        users.map(user => 
+          Notification.createNotification({
+            recipientId: user._id,
+            message,
+            type,
+            priority,
+            createdBy: req.user.id,
+            actionUrl: '/fabrics'
+          })
+        )
+      );
+    } catch (notificationError) {
+      console.error('Error sending fabric update notification:', notificationError);
+      // Don't fail the fabric update if notification fails
+    }
+    
+    res.json({ success: true, fabric: updatedFabric });
+  } catch (error) {
+    console.error('Error updating fabric:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   DELETE /api/fabrics/:id
+// @desc    Delete fabric (soft delete)
+// @access  Private (Admin only)
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    const fabric = await Fabric.findById(req.params.id);
+    if (!fabric) {
+      return res.status(404).json({ success: false, message: 'Fabric not found' });
+    }
+    
+    // Soft delete
+    fabric.isActive = false;
+    fabric.updatedBy = req.user.id;
+    await fabric.save();
+    
+    res.json({ success: true, message: 'Fabric deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting fabric:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   GET /api/fabrics/inventory/low-stock
+// @desc    Get low stock fabrics
+// @access  Private (Admin/Staff)
+router.get('/inventory/low-stock', auth, async (req, res) => {
+  try {
+    if (!['Admin', 'Staff'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    const lowStockFabrics = await Fabric.getLowStockFabrics();
+    
+    res.json({ success: true, fabrics: lowStockFabrics });
+  } catch (error) {
+    console.error('Error fetching low stock fabrics:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   PUT /api/fabrics/:id/stock
+// @desc    Update fabric stock
+// @access  Private (Admin/Staff)
+router.put('/:id/stock', auth, async (req, res) => {
+  try {
+    if (!['Admin', 'Staff'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    const { action, quantity } = req.body; // action: 'add' or 'reduce'
+    
+    const fabric = await Fabric.findById(req.params.id);
+    if (!fabric) {
+      return res.status(404).json({ success: false, message: 'Fabric not found' });
+    }
+    
+    if (action === 'add') {
+      await fabric.addStock(quantity);
+    } else if (action === 'reduce') {
+      await fabric.reduceStock(quantity);
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid action' });
+    }
+    
+    res.json({ success: true, fabric });
+  } catch (error) {
+    console.error('Error updating stock:', error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 });
 

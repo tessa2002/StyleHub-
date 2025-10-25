@@ -10,6 +10,94 @@ const Appointment = require('../models/Appointment');
 
 const router = express.Router();
 
+// GET /api/admin/activities - Get recent activities
+router.get('/activities', auth, allowRoles('Admin', 'Staff'), async (req, res) => {
+  try {
+    const [recentOrders, recentCustomers, recentBills] = await Promise.all([
+      Order.find().populate('customer', 'name').sort({ createdAt: -1 }).limit(5),
+      Customer.find().sort({ createdAt: -1 }).limit(3),
+      Bill.find().populate('order').sort({ createdAt: -1 }).limit(3)
+    ]);
+
+    const activities = [
+      ...recentOrders.map(order => ({
+        id: order._id,
+        type: 'order',
+        description: `New Order from ${order.customer?.name || 'Unknown Customer'}`,
+        timestamp: new Date(order.createdAt).toLocaleString()
+      })),
+      ...recentCustomers.map(customer => ({
+        id: customer._id,
+        type: 'customer',
+        description: `New Customer: ${customer.name}`,
+        timestamp: new Date(customer.createdAt).toLocaleString()
+      })),
+      ...recentBills.map(bill => ({
+        id: bill._id,
+        type: 'payment',
+        description: `Bill Generated: ₹${bill.amount}`,
+        timestamp: new Date(bill.createdAt).toLocaleString()
+      }))
+    ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 10);
+
+    res.json({ success: true, activities });
+  } catch (error) {
+    console.error('Error fetching activities:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/admin/settings - Get admin settings
+router.get('/settings', auth, allowRoles('Admin'), async (req, res) => {
+  try {
+    // For now, return default settings
+    // In a real app, you'd store these in a database
+    const defaultSettings = {
+      shopName: 'Style Hub',
+      shopAddress: '',
+      shopPhone: '',
+      shopEmail: '',
+      currency: 'INR',
+      timezone: 'Asia/Kolkata',
+      workingHours: '9:00 AM - 6:00 PM',
+      emailNotifications: true,
+      smsNotifications: false,
+      orderNotifications: true,
+      paymentNotifications: true,
+      sessionTimeout: 30,
+      requirePasswordChange: false,
+      twoFactorAuth: false,
+      theme: 'light',
+      language: 'en',
+      dateFormat: 'DD/MM/YYYY',
+      autoBackup: true,
+      backupFrequency: 'daily',
+      backupRetention: 30
+    };
+
+    res.json({ success: true, settings: defaultSettings });
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// PUT /api/admin/settings - Update admin settings
+router.put('/settings', auth, allowRoles('Admin'), async (req, res) => {
+  try {
+    const settings = req.body;
+    
+    // In a real app, you'd save these to a database
+    // For now, just return success
+    console.log('Settings updated:', settings);
+    
+    res.json({ success: true, message: 'Settings updated successfully' });
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // GET /api/admin/dashboard - key metrics for admin/staff
 router.get('/dashboard', auth, allowRoles('Admin', 'Staff'), async (req, res) => {
   try {
@@ -432,6 +520,87 @@ router.post('/appointments', auth, allowRoles('Admin'), async (req, res) => {
     res.status(201).json({ appointment: appt });
   } catch (e) {
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// DEBUG: Check and fix tailor role
+router.get('/debug/fix-tailor-role', auth, allowRoles('Admin'), async (req, res) => {
+  try {
+    console.log('\n🔧 ===== FIX TAILOR ROLE DEBUG ENDPOINT =====');
+    console.log('Requested by:', req.user.name);
+    
+    const TAILOR_ID = '68ca325eaa09cbfa7239892a';
+    
+    // Get all users for reference
+    const allUsers = await User.find({}).select('name email role');
+    console.log('\n📋 All users in database:');
+    allUsers.forEach((u, i) => {
+      console.log(`  ${i + 1}. ${u.name} (${u.email}) - Role: "${u.role}"`);
+    });
+    
+    // Find the specific tailor
+    const tailor = await User.findById(TAILOR_ID).select('name email role');
+    
+    if (!tailor) {
+      console.log(`\n❌ Tailor with ID ${TAILOR_ID} not found!`);
+      return res.status(404).json({ 
+        success: false, 
+        message: `Tailor user with ID ${TAILOR_ID} not found`,
+        allUsers: allUsers.map(u => ({ id: u._id, name: u.name, email: u.email, role: u.role }))
+      });
+    }
+    
+    console.log('\n🔍 Found tailor user:');
+    console.log(`   Name: ${tailor.name}`);
+    console.log(`   Email: ${tailor.email}`);
+    console.log(`   Current Role: "${tailor.role}"`);
+    console.log(`   Role Type: ${typeof tailor.role}`);
+    
+    const correctRole = 'Tailor';
+    const needsFix = tailor.role !== correctRole;
+    
+    console.log(`\n📊 Analysis:`);
+    console.log(`   Expected: "${correctRole}"`);
+    console.log(`   Actual: "${tailor.role}"`);
+    console.log(`   Needs Fix: ${needsFix ? '❌ YES' : '✅ NO'}`);
+    
+    if (!needsFix) {
+      console.log('\n✅ Role is already correct!');
+      return res.json({
+        success: true,
+        message: 'Tailor role is already correct',
+        tailor: { id: tailor._id, name: tailor.name, email: tailor.email, role: tailor.role },
+        needsFix: false
+      });
+    }
+    
+    // Fix the role
+    console.log(`\n🔧 Fixing role from "${tailor.role}" to "${correctRole}"...`);
+    
+    tailor.role = correctRole;
+    await tailor.save();
+    
+    console.log('✅ SUCCESS! Role updated!');
+    
+    // Verify
+    const verified = await User.findById(TAILOR_ID).select('name email role');
+    console.log(`\n🔍 Verification:`);
+    console.log(`   Role is now: "${verified.role}"`);
+    console.log(`   Match: ${verified.role === correctRole ? '✅ CORRECT' : '❌ STILL WRONG'}`);
+    
+    console.log('\n✅ Done! User should logout and login again.\n');
+    
+    res.json({
+      success: true,
+      message: 'Tailor role fixed successfully! User should logout and login again.',
+      before: tailor.role,
+      after: verified.role,
+      tailor: { id: verified._id, name: verified.name, email: verified.email, role: verified.role }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error in fix-tailor-role endpoint:', error);
+    res.status(500).json({ success: false, message: 'Server error: ' + error.message });
   }
 });
 

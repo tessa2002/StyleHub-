@@ -1,625 +1,778 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import StaffSidebar from '../../components/StaffSidebar';
 import {
-  FaBell, 
-  FaCalendarAlt, 
-  FaClipboardList, 
-  FaCheckCircle, 
-  FaClock, 
-  FaExclamationTriangle,
-  FaComments,
-  FaChartLine,
-  FaQuestionCircle,
-  FaSignOutAlt
+  FaBox, FaClock, FaCheckCircle, FaTruck, FaBell, FaUser, FaCog,
+  FaSignOutAlt, FaPlus, FaEye, FaEdit, FaCalendarAlt, FaRuler
 } from 'react-icons/fa';
-import axios from 'axios';
 import './StaffDashboard.css';
 
-export default function StaffDashboard() {
+const StaffDashboard = () => {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [dataLoaded, setDataLoaded] = useState(false);
-  const [error, setError] = useState(null);
-  const [stats, setStats] = useState({
-    totalOrders: 0,
-    upcomingAppointments: 0,
-    pendingTasks: 0,
-    completedJobs: 0
-  });
-  const [tasks, setTasks] = useState([]);
-  const [appointments, setAppointments] = useState([]);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [orders, setOrders] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [recentOrders, setRecentOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    assigned: 0,
+    inProgress: 0,
+    completed: 0,
+    pendingDelivery: 0
+  });
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
+  const [statusNote, setStatusNote] = useState('');
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedTailor, setSelectedTailor] = useState('');
+  const [tailors, setTailors] = useState([]);
+  const [unassignedOrders, setUnassignedOrders] = useState([]);
 
   useEffect(() => {
-    if (user?.id) {
-      loadDashboardData();
-    }
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchDashboardData();
+  }, []);
 
-  const loadDashboardData = async () => {
+  const fetchDashboardData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      
-      if (!user?.id) {
-        setError('User authentication required');
-        return;
-      }
-
-      // Since staff APIs might not be available yet, let's use fallback data for now
-      console.log('Loading staff dashboard data for user:', user.id);
-      
-      // Try to fetch real data, but fall back gracefully
-      let ordersRes, appointmentsRes, notificationsRes;
-      
-      try {
-        ordersRes = await axios.get(`/api/staff/orders?staffId=${user.id}`);
-        console.log('Orders loaded:', ordersRes.data.length);
-      } catch (err) {
-        console.warn('Orders API not available, using empty data');
-        ordersRes = { data: [] };
-      }
-      
-      try {
-        appointmentsRes = await axios.get(`/api/staff/appointments?staffId=${user.id}`);
-        console.log('Appointments loaded:', appointmentsRes.data.length);
-      } catch (err) {
-        console.warn('Appointments API not available, using empty data');
-        appointmentsRes = { data: [] };
-      }
-      
-      try {
-        notificationsRes = await axios.get(`/api/staff/notifications?staffId=${user.id}`);
-        console.log('Notifications loaded:', notificationsRes.data.length);
-      } catch (err) {
-        console.warn('Notifications API not available, using empty data');
-        notificationsRes = { data: [] };
-      }
-
-      const assignedOrders = ordersRes.data || [];
-      const assignedAppointments = appointmentsRes.data || [];
-      const staffNotifications = notificationsRes.data || [];
-
-      // Filter appointments for today and upcoming
-      const today = new Date();
-      const todayAppointments = assignedAppointments.filter(apt => {
-        const aptDate = new Date(apt.scheduledAt || apt.date);
-        return aptDate.toDateString() === today.toDateString();
+      // Fetch assigned orders
+      const ordersResponse = await fetch('/api/orders/assigned', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
+      const ordersData = await ordersResponse.json();
+      setOrders(ordersData.orders || []);
 
-      const upcomingAppointments = assignedAppointments.filter(apt => {
-        const aptDate = new Date(apt.scheduledAt || apt.date);
-        const weekFromNow = new Date();
-        weekFromNow.setDate(today.getDate() + 7);
-        return aptDate > today && aptDate <= weekFromNow;
+      // Fetch unassigned orders
+      const unassignedResponse = await fetch('/api/orders/unassigned', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
+      const unassignedData = await unassignedResponse.json();
+      setUnassignedOrders(unassignedData.orders || []);
 
-      // Calculate real stats from assigned data
-      const realStats = {
-        totalOrders: assignedOrders.length,
-        upcomingAppointments: upcomingAppointments.length,
-        pendingTasks: assignedOrders.filter(order => 
-          order.status === 'Pending' || order.status === 'Assigned' || order.status === 'In Progress'
-        ).length,
-        completedJobs: assignedOrders.filter(order => 
-          order.status === 'Completed' || order.status === 'Delivered'
-        ).length
-      };
+      // Fetch tailors
+      const tailorsResponse = await fetch('/api/staff/tailors', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const tailorsData = await tailorsResponse.json();
+      setTailors(tailorsData.users || []);
 
-      // Process tasks from orders with better filtering
-      const orderTasks = assignedOrders
-        .filter(order => order.status !== 'Completed' && order.status !== 'Delivered')
-        .map(order => ({
-          id: order._id,
-          title: `${order.serviceType || order.type || 'Order'} for ${order.customerName || 'Customer'}`,
-          priority: order.priority || 'Medium',
-          dueDate: order.deliveryDate || order.dueDate,
-          status: order.status,
-          customer: order.customerName || 'Unknown Customer',
-          orderId: order.orderNumber || order._id
-        }));
+      // Fetch notifications
+      const notificationsResponse = await fetch('/api/notifications', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const notificationsData = await notificationsResponse.json();
+      setNotifications(notificationsData.notifications || []);
 
-      setStats(realStats);
-      setTasks(orderTasks);
-      setAppointments(todayAppointments); // Show today's appointments in schedule
-      setNotifications(staffNotifications);
-      setRecentOrders(assignedOrders.slice(0, 5));
-      setDataLoaded(true);
-      
-      console.log('Dashboard data loaded successfully');
-      
+      // Calculate stats
+      const assigned = ordersData.orders?.length || 0;
+      const inProgress = ordersData.orders?.filter(order => order.status === 'In Progress').length || 0;
+      const completed = ordersData.orders?.filter(order => order.status === 'Completed').length || 0;
+      const pendingDelivery = ordersData.orders?.filter(order => order.status === 'Ready for Delivery').length || 0;
+
+      setStats({ assigned, inProgress, completed, pendingDelivery });
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-      setError('Failed to load dashboard data. Please try refreshing the page.');
-      
-      // Set empty data for clean display
-      setStats({
-        totalOrders: 0,
-        upcomingAppointments: 0,
-        pendingTasks: 0,
-        completedJobs: 0
-      });
-      setTasks([]);
-      setAppointments([]);
-      setNotifications([]);
-      setRecentOrders([]);
-      setDataLoaded(true); // Mark as loaded even with empty data
-      
+      console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const updateTaskStatus = async (taskId, newStatus) => {
+  const getTodaysTasks = () => {
+    const today = new Date();
+    return orders.filter(order => {
+      const orderDate = new Date(order.expectedDeliveryDate);
+      return orderDate.toDateString() === today.toDateString();
+    });
+  };
+
+  const handleStatusUpdate = async (orderId, newStatus, note) => {
     try {
-      // Update order status in backend
-      await axios.put(`/api/orders/${taskId}/status`, { 
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ 
         status: newStatus,
-        updatedBy: user.id
+          note: note 
+        })
       });
       
+      if (response.ok) {
       // Update local state
-      setTasks(tasks.map(task => 
-        task.id === taskId ? { ...task, status: newStatus } : task
-      ));
-      
-      // Refresh stats after status update
-      loadDashboardData();
-      
+        setOrders(prev => prev.map(order => 
+          order._id === orderId 
+            ? { ...order, status: newStatus }
+            : order
+        ));
+        
+        // Recalculate stats
+        const updatedOrders = orders.map(order => 
+          order._id === orderId 
+            ? { ...order, status: newStatus }
+            : order
+        );
+        
+        const assigned = updatedOrders.length;
+        const inProgress = updatedOrders.filter(order => order.status === 'In Progress').length;
+        const completed = updatedOrders.filter(order => order.status === 'Completed').length;
+        const pendingDelivery = updatedOrders.filter(order => order.status === 'Ready for Delivery').length;
+        
+        setStats({ assigned, inProgress, completed, pendingDelivery });
+        
+        setShowStatusModal(false);
+        setSelectedOrder(null);
+        setNewStatus('');
+        setStatusNote('');
+      }
     } catch (error) {
-      console.error('Failed to update task status:', error);
-      alert('Failed to update status. Please try again.');
+      console.error('Error updating order status:', error);
     }
   };
 
-  const markNotificationRead = async (notificationId) => {
+  const openStatusModal = (order) => {
+    setSelectedOrder(order);
+    setNewStatus(order.status);
+    setShowStatusModal(true);
+  };
+
+  const handleAssignOrder = async (orderId, tailorId) => {
     try {
-      // Mark notification as read in backend
-      await axios.put(`/api/staff/notifications/${notificationId}/read`, {
-        staffId: user.id
+      const response = await fetch(`/api/orders/${orderId}/assign`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ tailorId })
       });
-      
-      // Remove from local state
-      setNotifications(notifications.filter(n => n.id !== notificationId));
-      
+
+      if (response.ok) {
+        // Remove from unassigned and add to assigned
+        setUnassignedOrders(prev => prev.filter(order => order._id !== orderId));
+        setShowAssignModal(false);
+        setSelectedOrder(null);
+        setSelectedTailor('');
+        
+        // Refresh data
+        fetchDashboardData();
+      }
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-      // Still remove from UI even if API call fails
-      setNotifications(notifications.filter(n => n.id !== notificationId));
+      console.error('Error assigning order:', error);
     }
   };
 
-  const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const openAssignModal = (order) => {
+    setSelectedOrder(order);
+    setShowAssignModal(true);
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    });
-  };
+  const renderDashboard = () => (
+    <div className="staff-dashboard">
+      <div className="dashboard-header">
+        <h1>Welcome back, {user?.name}!</h1>
+        <p>Here's your work overview for today</p>
+              </div>
 
-  const handleLogout = () => {
-    if (window.confirm('Are you sure you want to logout?')) {
-      logout();
-      navigate('/login');
-    }
-  };
+      {/* Quick Stats */}
+      <div className="stats-grid">
+        <div className="stat-card assigned">
+          <div className="stat-icon">
+            <FaBox />
+          </div>
+          <div className="stat-content">
+            <h3>{stats.assigned}</h3>
+            <p>Orders Assigned</p>
+          </div>
+        </div>
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'High': return '#dc2626';
-      case 'Medium': return '#f59e0b';
-      case 'Low': return '#10b981';
-      default: return '#64748b';
-    }
-  };
+        <div className="stat-card in-progress">
+          <div className="stat-icon">
+            <FaClock />
+            </div>
+            <div className="stat-content">
+            <h3>{stats.inProgress}</h3>
+            <p>In Progress</p>
+            </div>
+          </div>
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Completed': return '#10b981';
-      case 'In Progress': return '#3b82f6';
-      case 'Pending': return '#f59e0b';
-      case 'Quality Check': return '#8b5cf6';
-      default: return '#64748b';
+        <div className="stat-card completed">
+          <div className="stat-icon">
+            <FaCheckCircle />
+            </div>
+            <div className="stat-content">
+            <h3>{stats.completed}</h3>
+            <p>Completed</p>
+            </div>
+          </div>
+
+        <div className="stat-card pending">
+          <div className="stat-icon">
+            <FaTruck />
+            </div>
+            <div className="stat-content">
+            <h3>{stats.pendingDelivery}</h3>
+            <p>Pending Delivery</p>
+          </div>
+        </div>
+            </div>
+
+      <div className="dashboard-content">
+        {/* Today's Tasks */}
+        <div className="dashboard-section">
+          <h2>Today's Tasks</h2>
+            <div className="tasks-list">
+            {getTodaysTasks().length > 0 ? (
+              getTodaysTasks().map(order => (
+                <div key={order._id} className="task-item">
+                  <div className="task-info">
+                    <h4>{order.orderNumber}</h4>
+                    <p>{order.customerName} - {order.garmentType}</p>
+                    <span className={`task-status status-${order.status.toLowerCase().replace(' ', '-')}`}>
+                      {order.status}
+                    </span>
+                  </div>
+                  <div className="task-actions">
+                    <button 
+                      className="btn btn-sm btn-primary"
+                      onClick={() => setActiveTab('orders')}
+                    >
+                      <FaEye /> View Details
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="no-tasks">
+                <FaCheckCircle className="no-tasks-icon" />
+                <p>No tasks due today! 🎉</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Unassigned Orders Alert */}
+        {unassignedOrders.length > 0 && (
+          <div className="dashboard-section unassigned-alert">
+            <h2>⚠️ Unassigned Orders</h2>
+            <p>{unassignedOrders.length} orders need to be assigned to tailors</p>
+            <button 
+              className="btn btn-primary"
+              onClick={() => setActiveTab('assignments')}
+            >
+              <FaPlus /> Assign Orders
+            </button>
+          </div>
+        )}
+
+        {/* Notifications */}
+        <div className="dashboard-section">
+          <h2>Recent Notifications</h2>
+          <div className="notifications-list">
+            {notifications.slice(0, 5).map(notification => (
+              <div key={notification._id} className="notification-item">
+                <div className="notification-icon">
+                  <FaBell />
+                </div>
+                <div className="notification-content">
+                  <p>{notification.message}</p>
+                  <small>{new Date(notification.createdAt).toLocaleDateString()}</small>
+                </div>
+              </div>
+            ))}
+            {notifications.length === 0 && (
+              <div className="no-notifications">
+                <FaBell className="no-notifications-icon" />
+                <p>No new notifications</p>
+                </div>
+              )}
+            </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderOrders = () => (
+    <div className="orders-section">
+            <div className="section-header">
+        <h1>My Assigned Orders</h1>
+        <div className="section-actions">
+          <button className="btn btn-primary">
+            <FaPlus /> New Order
+              </button>
+            </div>
+      </div>
+
+      <div className="orders-list">
+        {orders.length > 0 ? (
+          orders.map(order => (
+            <div key={order._id} className="order-card">
+              <div className="order-header">
+                <div className="order-info">
+                  <h3>{order.orderNumber}</h3>
+                  <p>{order.customerName} - {order.garmentType}</p>
+                </div>
+                <div className="order-status">
+                  <span className={`status-badge status-${order.status.toLowerCase().replace(' ', '-')}`}>
+                    {order.status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="order-details">
+                <div className="detail-row">
+                  <span className="detail-label">Customer:</span>
+                  <span className="detail-value">{order.customerName}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Garment:</span>
+                  <span className="detail-value">{order.garmentType}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Delivery Date:</span>
+                  <span className="detail-value">
+                    {new Date(order.expectedDeliveryDate).toLocaleDateString()}
+                    </span>
+                  </div>
+              </div>
+
+              <div className="order-actions">
+                <button className="btn btn-outline">
+                  <FaEye /> View Details
+                </button>
+                  <button 
+                  className="btn btn-primary"
+                  onClick={() => openStatusModal(order)}
+                  >
+                  <FaEdit /> Update Status
+                  </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="no-orders">
+            <FaBox className="no-orders-icon" />
+            <h3>No orders assigned</h3>
+            <p>You don't have any orders assigned to you yet.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderProfile = () => (
+    <div className="profile-section">
+      <div className="section-header">
+        <h1>Profile & Settings</h1>
+      </div>
+
+      <div className="profile-content">
+        <div className="profile-card">
+          <div className="profile-header">
+            <div className="profile-avatar">
+              <FaUser />
+            </div>
+            <div className="profile-info">
+              <h2>{user?.name}</h2>
+              <p>{user?.role}</p>
+              <p>{user?.email}</p>
+            </div>
+          </div>
+
+          <div className="profile-details">
+            <div className="detail-section">
+              <h3>Account Information</h3>
+              <div className="detail-grid">
+                <div className="detail-item">
+                  <span className="detail-label">Name:</span>
+                  <span className="detail-value">{user?.name}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="detail-label">Email:</span>
+                  <span className="detail-value">{user?.email}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="detail-label">Role:</span>
+                  <span className="detail-value">{user?.role}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="profile-actions">
+              <button className="btn btn-primary">
+                <FaEdit /> Edit Profile
+              </button>
+              <button className="btn btn-outline">
+                <FaCog /> Change Password
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderMeasurements = () => (
+    <div className="measurements-section">
+            <div className="section-header">
+        <h1>Measurements Access</h1>
+        <p>View and manage measurements for your assigned orders</p>
+      </div>
+
+      <div className="measurements-list">
+        {orders.length > 0 ? (
+          orders.map(order => (
+            <div key={order._id} className="measurement-card">
+              <div className="measurement-header">
+                <h3>{order.orderNumber}</h3>
+                <p>{order.customerName} - {order.garmentType}</p>
+              </div>
+              
+              <div className="measurement-actions">
+                <button className="btn btn-outline">
+                  <FaRuler /> View Measurements
+                </button>
+                <button className="btn btn-outline">
+                  <FaCalendarAlt /> Download
+              </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="no-measurements">
+            <FaRuler className="no-measurements-icon" />
+            <h3>No measurements available</h3>
+            <p>You don't have any orders with measurements yet.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderCalendar = () => (
+    <div className="calendar-section">
+      <div className="section-header">
+        <h1>Work Calendar</h1>
+        <p>Track your deadlines and manage your workload</p>
+      </div>
+
+      <div className="calendar-overview">
+        <div className="calendar-stats">
+          <div className="stat-item">
+            <h3>{getTodaysTasks().length}</h3>
+            <p>Due Today</p>
+          </div>
+          <div className="stat-item">
+            <h3>{orders.filter(order => new Date(order.expectedDeliveryDate) > new Date()).length}</h3>
+            <p>Upcoming</p>
+          </div>
+          <div className="stat-item">
+            <h3>{orders.filter(order => new Date(order.expectedDeliveryDate) < new Date() && order.status !== 'Completed').length}</h3>
+            <p>Overdue</p>
+          </div>
+        </div>
+
+        <div className="upcoming-deadlines">
+          <h2>Upcoming Deadlines</h2>
+          <div className="deadlines-list">
+            {orders
+              .filter(order => new Date(order.expectedDeliveryDate) >= new Date())
+              .sort((a, b) => new Date(a.expectedDeliveryDate) - new Date(b.expectedDeliveryDate))
+              .slice(0, 5)
+              .map(order => (
+                <div key={order._id} className="deadline-item">
+                  <div className="deadline-date">
+                    {new Date(order.expectedDeliveryDate).toLocaleDateString()}
+                  </div>
+                  <div className="deadline-info">
+                    <h4>{order.orderNumber}</h4>
+                    <p>{order.customerName} - {order.garmentType}</p>
+                    <span className={`status-badge status-${order.status.toLowerCase().replace(' ', '-')}`}>
+                      {order.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+          </div>
+                </div>
+                </div>
+            </div>
+  );
+
+  const renderAssignments = () => (
+    <div className="assignments-section">
+            <div className="section-header">
+        <h1>Order Assignments</h1>
+        <p>Assign customer orders to tailors for processing</p>
+            </div>
+
+      <div className="assignments-content">
+        {/* Unassigned Orders */}
+        <div className="unassigned-orders">
+          <h2>Unassigned Orders ({unassignedOrders.length})</h2>
+            <div className="orders-list">
+            {unassignedOrders.length > 0 ? (
+              unassignedOrders.map(order => (
+                <div key={order._id} className="order-card unassigned">
+                  <div className="order-header">
+                    <div className="order-info">
+                      <h3>{order.orderNumber}</h3>
+                      <p>{order.customerName} - {order.garmentType}</p>
+                      <div className="order-meta">
+                        <span className="priority-badge urgent">Unassigned</span>
+                        <span className="delivery-date">
+                          Due: {new Date(order.expectedDeliveryDate).toLocaleDateString()}
+                    </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="order-details">
+                    <div className="detail-row">
+                      <span className="detail-label">Customer:</span>
+                      <span className="detail-value">{order.customerName}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Garment:</span>
+                      <span className="detail-value">{order.garmentType}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Order Date:</span>
+                      <span className="detail-value">
+                        {new Date(order.orderDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="order-actions">
+                    <button 
+                      className="btn btn-primary"
+                      onClick={() => openAssignModal(order)}
+                    >
+                      <FaPlus /> Assign to Tailor
+                    </button>
+                    <button className="btn btn-outline">
+                      <FaEye /> View Details
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="no-orders">
+                <FaCheckCircle className="no-orders-icon" />
+                <h3>All orders assigned!</h3>
+                <p>Great job! All orders have been assigned to tailors.</p>
+                </div>
+              )}
+          </div>
+        </div>
+
+        {/* Assigned Orders Summary */}
+        <div className="assigned-summary">
+          <h2>Assignment Summary</h2>
+          <div className="summary-cards">
+            <div className="summary-card">
+              <h3>{orders.length}</h3>
+              <p>Assigned Orders</p>
+            </div>
+            <div className="summary-card">
+              <h3>{unassignedOrders.length}</h3>
+              <p>Unassigned Orders</p>
+                </div>
+            <div className="summary-card">
+              <h3>{tailors.length}</h3>
+              <p>Available Tailors</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return renderDashboard();
+      case 'orders':
+        return renderOrders();
+      case 'assignments':
+        return renderAssignments();
+      case 'measurements':
+        return renderMeasurements();
+      case 'calendar':
+        return renderCalendar();
+      case 'profile':
+        return renderProfile();
+      default:
+        return renderDashboard();
     }
   };
 
   if (loading) {
     return (
-      <div className="staff-dashboard loading">
-        <div className="loading-spinner">
-          <div className="spinner"></div>
-          <p>Loading your dashboard...</p>
-        </div>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading your dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="staff-dashboard">
-      {/* Header */}
-      <header className="dashboard-header">
-        <div className="header-content">
-          <div className="welcome-section">
-            <h1>Welcome back, {user?.name || 'Staff Member'}!</h1>
-            <p>Here's what's happening with your work today</p>
-            {error && (
-              <div className="error-banner">
-                <span>⚠️ {error}</span>
-                <button onClick={loadDashboardData} className="retry-btn">
-                  Retry
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="header-actions">
-            <div className="notification-bell" onClick={() => navigate('/notifications')}>
-              <FaBell />
-              {notifications.length > 0 && (
-                <span className="notification-badge">{notifications.length}</span>
-              )}
-            </div>
-            <div className="profile-menu" onClick={() => navigate('/profile')}>
-              <div className="avatar">
-                {(user?.name || 'S').charAt(0).toUpperCase()}
-              </div>
-              <span>{user?.name || 'Staff'}</span>
-            </div>
-            <button 
-              className="logout-btn"
-              onClick={handleLogout}
-              title="Logout"
-            >
-              <FaSignOutAlt />
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Summary Stats */}
-      <section className="stats-section">
-        <div className="stats-grid">
-          <div className="stat-card" onClick={() => navigate('/staff/orders')}>
-            <div className="stat-icon orders">
-              <FaClipboardList />
-            </div>
-            <div className="stat-content">
-              <h3>Total Orders</h3>
-              <div className="stat-number">{stats.totalOrders}</div>
-              <p className="stat-label">Assigned to you</p>
-            </div>
-          </div>
-
-          <div className="stat-card" onClick={() => navigate('/staff/appointments')}>
-            <div className="stat-icon appointments">
-              <FaCalendarAlt />
-            </div>
-            <div className="stat-content">
-              <h3>Upcoming Appointments</h3>
-              <div className="stat-number">{stats.upcomingAppointments}</div>
-              <p className="stat-label">This week</p>
-            </div>
-          </div>
-
-          <div className="stat-card" onClick={() => navigate('/staff/tasks')}>
-            <div className="stat-icon tasks">
-              <FaClock />
-            </div>
-            <div className="stat-content">
-              <h3>Pending Tasks</h3>
-              <div className="stat-number">{stats.pendingTasks}</div>
-              <p className="stat-label">Need attention</p>
-            </div>
-          </div>
-
-          <div className="stat-card" onClick={() => navigate('/staff/completed')}>
-            <div className="stat-icon completed">
-              <FaCheckCircle />
-            </div>
-            <div className="stat-content">
-              <h3>Completed Jobs</h3>
-              <div className="stat-number">{stats.completedJobs}</div>
-              <p className="stat-label">This month</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Content Grid */}
-      <div className="main-content">
-        {/* Tasks & Notifications */}
-        <div className="content-left">
-          {/* Tasks Section */}
-          <section className="dashboard-section">
-            <div className="section-header">
-              <h2>
-                <FaClipboardList />
-                My Tasks
-              </h2>
-              <button 
-                className="btn-secondary"
-                onClick={() => navigate('/staff/tasks')}
-              >
-                View All
-              </button>
-            </div>
-            <div className="tasks-list">
-              {tasks.slice(0, 3).map(task => (
-                <div key={task.id} className="task-item">
-                  <div className="task-header">
-                    <h4>{task.title}</h4>
-                    <span 
-                      className="priority-badge"
-                      style={{ backgroundColor: getPriorityColor(task.priority) }}
-                    >
-                      {task.priority}
-                    </span>
-                  </div>
-                  <div className="task-details">
-                    <p><strong>Customer:</strong> {task.customer}</p>
-                    <p><strong>Due:</strong> {task.dueDate ? `${formatDate(task.dueDate)} at ${formatTime(task.dueDate)}` : 'No deadline set'}</p>
-                  </div>
-                  <div className="task-actions">
-                    <select 
-                      value={task.status}
-                      onChange={(e) => updateTaskStatus(task.id, e.target.value)}
-                      className="status-select"
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Assigned">Assigned</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Completed">Completed</option>
-                    </select>
-                  </div>
-                </div>
-              ))}
-              {dataLoaded && tasks.length === 0 && (
-                <div className="empty-state positive">
-                  <div className="empty-icon">✅</div>
-                  <p><strong>All caught up!</strong></p>
-                  <p>No pending tasks assigned to you right now.</p>
-                </div>
-              )}
-              {!dataLoaded && loading && (
-                <div className="loading-state">
-                  <p>Loading your tasks...</p>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Notifications Section */}
-          <section className="dashboard-section">
-            <div className="section-header">
-              <h2>
-                <FaBell />
-                Notifications
-              </h2>
-              <button 
-                className="btn-secondary"
-                onClick={() => setNotifications([])}
-              >
-                Clear All
-              </button>
-            </div>
-            <div className="notifications-list">
-              {notifications.slice(0, 3).map(notification => (
-                <div key={notification._id || notification.id} className={`notification-item ${notification.type || 'info'}`}>
-                  <div className="notification-content">
-                    <p>{notification.message || notification.content}</p>
-                    <span className="notification-time">
-                      {notification.createdAt ? 
-                        new Date(notification.createdAt).toLocaleString() : 
-                        notification.time
-                      }
-                    </span>
-                  </div>
-                  <button 
-                    className="notification-close"
-                    onClick={() => markNotificationRead(notification._id || notification.id)}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-              {dataLoaded && notifications.length === 0 && (
-                <div className="empty-state positive">
-                  <div className="empty-icon">🔔</div>
-                  <p><strong>You're all up to date!</strong></p>
-                  <p>No new notifications at the moment.</p>
-                </div>
-              )}
-              {!dataLoaded && loading && (
-                <div className="loading-state">
-                  <p>Loading notifications...</p>
-                </div>
-              )}
-            </div>
-          </section>
-        </div>
-
-        {/* Schedule & Orders */}
-        <div className="content-right">
-          {/* Schedule Section */}
-          <section className="dashboard-section">
-            <div className="section-header">
-              <h2>
-                <FaCalendarAlt />
-                Today's Schedule
-              </h2>
-              <button 
-                className="btn-secondary"
-                onClick={() => navigate('/staff/schedule')}
-              >
-                View Calendar
-              </button>
-            </div>
-            <div className="schedule-list">
-              {appointments.slice(0, 3).map(appointment => (
-                <div key={appointment._id || appointment.id} className="appointment-item">
-                  <div className="appointment-time">
-                    {formatTime(appointment.scheduledAt || appointment.date)}
-                  </div>
-                  <div className="appointment-details">
-                    <h4>{appointment.service || appointment.serviceType}</h4>
-                    <p>{appointment.customerName || appointment.customer}</p>
-                    <span className={`status-badge ${(appointment.status || 'pending').toLowerCase()}`}>
-                      {appointment.status || 'Pending'}
-                    </span>
-                  </div>
-                  <div className="appointment-actions">
-                    <button 
-                      className="btn-small"
-                      onClick={() => navigate(`/staff/appointments/${appointment._id || appointment.id}`)}
-                    >
-                      View
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {dataLoaded && appointments.length === 0 && (
-                <div className="empty-state positive">
-                  <div className="empty-icon">📅</div>
-                  <p><strong>Free schedule today!</strong></p>
-                  <p>No appointments scheduled for today — you're all caught up!</p>
-                </div>
-              )}
-              {!dataLoaded && loading && (
-                <div className="loading-state">
-                  <p>Loading today's schedule...</p>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Recent Orders */}
-          <section className="dashboard-section">
-            <div className="section-header">
-              <h2>
-                <FaClipboardList />
-                Recent Orders
-              </h2>
-              <button 
-                className="btn-secondary"
-                onClick={() => navigate('/staff/orders')}
-              >
-                View All Orders
-              </button>
-            </div>
-            <div className="orders-list">
-              {recentOrders.map(order => (
-                <div key={order._id} className="order-item">
-                  <div className="order-header">
-                    <h4>{order.orderNumber || `#${order._id.slice(-6)}`}</h4>
-                    <span 
-                      className="status-badge"
-                      style={{ backgroundColor: getStatusColor(order.status) }}
-                    >
-                      {order.status}
-                    </span>
-                  </div>
-                  <div className="order-details">
-                    <p><strong>Customer:</strong> {order.customerName}</p>
-                    <p><strong>Type:</strong> {order.serviceType || order.type || 'Custom Order'}</p>
-                    <p><strong>Deadline:</strong> {order.deliveryDate ? formatDate(order.deliveryDate) : 'Not set'}</p>
-                  </div>
-                  <div className="order-actions">
-                    <button 
-                      className="btn-small"
-                      onClick={() => navigate(`/staff/orders/${order._id}`)}
-                    >
-                      View
-                    </button>
-                    <select 
-                      value={order.status}
-                      onChange={(e) => updateTaskStatus(order._id, e.target.value)}
-                      className="status-select-small"
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Ready for Delivery">Ready</option>
-                    </select>
-                  </div>
-                </div>
-              ))}
-              {dataLoaded && recentOrders.length === 0 && (
-                <div className="empty-state positive">
-                  <div className="empty-icon">📋</div>
-                  <p><strong>Ready for new assignments!</strong></p>
-                  <p>No orders assigned to you yet. Check back soon for new work.</p>
-                </div>
-              )}
-              {!dataLoaded && loading && (
-                <div className="loading-state">
-                  <p>Loading your orders...</p>
-                </div>
-              )}
-            </div>
-          </section>
-        </div>
+    <div className="staff-layout">
+      <StaffSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <div className="staff-main-content">
+        {renderContent()}
       </div>
 
-      {/* Quick Actions & Footer */}
-      <footer className="dashboard-footer">
-        <div className="quick-actions">
-          <h3>Quick Actions</h3>
-          <div className="action-buttons">
+      {/* Status Update Modal */}
+      {showStatusModal && selectedOrder && (
+        <div className="modal-overlay" onClick={() => setShowStatusModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Update Order Status</h2>
             <button 
-              className="action-btn"
-              onClick={() => navigate('/staff/orders/new')}
+                className="close-btn"
+                onClick={() => setShowStatusModal(false)}
             >
-              <FaClipboardList />
-              New Order
+                ×
+            </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="order-info">
+                <h3>{selectedOrder.orderNumber}</h3>
+                <p>{selectedOrder.customerName} - {selectedOrder.garmentType}</p>
+              </div>
+
+              <div className="form-group">
+                <label>New Status:</label>
+                <select 
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
+                  className="form-select"
+                >
+                  <option value="New">New</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Ready for Delivery">Ready for Delivery</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Status Note (Optional):</label>
+                <textarea
+                  value={statusNote}
+                  onChange={(e) => setStatusNote(e.target.value)}
+                  placeholder="Add any notes about the status change..."
+                  rows="3"
+                  className="form-textarea"
+                />
+              </div>
+
+              <div className="modal-actions">
+            <button 
+                  className="btn btn-outline"
+                  onClick={() => setShowStatusModal(false)}
+            >
+                  Cancel
             </button>
             <button 
-              className="action-btn"
-              onClick={() => navigate('/staff/appointments/new')}
+                  className="btn btn-primary"
+                  onClick={() => handleStatusUpdate(selectedOrder._id, newStatus, statusNote)}
             >
-              <FaCalendarAlt />
-              Schedule Appointment
+                  Update Status
             </button>
-            <button 
-              className="action-btn"
-              onClick={() => navigate('/staff/messages')}
-            >
-              <FaComments />
-              Messages
-            </button>
-            <button 
-              className="action-btn"
-              onClick={() => navigate('/staff/performance')}
-            >
-              <FaChartLine />
-              Performance
-            </button>
+              </div>
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* Assignment Modal */}
+      {showAssignModal && selectedOrder && (
+        <div className="modal-overlay" onClick={() => setShowAssignModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Assign Order to Tailor</h2>
+              <button 
+                className="close-btn"
+                onClick={() => setShowAssignModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="order-info">
+                <h3>{selectedOrder.orderNumber}</h3>
+                <p>{selectedOrder.customerName} - {selectedOrder.garmentType}</p>
+                <p>Due: {new Date(selectedOrder.expectedDeliveryDate).toLocaleDateString()}</p>
+              </div>
+
+              <div className="form-group">
+                <label>Select Tailor:</label>
+                <select 
+                  value={selectedTailor}
+                  onChange={(e) => setSelectedTailor(e.target.value)}
+                  className="form-select"
+                >
+                  <option value="">Choose a tailor...</option>
+                  {tailors.map(tailor => (
+                    <option key={tailor._id} value={tailor._id}>
+                      {tailor.name} ({tailor.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="tailor-info">
+                {selectedTailor && (
+                  <div className="selected-tailor">
+                    {(() => {
+                      const tailor = tailors.find(t => t._id === selectedTailor);
+                      return tailor ? (
+                        <div>
+                          <h4>Selected Tailor:</h4>
+                          <p><strong>Name:</strong> {tailor.name}</p>
+                          <p><strong>Email:</strong> {tailor.email}</p>
+                          <p><strong>Phone:</strong> {tailor.phone || 'Not provided'}</p>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
         </div>
         
-        <div className="footer-links">
-          <div className="links-section">
-            <h4>Profile & Settings</h4>
-            <a href="/staff/profile">My Profile</a>
-            <a href="/staff/settings">Settings</a>
-            <a href="/staff/preferences">Preferences</a>
+              <div className="modal-actions">
+                <button 
+                  className="btn btn-outline"
+                  onClick={() => setShowAssignModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => handleAssignOrder(selectedOrder._id, selectedTailor)}
+                  disabled={!selectedTailor}
+                >
+                  Assign Order
+                </button>
+              </div>
           </div>
-          <div className="links-section">
-            <h4>Help & Support</h4>
-            <a href="/help">Help Center</a>
-            <a href="/support">Contact Support</a>
-            <a href="/feedback">Send Feedback</a>
           </div>
         </div>
-      </footer>
+      )}
     </div>
   );
-}
+};
+
+export default StaffDashboard;

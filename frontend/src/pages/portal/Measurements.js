@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import DashboardLayout from '../../components/DashboardLayout';
+import './Measurements.css';
 
 export default function MeasurementsPage() {
   const [data, setData] = useState({ current: {}, history: [] });
@@ -38,11 +39,32 @@ export default function MeasurementsPage() {
         measurements: Object.fromEntries(Object.entries(m).map(([k, v]) => [k, v === '' || v == null ? undefined : Number(v)])),
         styleNotes: data.styleNotes || '',
       };
+      
+      console.log('📏 Saving measurements with payload:', payload);
+      
       await axios.put('/api/portal/measurements', payload);
+      
+      console.log('✅ Measurements saved successfully');
+      
       const { data: fresh } = await axios.get('/api/portal/measurements');
-      setData({ current: fresh.current || {}, history: fresh.history || [] });
+      setData({ 
+        current: fresh.current || {}, 
+        history: fresh.history || [],
+        styleNotes: fresh.styleNotes || ''
+      });
+      
+      console.log('📊 Updated data:', { 
+        current: fresh.current, 
+        historyCount: fresh.history?.length || 0 
+      });
+      
+      alert('✅ Measurements saved successfully!');
     } catch (e) {
-      setError(e?.response?.data?.message || 'Failed to save');
+      console.error('❌ Error saving measurements:', e);
+      console.error('Error response:', e?.response?.data);
+      const errorMessage = e?.response?.data?.message || 'Failed to save';
+      setError(errorMessage);
+      alert('❌ Error: ' + errorMessage);
     } finally {
       setSaving(false);
     }
@@ -52,6 +74,12 @@ export default function MeasurementsPage() {
     <DashboardLayout title="My Measurements">
       {loading ? 'Loading...' : (
         <>
+          {/* Page Header */}
+          <div className="page-header">
+            <h1 className="page-title">My Measurements</h1>
+            <p className="page-subtitle">Manage your body measurements for accurate tailoring</p>
+          </div>
+          
           <div className="section">
             <h3 className="section-title">Current</h3>
             <form className="form" onSubmit={save}>

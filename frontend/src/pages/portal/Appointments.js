@@ -132,6 +132,12 @@ const Appointments = () => {
   return (
     <DashboardLayout title="My Appointments">
       <div className="appointments-container">
+        {/* Page Header */}
+        <div className="page-header">
+          <h1 className="page-title">My Appointments</h1>
+          <p className="page-subtitle">Schedule and manage your appointments</p>
+        </div>
+        
         {/* Header with filters and book button */}
         <div className="appointments-header">
           <div className="appointments-filters">

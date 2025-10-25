@@ -10,7 +10,10 @@ import {
   FaTrash,
   FaCalendarAlt,
   FaUser,
-  FaRupeeSign
+  FaRupeeSign,
+  FaPlay,
+  FaArrowRight,
+  FaCheckCircle
 } from 'react-icons/fa';
 import axios from 'axios';
 import './Orders.css';
@@ -65,6 +68,34 @@ const AllOrders = () => {
     } catch (error) {
       console.error('Failed to update status:', error);
       alert('Failed to update status. Please try again.');
+    }
+  };
+
+  const handleStartWork = async (orderId) => {
+    if (!window.confirm('Start working on this order?')) return;
+    
+    try {
+      const response = await axios.put(`/api/orders/${orderId}/start-work`);
+      if (response.data.success) {
+        alert('✅ Work started!');
+        loadOrders(); // Refresh list
+      }
+    } catch (error) {
+      console.error('Error starting work:', error);
+      alert('Failed to start work: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleNextStage = async (orderId) => {
+    try {
+      const response = await axios.put(`/api/orders/${orderId}/next-stage`);
+      if (response.data.success) {
+        alert(`✅ ${response.data.message}`);
+        loadOrders(); // Refresh list
+      }
+    } catch (error) {
+      console.error('Error advancing stage:', error);
+      alert('Failed to advance: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -277,24 +308,40 @@ const AllOrders = () => {
                           <button
                             className="btn-icon view"
                             onClick={() => navigate(`/tailor/orders/${order._id}`)}
-                            title="View Order"
+                            title="View Details"
                           >
                             <FaEye />
                           </button>
-                          <button
-                            className="btn-icon edit"
-                            onClick={() => navigate(`/tailor/orders/${order._id}/edit`)}
-                            title="Edit Order"
-                          >
-                            <FaEdit />
-                          </button>
-                          <button
-                            className="btn-icon delete"
-                            onClick={() => handleDeleteOrder(order._id)}
-                            title="Delete Order"
-                          >
-                            <FaTrash />
-                          </button>
+                          {['Pending', 'Order Placed'].includes(order.status) && (
+                            <button
+                              className="btn-icon start"
+                              onClick={() => handleStartWork(order._id)}
+                              title="Start Work"
+                              style={{ background: '#10b981' }}
+                            >
+                              <FaPlay />
+                            </button>
+                          )}
+                          {order.status === 'Cutting' && (
+                            <button
+                              className="btn-icon next"
+                              onClick={() => handleNextStage(order._id)}
+                              title="Next → Stitching"
+                              style={{ background: '#8b5cf6' }}
+                            >
+                              <FaArrowRight />
+                            </button>
+                          )}
+                          {order.status === 'Stitching' && (
+                            <button
+                              className="btn-icon ready"
+                              onClick={() => handleNextStage(order._id)}
+                              title="Mark as Ready"
+                              style={{ background: '#10b981' }}
+                            >
+                              <FaCheckCircle />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

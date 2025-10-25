@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 // Map role to its dashboard path
 const roleToPath = {
-  Admin: '/dashboard/admin',
+  Admin: '/admin/dashboard',
   Tailor: '/dashboard/tailor',
   Staff: '/dashboard/staff',
   Customer: '/dashboard/customer',

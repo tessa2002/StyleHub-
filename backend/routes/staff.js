@@ -4,7 +4,7 @@ const Order = require('../models/Order');
 const Appointment = require('../models/Appointment');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
-const { auth } = require('../middleware/auth');
+const { auth, allowRoles } = require('../middleware/auth');
 
 // Middleware to ensure user is staff
 const ensureStaff = (req, res, next) => {
@@ -13,6 +13,32 @@ const ensureStaff = (req, res, next) => {
   }
   next();
 };
+
+// Get all staff members (Admin only)
+router.get('/', auth, allowRoles('Admin'), async (req, res) => {
+  try {
+    const staff = await User.find({ role: { $in: ['Staff', 'Admin'] } })
+      .select('-password')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, staff });
+  } catch (error) {
+    console.error('Error fetching staff:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get all tailors (Admin/Staff)
+router.get('/tailors', auth, allowRoles('Admin', 'Staff'), async (req, res) => {
+  try {
+    const tailors = await User.find({ role: 'Tailor' })
+      .select('-password')
+      .sort({ name: 1 });
+    res.json({ success: true, users: tailors });
+  } catch (error) {
+    console.error('Error fetching tailors:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
 // Get orders assigned to specific staff member
 router.get('/orders', auth, ensureStaff, async (req, res) => {

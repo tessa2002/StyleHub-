@@ -1,8 +1,28 @@
 /* Bills & Payments Page Styles */
 
-.bills-page { display: grid; gap: 16px; }
-.bills-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.bills-header h2 { margin: 0; }
+.bills-page { display: grid; gap: 12px; }
+
+/* Page Header */
+.page-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.bills-header { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
 .search-input { width: 320px; max-width: 80vw; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; }
 
 .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }

@@ -132,6 +132,12 @@ export default function ProfilePage() {
         <div className="loading">Loading profile...</div>
       ) : (
         <div className="profile-edit-container">
+          {/* Page Header */}
+          <div className="page-header">
+            <h1 className="page-title">Profile Settings</h1>
+            <p className="page-subtitle">Manage your personal information and preferences</p>
+          </div>
+          
           {/* Success/Error Messages */}
           {success && (
             <div className="alert alert-success">

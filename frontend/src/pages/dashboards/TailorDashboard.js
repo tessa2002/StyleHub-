@@ -1,213 +1,410 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import DashboardLayout from "../../components/DashboardLayout";
-import { useAuth } from "../../context/AuthContext";
-import "./TailorDashboard.css";
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import TailorSidebar from '../../components/TailorSidebar';
+import { 
+  FaShoppingBag, FaClock, FaTools, FaCheckCircle,
+  FaExclamationTriangle, FaCalendarAlt, FaUser, FaTshirt,
+  FaEye, FaArrowRight, FaFire
+} from 'react-icons/fa';
+import './TailorDashboard.css';
 
-const TailorDashboard = ({ tailorId }) => {
-  const { user } = useAuth();
-  const myTailorId = tailorId || user?._id;
+const TailorDashboard = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [orders, setOrders] = useState([]);
-  const [summary, setSummary] = useState({
-    active: 0,
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    inProgress: 0,
     completed: 0,
-    dueSoon: 0,
+    urgent: 0
   });
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [uploading, setUploading] = useState({});
 
-  // ✅ Fetch assigned orders for this tailor
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await axios.get(`/api/orders/tailor/${myTailorId}`);
-        setOrders(res.data);
-      } catch (err) {
-        console.error("Error fetching tailor orders:", err);
+    fetchDashboardData();
+    
+    // Auto-refresh every 30 seconds to check for new assignments
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing dashboard data...');
+      fetchDashboardData();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      console.log('📊 Fetching dashboard data for tailor:', user?._id);
+      
+      const response = await axios.get('/api/orders/assigned');
+      console.log('📦 API Response:', response.data);
+      
+      const allOrders = response.data.orders || response.data || [];
+      console.log(`✅ Loaded ${allOrders.length} orders`);
+      
+      // Log each order's details for debugging
+      if (allOrders.length > 0) {
+        console.log('📋 Order List:');
+        allOrders.forEach((order, idx) => {
+          console.log(`   ${idx + 1}. Order #${order._id?.toString().slice(-6)} - ${order.itemType} - Status: ${order.status}`);
+        });
       }
-    };
-    fetchOrders();
-  }, [myTailorId]);
+      
+      setOrders(allOrders);
+      calculateStats(allOrders);
+    } catch (error) {
+      console.error('❌ Error fetching orders:', error);
+      console.error('Error details:', error.response?.data);
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // ✅ Calculate summary
-  useEffect(() => {
-    const active = orders.filter((o) => o.status !== "Completed").length;
-    const completed = orders.filter((o) => o.status === "Completed").length;
-    const dueSoon = orders.filter((o) => {
-      const today = new Date();
-      const due = new Date(o.dueDate);
-      const diff = (due - today) / (1000 * 60 * 60 * 24);
-      return diff <= 2 && o.status !== "Completed";
+  const calculateStats = (ordersData) => {
+    const total = ordersData.length;
+    const pending = ordersData.filter(o => ['Pending', 'Order Placed'].includes(o.status)).length;
+    const inProgress = ordersData.filter(o => ['Cutting', 'Stitching', 'Trial'].includes(o.status)).length;
+    const completed = ordersData.filter(o => ['Ready', 'Delivered'].includes(o.status)).length;
+    
+    // Calculate urgent orders (due within 3 days)
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+    const urgent = ordersData.filter(order => {
+      const dueDate = new Date(order.expectedDelivery || order.deliveryDate);
+      return dueDate <= threeDaysFromNow && !['Ready', 'Delivered', 'Cancelled'].includes(order.status);
     }).length;
 
-    setSummary({ active, completed, dueSoon });
-  }, [orders]);
+    const newStats = { total, pending, inProgress, completed, urgent };
+    console.log('📊 Stats Calculated:', newStats);
+    console.log('   - Total:', total);
+    console.log('   - Pending:', pending);
+    console.log('   - In Progress:', inProgress);
+    console.log('   - Completed:', completed);
+    console.log('   - Urgent:', urgent);
+    
+    setStats(newStats);
+    console.log('✅ Stats state updated');
+  };
 
-  // ✅ Update status in DB
-  const updateStatus = async (id, newStatus) => {
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not Set';
     try {
-      await axios.put(`/api/orders/${id}/status`, { status: newStatus });
-      setOrders(
-        orders.map((o) =>
-          o._id === id ? { ...o, status: newStatus } : o
-        )
-      );
-    } catch (err) {
-      console.error("Error updating status:", err);
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Not Set';
+      return date.toLocaleDateString('en-IN', { 
+        day: '2-digit', 
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return 'Not Set';
     }
   };
 
-  // ✅ Update notes in DB
-  const updateNotes = async (id, notes) => {
-    try {
-      await axios.put(`/api/orders/${id}/notes`, { notes });
-      setOrders(
-        orders.map((o) =>
-          o._id === id ? { ...o, notes } : o
-        )
-      );
-    } catch (err) {
-      console.error("Error updating notes:", err);
-    }
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
   };
 
-  // Progress helpers (fallback to status-based)
-  const getProgressPercent = (o) => {
-    if (typeof o.progress === 'number') return Math.max(0, Math.min(100, o.progress));
-    if (o.status === 'Completed') return 100;
-    if (o.status === 'In Progress') return 60;
-    return 10;
+  const getRecentOrders = () => {
+    return orders.slice(0, 5);
   };
 
-  const uploadImages = async (id, files) => {
-    if (!files || files.length === 0) return;
-    const form = new FormData();
-    Array.from(files).forEach(f => form.append('images', f));
-    try {
-      setUploading(prev => ({ ...prev, [id]: true }));
-      await axios.post(`/api/uploads/order/${id}`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
-      // optionally refresh or mark uploaded flag
-    } catch (err) {
-      console.error('Error uploading images:', err);
-      alert('Failed to upload images');
-    } finally {
-      setUploading(prev => ({ ...prev, [id]: false }));
-    }
+  const getUrgentOrders = () => {
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+    return orders.filter(order => {
+      const dueDate = new Date(order.expectedDelivery || order.deliveryDate);
+      return dueDate <= threeDaysFromNow && !['Ready', 'Delivered', 'Cancelled'].includes(order.status);
+    }).slice(0, 5);
   };
 
-  const now = new Date();
-  const overdueCount = orders.filter(o => o.dueDate && new Date(o.dueDate) < now && o.status !== 'Completed').length;
-  const filtered = orders.filter(o => (statusFilter === 'ALL' ? true : o.status === statusFilter));
+  if (loading) {
+    return (
+      <div className="tailor-layout">
+        <TailorSidebar 
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onLogout={handleLogout}
+        />
+        <div className={`tailor-main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+          <div className="dashboard-page">
+            <div className="dashboard-loading">
+              <div className="loading-spinner"></div>
+              <p>Loading dashboard...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const recentOrders = getRecentOrders();
+  const urgentOrders = getUrgentOrders();
 
   return (
-    <DashboardLayout
-      title="Tailor Dashboard"
-      actions={
-        <div className="tailor-header-actions">
-          <div className="bell" title={`Overdue: ${overdueCount}`}>
-            🔔{overdueCount > 0 && <span className="badge">{overdueCount}</span>}
+    <div className="tailor-layout">
+      <TailorSidebar 
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onLogout={handleLogout}
+      />
+      <div className={`tailor-main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <div className="dashboard-page">
+          {/* Welcome Section */}
+          <div className="welcome-section">
+            <div className="welcome-content">
+              <h1>{getGreeting()}, {user?.name || 'Tailor'}! 👋</h1>
+              <p>Here's what's happening with your work today</p>
+            </div>
+            <div className="welcome-actions">
+              <button 
+                className="btn btn-outline"
+                onClick={() => {
+                  console.log('🔄 Manual refresh triggered');
+                  fetchDashboardData();
+                }}
+                style={{ marginRight: '10px' }}
+              >
+                <FaArrowRight style={{ transform: 'rotate(-90deg)' }} /> Refresh
+              </button>
+              <button 
+                className="btn btn-white"
+                onClick={() => navigate('/dashboard/tailor/orders')}
+              >
+                <FaShoppingBag /> View All Orders
+              </button>
+            </div>
           </div>
-          <div className="profile-chip">
-            <span className="avatar">{(user?.name || 'T').slice(0,1).toUpperCase()}</span>
-            <span className="name">{user?.name || 'Tailor'}</span>
+
+          {/* Summary Cards */}
+          <div className="summary-cards">
+            <div className="summary-card">
+              <div className="card-header">
+                <div className="card-icon">
+                  <FaShoppingBag />
+                </div>
+                <div className="card-title">Total Orders</div>
+              </div>
+              <div className="card-content">
+                <div className="card-value">{stats.total}</div>
+                <div className="card-description">All assigned orders</div>
+              </div>
+              <div className="card-footer">
+                <button onClick={() => navigate('/dashboard/tailor/orders')} className="card-link">
+                  View All <FaArrowRight />
+                </button>
+              </div>
+            </div>
+
+            <div className="summary-card">
+              <div className="card-header">
+                <div className="card-icon" style={{background: 'linear-gradient(135deg, #f59e0b, #d97706)'}}>
+                  <FaClock />
+                </div>
+                <div className="card-title">Pending</div>
+              </div>
+              <div className="card-content">
+                <div className="card-value">{stats.pending}</div>
+                <div className="card-description">Not yet started</div>
+              </div>
+              <div className="card-footer">
+                <button onClick={() => navigate('/dashboard/tailor/orders')} className="card-link">
+                  Start Work <FaArrowRight />
+                </button>
+              </div>
+            </div>
+
+            <div className="summary-card">
+              <div className="card-header">
+                <div className="card-icon" style={{background: 'linear-gradient(135deg, #3b82f6, #2563eb)'}}>
+                  <FaTools />
+                </div>
+                <div className="card-title">In Progress</div>
+              </div>
+              <div className="card-content">
+                <div className="card-value">{stats.inProgress}</div>
+                <div className="card-description">Active work</div>
+              </div>
+              <div className="card-footer">
+                <button onClick={() => navigate('/dashboard/tailor/in-progress')} className="card-link">
+                  View Details <FaArrowRight />
+                </button>
+              </div>
+            </div>
+
+            <div className="summary-card">
+              <div className="card-header">
+                <div className="card-icon" style={{background: 'linear-gradient(135deg, #10b981, #059669)'}}>
+                  <FaCheckCircle />
+                </div>
+                <div className="card-title">Completed</div>
+              </div>
+              <div className="card-content">
+                <div className="card-value">{stats.completed}</div>
+                <div className="card-description">Ready for delivery</div>
+              </div>
+              <div className="card-footer">
+                <button onClick={() => navigate('/dashboard/tailor/completed')} className="card-link">
+                  View All <FaArrowRight />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="dashboard-grid">
+            {/* Recent Orders */}
+            <div className="dashboard-section">
+              <div className="section-header">
+                <h2 className="section-title">
+                  <FaShoppingBag /> Recent Orders
+                </h2>
+                <button onClick={() => navigate('/dashboard/tailor/orders')} className="btn btn-sm btn-outline">
+                  View All
+                </button>
+              </div>
+              {recentOrders.length === 0 ? (
+                <div className="empty-state">
+                  <FaShoppingBag className="empty-icon" />
+                  <p>No orders assigned yet</p>
+                </div>
+              ) : (
+                <div className="orders-list">
+                  {recentOrders.map((order) => (
+                    <div key={order._id} className="order-item">
+                      <div className="order-info">
+                        <div className="order-id">#{String(order._id).slice(-6).toUpperCase()}</div>
+                        <div className="order-details">
+                          <div className="order-meta">
+                            <span><FaUser /> {order.customer?.name || 'Customer'}</span>
+                            <span><FaTshirt /> {order.itemType || 'Custom'}</span>
+                          </div>
+                          <div className="order-date">
+                            <FaCalendarAlt /> Due: {formatDate(order.expectedDelivery || order.deliveryDate)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="order-actions">
+                        <span className={`status-badge status-${order.status.toLowerCase().replace(' ', '-')}`}>
+                          {order.status}
+                        </span>
+                        <button 
+                          className="btn btn-sm btn-icon"
+                          onClick={() => navigate(`/dashboard/tailor/order/${order._id}`)}
+                          title="View Details"
+                        >
+                          <FaEye />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Urgent Orders */}
+            <div className="dashboard-section">
+              <div className="section-header">
+                <h2 className="section-title">
+                  <FaExclamationTriangle /> Urgent Orders
+                  {stats.urgent > 0 && <span className="badge badge-danger">{stats.urgent}</span>}
+                </h2>
+                <button onClick={() => navigate('/dashboard/tailor/urgent')} className="btn btn-sm btn-outline">
+                  View All
+                </button>
+              </div>
+              {urgentOrders.length === 0 ? (
+                <div className="empty-state">
+                  <FaCheckCircle className="empty-icon" style={{color: '#10b981'}} />
+                  <p>No urgent orders! You're all caught up! ✨</p>
+                </div>
+              ) : (
+                <div className="orders-list">
+                  {urgentOrders.map((order) => {
+                    const dueDate = new Date(order.expectedDelivery || order.deliveryDate);
+                    const today = new Date();
+                    const daysUntilDue = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+                    const isOverdue = daysUntilDue < 0;
+
+                    return (
+                      <div key={order._id} className={`order-item ${isOverdue ? 'urgent' : ''}`}>
+                        <div className="order-info">
+                          <div className="order-id">#{String(order._id).slice(-6).toUpperCase()}</div>
+                          <div className="order-details">
+                            <div className="order-meta">
+                              <span><FaUser /> {order.customer?.name || 'Customer'}</span>
+                              <span><FaTshirt /> {order.itemType || 'Custom'}</span>
+                            </div>
+                            <div className="order-date urgent-date">
+                              <FaFire /> {isOverdue ? `${Math.abs(daysUntilDue)} days overdue` : daysUntilDue === 0 ? 'Due Today' : `${daysUntilDue} days left`}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="order-actions">
+                          <span className={`status-badge status-${order.status.toLowerCase().replace(' ', '-')}`}>
+                            {order.status}
+                          </span>
+                          <button 
+                            className="btn btn-sm btn-icon"
+                            onClick={() => navigate(`/dashboard/tailor/order/${order._id}`)}
+                            title="View Details"
+                          >
+                            <FaEye />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="dashboard-section">
+            <div className="section-header">
+              <h2 className="section-title">Quick Actions</h2>
+            </div>
+            <div className="quick-actions">
+              <button className="quick-action-card" onClick={() => navigate('/dashboard/tailor/orders')}>
+                <div className="qa-icon"><FaShoppingBag /></div>
+                <div className="qa-title">View All Orders</div>
+                <div className="qa-desc">See all assigned work</div>
+              </button>
+              <button className="quick-action-card" onClick={() => navigate('/dashboard/tailor/in-progress')}>
+                <div className="qa-icon"><FaTools /></div>
+                <div className="qa-title">Work In Progress</div>
+                <div className="qa-desc">Active orders</div>
+              </button>
+              <button className="quick-action-card" onClick={() => navigate('/dashboard/tailor/measurements')}>
+                <div className="qa-icon"><FaTshirt /></div>
+                <div className="qa-title">Measurements</div>
+                <div className="qa-desc">View designs</div>
+              </button>
+              <button className="quick-action-card" onClick={() => navigate('/dashboard/tailor/calendar')}>
+                <div className="qa-icon"><FaCalendarAlt /></div>
+                <div className="qa-title">Calendar</div>
+                <div className="qa-desc">Check deadlines</div>
+              </button>
+            </div>
           </div>
         </div>
-      }
-    >
-      {/* Summary Cards */}
-      <div className="summary-cards">
-        <div className="card">Total Assigned: {orders.length}</div>
-        <div className="card">In Progress: {orders.filter(o => o.status === 'In Progress').length}</div>
-        <div className="card">Completed: {orders.filter(o => o.status === 'Completed').length}</div>
-        <div className="card">Overdue: {overdueCount}</div>
       </div>
-
-      {/* Filters */}
-      <div className="filters-row">
-        <label>Status:</label>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-          <option value="ALL">All</option>
-          <option value="Pending">Pending</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Completed">Completed</option>
-        </select>
-      </div>
-
-      {/* Orders Table */}
-      <h3>My Tasks / Orders</h3>
-      {filtered.length === 0 ? (
-        <p>No items to show.</p>
-      ) : (
-        <table className="orders-table">
-          <thead>
-            <tr>
-              <th>Order / Task</th>
-              <th>Customer</th>
-              <th>Status</th>
-              <th>Due</th>
-              <th>Instructions</th>
-              <th>Progress</th>
-              <th>Notes</th>
-              <th>Uploads</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((o) => (
-              <tr key={o._id}>
-                <td>{o.taskName || o.orderNumber || o._id}</td>
-                <td>{o.customerName || '-'}</td>
-                <td>
-                  <select value={o.status} onChange={(e) => updateStatus(o._id, e.target.value)}>
-                    <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Completed">Completed</option>
-                  </select>
-                </td>
-                <td>{o.dueDate ? new Date(o.dueDate).toLocaleString() : '-'}</td>
-                <td className="truncate">{o.measurementsSummary || o.specialInstructions || '-'}</td>
-                <td>
-                  <div className="progress">
-                    <div className="bar" style={{ width: `${getProgressPercent(o)}%` }} />
-                  </div>
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    placeholder="Add work note..."
-                    value={o.notes || ''}
-                    onChange={(e) => updateNotes(o._id, e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input type="file" multiple accept="image/*" onChange={(e) => uploadImages(o._id, e.target.files)} />
-                  {uploading[o._id] ? <span className="muted">Uploading...</span> : null}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {/* Notifications / Alerts */}
-      <h3>Notifications & Alerts</h3>
-      {overdueCount > 0 && <div className="alert warning">{overdueCount} overdue item(s)</div>}
-      <ul className="notifications">
-        {orders
-          .filter((o) => o.status === "Pending")
-          .map((o) => (
-            <li key={o._id}>New task assigned: {o.taskName || o.orderNumber || o._id}</li>
-          ))}
-      </ul>
-
-      {/* Footer */}
-      <footer className="tailor-footer">
-        <div className="links">
-          <a href="/portal/profile">Profile</a>
-          <a href="/help">Help</a>
-        </div>
-        <div className="version">v1.0.0</div>
-      </footer>
-    </DashboardLayout>
+    </div>
   );
 };
 

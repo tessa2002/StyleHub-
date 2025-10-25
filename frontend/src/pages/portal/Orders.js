@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import DashboardLayout from '../../components/DashboardLayout';
+import OrderStatusTracker from '../../components/OrderStatusTracker';
 import './Orders.css';
 import { FaSearch, FaFilter, FaEye, FaTruck, FaRedoAlt, FaFileInvoice } from 'react-icons/fa';
 import { toast } from 'react-toastify';
@@ -128,6 +129,12 @@ export default function OrdersPage() {
   return (
     <DashboardLayout title="My Orders">
       <div className="orders-page">
+        {/* Page Header */}
+        <div className="page-header">
+          <h1 className="page-title">My Orders</h1>
+          <p className="page-subtitle">View and manage all your orders</p>
+        </div>
+        
         {/* Filters & Search */}
         <div className="orders-toolbar">
           <div className="filters">
@@ -135,9 +142,12 @@ export default function OrdersPage() {
               <FaFilter className="icon" />
               <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
                 <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="in progress">In Progress</option>
-                <option value="completed">Completed</option>
+                <option value="order placed">Order Placed</option>
+                <option value="cutting">Cutting</option>
+                <option value="stitching">Stitching</option>
+                <option value="trial">Trial</option>
+                <option value="ready">Ready</option>
+                <option value="delivered">Delivered</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
@@ -224,8 +234,6 @@ export default function OrdersPage() {
           />)
         }
 
-        {/* Optional: Quick new order (kept) */}
-        <NewOrderForm onCreated={o => setOrders([o, ...orders])} />
       </div>
     </DashboardLayout>
   );
@@ -291,7 +299,17 @@ function OrderRow({ order, onView, onReorder }) {
           <button className="btn btn-light" title="Track Shipment" disabled><FaTruck /></button>
         )}
         <button className="btn btn-light" title="Reorder" onClick={onReorder}><FaRedoAlt /></button>
-        {!loading && bill && bill.status !== 'Paid' ? (
+        {!loading && bill && bill.status === 'Paid' ? (
+          <a 
+            className="btn btn-success" 
+            href={`/api/portal/bills/${bill._id}/receipt`} 
+            target="_blank" 
+            rel="noreferrer"
+            title="Download Receipt"
+          >
+            <FaFileInvoice /> Receipt
+          </a>
+        ) : !loading && bill && bill.status !== 'Paid' ? (
           <button className="btn btn-primary" disabled={paying} onClick={payNow}>{paying ? 'Paying…' : 'Pay Now'}</button>
         ) : null}
       </td>
@@ -299,53 +317,31 @@ function OrderRow({ order, onView, onReorder }) {
   );
 }
 
-function NewOrderForm({ onCreated }) {
-  const [items, setItems] = useState([{ name: '', quantity: 1, price: 0 }]);
-  const [notes, setNotes] = useState('');
-
-  const addItem = () => setItems([...items, { name: '', quantity: 1, price: 0 }]);
-  const updateItem = (idx, key, val) => {
-    const next = items.slice();
-    next[idx][key] = key === 'quantity' || key === 'price' ? Number(val) : val;
-    setItems(next);
-  };
-
-  const submit = async (e) => {
-    e.preventDefault();
-    try {
-      const { data } = await axios.post('/api/portal/orders', { items, notes });
-      onCreated(data.order);
-      setItems([{ name: '', quantity: 1, price: 0 }]);
-      setNotes('');
-      alert('Order placed');
-    } catch (e) {
-      alert('Failed to place order');
-    }
-  };
-
-  return (
-    <div className="section">
-      <h3 className="section-title">Place New Order</h3>
-      <form className="form" onSubmit={submit}>
-        {items.map((it, i) => (
-          <div className="row" key={i}>
-            <input placeholder="Service (e.g., stitching)" value={it.name} onChange={e => updateItem(i, 'name', e.target.value)} />
-            <input type="number" placeholder="Qty" value={it.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} />
-            <input type="number" placeholder="Price" value={it.price} onChange={e => updateItem(i, 'price', e.target.value)} />
-          </div>
-        ))}
-        <button type="button" onClick={addItem}>+ Add Item</button>
-        <label>Special Instructions<textarea value={notes} onChange={e => setNotes(e.target.value)} /></label>
-        <button className="primary" type="submit">Submit Order</button>
-      </form>
-    </div>
-  );
-}
 
 // Details Modal for an order
 function OrderDetailsModal({ order, details, loading, onClose }) {
   const ord = details?.order || order;
   const bill = details?.bill || null;
+  const [payments, setPayments] = React.useState([]);
+  const [loadingPayments, setLoadingPayments] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchPayments = async () => {
+      if (!bill?._id) {
+        setLoadingPayments(false);
+        return;
+      }
+      try {
+        const { data } = await axios.get(`/api/portal/payments/by-bill/${bill._id}`);
+        setPayments(data.payments || []);
+      } catch (error) {
+        console.error('Failed to fetch payments:', error);
+      } finally {
+        setLoadingPayments(false);
+      }
+    };
+    fetchPayments();
+  }, [bill?._id]);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -358,23 +354,88 @@ function OrderDetailsModal({ order, details, loading, onClose }) {
           <div className="loading">Loading details…</div>
         ) : (
           <div className="modal-content">
+            {/* Order Status Tracker */}
+            <OrderStatusTracker currentStatus={ord.status} />
+
             <div className="details-grid">
               <div>
                 <div className="detail"><strong>Order ID:</strong> {ord._id}</div>
                 <div className="detail"><strong>Date:</strong> {ord.createdAt ? new Date(ord.createdAt).toLocaleString() : '-'}</div>
-                <div className="detail"><strong>Status:</strong> {ord.status}</div>
+                <div className="detail"><strong>Status:</strong> <span className={`badge status-${(ord.status || 'default').toLowerCase().replace(/\s+/g,'-')}`}>{ord.status || '-'}</span></div>
                 {ord.expectedDelivery && (
                   <div className="detail"><strong>ETA:</strong> {new Date(ord.expectedDelivery).toLocaleDateString()}</div>
                 )}
               </div>
               <div>
                 <div className="detail"><strong>Total:</strong> ₹{Number(ord.totalAmount || 0).toLocaleString()}</div>
-                <div className="detail"><strong>Payment:</strong> {bill ? bill.status : '—'}</div>
+                <div className="detail"><strong>Payment Status:</strong> {bill ? <span className={`badge payment-${(bill.status || 'pending').toLowerCase()}`}>{bill.status}</span> : '—'}</div>
+                {bill && bill.amountPaid > 0 && (
+                  <div className="detail"><strong>Amount Paid:</strong> ₹{Number(bill.amountPaid || 0).toLocaleString()}</div>
+                )}
+                {bill && bill.amount > bill.amountPaid && (
+                  <div className="detail"><strong>Balance Due:</strong> ₹{Number(bill.amount - bill.amountPaid || 0).toLocaleString()}</div>
+                )}
                 {bill && (
-                  <div className="detail"><strong>Invoice:</strong> <a className="btn btn-link" href={`/api/bills/${bill._id}`} target="_blank" rel="noreferrer"><FaFileInvoice /> Download</a></div>
+                  <>
+                    <div className="detail">
+                      <strong>Invoice:</strong> 
+                      <a 
+                        className="btn btn-link" 
+                        href={`/api/portal/bills/${bill._id}/receipt`} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        style={{ marginLeft: '10px' }}
+                      >
+                        <FaFileInvoice /> Download Receipt
+                      </a>
+                    </div>
+                    <div className="detail">
+                      <strong>Bill Number:</strong> 
+                      <span>{bill.billNumber || 'N/A'}</span>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
+
+            {/* Payment History Section */}
+            {bill && (
+              <div className="payment-history-section">
+                <h4>Payment Details</h4>
+                {loadingPayments ? (
+                  <div className="loading-small">Loading payment details...</div>
+                ) : payments.length > 0 ? (
+                  <table className="payment-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Method</th>
+                        <th>Amount</th>
+                        <th>Transaction ID</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((payment, idx) => (
+                        <tr key={idx}>
+                          <td>{payment.createdAt ? new Date(payment.createdAt).toLocaleString() : '-'}</td>
+                          <td>{payment.method || payment.paymentMode || '-'}</td>
+                          <td>₹{Number(payment.amount || 0).toLocaleString()}</td>
+                          <td><code>{payment.razorpayPaymentId || payment.transactionId || '-'}</code></td>
+                          <td>
+                            <span className={`badge payment-${(payment.status || 'pending').toLowerCase()}`}>
+                              {payment.status || 'Pending'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="empty">No payment records found</div>
+                )}
+              </div>
+            )}
 
             {/* Items */}
             <div className="items-section">

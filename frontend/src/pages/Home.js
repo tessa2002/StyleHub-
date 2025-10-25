@@ -8,7 +8,8 @@ const Home = () => {
   // Smooth scrolling for anchor links
   useEffect(() => {
     const handleSmoothScroll = (e) => {
-      if (e.target.getAttribute('href')?.startsWith('#')) {
+      // Only handle anchor links within the current component
+      if (e.target.tagName === 'A' && e.target.getAttribute('href')?.startsWith('#')) {
         e.preventDefault();
         const targetId = e.target.getAttribute('href').substring(1);
         const targetElement = document.getElementById(targetId);
@@ -18,7 +19,8 @@ const Home = () => {
       }
     };
 
-    document.addEventListener('click', handleSmoothScroll);
+    // Add event listener to the document with proper cleanup
+    document.addEventListener('click', handleSmoothScroll, { passive: false });
     return () => document.removeEventListener('click', handleSmoothScroll);
   }, []);
 
@@ -50,9 +52,11 @@ const Home = () => {
           <div className="md:hidden">
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-gray-600 focus:outline-none"
+              className="text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMobileMenuOpen}
             >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16m-7 6h7"} />
               </svg>
             </button>
@@ -61,13 +65,13 @@ const Home = () => {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-white border-t shadow-lg">
+          <div className="md:hidden bg-white border-t shadow-lg" role="menu" aria-label="Mobile navigation menu">
             <div className="px-4 py-4 space-y-4">
-              <a href="#features" className="block text-gray-600 hover:text-blue-600 transition duration-300 font-medium">Features</a>
-              <a href="#how-it-works" className="block text-gray-600 hover:text-blue-600 transition duration-300 font-medium">How it Works</a>
-              <a href="#reviews" className="block text-gray-600 hover:text-blue-600 transition duration-300 font-medium">Reviews</a>
-              <Link to="/login" className="block text-gray-600 hover:text-blue-600 transition duration-300 font-medium">Sign In</Link>
-              <Link to="/register" className="block bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold text-center">Get Started</Link>
+              <a href="#features" className="block text-gray-600 hover:text-blue-600 transition duration-300 font-medium" role="menuitem">Features</a>
+              <a href="#how-it-works" className="block text-gray-600 hover:text-blue-600 transition duration-300 font-medium" role="menuitem">How it Works</a>
+              <a href="#reviews" className="block text-gray-600 hover:text-blue-600 transition duration-300 font-medium" role="menuitem">Reviews</a>
+              <Link to="/login" className="block text-gray-600 hover:text-blue-600 transition duration-300 font-medium" role="menuitem">Sign In</Link>
+              <Link to="/register" className="block bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold text-center" role="menuitem">Get Started</Link>
             </div>
           </div>
         )}
@@ -79,128 +83,50 @@ const Home = () => {
         <div 
           className="absolute inset-0 z-0 bg-cover bg-center bg-fixed" 
           style={{ 
-            backgroundImage: `url('https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=2558&auto=format&fit=crop')`,
+            backgroundImage: `url('https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=2558&auto=format&fit=crop'), linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #92400e 100%)`,
             filter: 'blur(1px)'
           }}
         ></div>
         <div className="absolute inset-0 z-10 bg-gradient-to-br from-blue-900/60 via-blue-800/50 to-amber-900/40"></div>
 
         {/* Hero Content */}
-        <div className="relative z-20 max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-between">
-          {/* Left Content */}
-          <div className="lg:w-1/2 text-left lg:pr-12 mb-12 lg:mb-0">
+        <div className="relative z-20 max-w-4xl mx-auto text-center px-4">
+          {/* Main Content */}
+          <div className="max-w-3xl mx-auto">
             {/* Main Headline */}
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-white">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-6 leading-tight text-white">
               Style Hub – <span className="text-amber-300">Tailoring Management,</span> Perfected.
             </h1>
             
             {/* Body Text */}
-            <p className="text-lg md:text-xl text-blue-100 max-w-2xl mb-10 leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-blue-100 max-w-2xl mx-auto mb-10 leading-relaxed">
               Digitize your boutique. Streamline orders, measurements, and customer data in one secure, AI-powered platform. 
               Bridge the gap between traditional craftsmanship and modern efficiency.
             </p>
             
             {/* CTA Button */}
-            <Link to="/register" className="bg-amber-500 hover:bg-amber-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition duration-300 shadow-xl inline-flex items-center space-x-2">
+            <Link to="/register" className="bg-amber-500 hover:bg-amber-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg text-base sm:text-lg font-semibold transition duration-300 shadow-xl inline-flex items-center space-x-2 w-full sm:w-auto justify-center">
               <span>Book a Demo</span>
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </Link>
             
             {/* Footer Badges */}
-            <div className="mt-8 flex flex-wrap gap-4 text-sm text-blue-200">
-              <span className="bg-white/20 px-4 py-2 rounded-full">Web-Based</span>
-              <span className="bg-white/20 px-4 py-2 rounded-full">AI Recommendations</span>
-              <span className="bg-white/20 px-4 py-2 rounded-full">Secure & Compliant</span>
+            <div className="mt-8 flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-blue-200 justify-center">
+              <span className="bg-white/20 px-3 sm:px-4 py-2 rounded-full">Web-Based</span>
+              <span className="bg-white/20 px-3 sm:px-4 py-2 rounded-full">AI Recommendations</span>
+              <span className="bg-white/20 px-3 sm:px-4 py-2 rounded-full">Secure & Compliant</span>
             </div>
           </div>
 
-          {/* Right Content - Tablet Interface Mockup */}
-          <div className="lg:w-1/2 flex justify-center">
-            <div className="relative">
-              {/* Tablet Device */}
-              <div className="w-80 h-96 bg-gray-900 rounded-2xl p-2 shadow-2xl">
-                <div className="w-full h-full bg-white rounded-xl overflow-hidden">
-                  {/* Tablet Interface */}
-                  <div className="h-full flex flex-col">
-                    {/* Header */}
-                    <div className="bg-blue-600 text-white p-4">
-                      <h3 className="font-bold text-lg">Style Hub Dashboard</h3>
-                      <p className="text-blue-100 text-sm">Customer Profile</p>
-                    </div>
-                    
-                    {/* Content */}
-                    <div className="flex-1 p-4 space-y-4">
-                      {/* Customer Info */}
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-600 font-bold">SJ</span>
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900">Sarah Johnson</h4>
-                          <p className="text-sm text-gray-600">Premium Client</p>
-                        </div>
-                      </div>
-                      
-                      {/* Measurements */}
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <h5 className="font-medium text-gray-900 mb-2">Measurements</h5>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Chest:</span>
-                            <span className="font-medium">38"</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Waist:</span>
-                            <span className="font-medium">32"</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Hip:</span>
-                            <span className="font-medium">40"</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Length:</span>
-                            <span className="font-medium">42"</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Design Sketch */}
-                      <div className="bg-amber-50 rounded-lg p-3">
-                        <h5 className="font-medium text-gray-900 mb-2">Design Sketch</h5>
-                        <div className="w-full h-16 bg-gradient-to-r from-blue-200 to-amber-200 rounded flex items-center justify-center">
-                          <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Floating Elements */}
-              <div className="absolute -top-4 -right-4 w-8 h-8 bg-amber-400 rounded-full flex items-center justify-center shadow-lg">
-                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              
-              <div className="absolute -bottom-4 -left-4 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
-                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
+      <section id="features" className="py-20 bg-white" aria-labelledby="features-heading">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
+          <h2 id="features-heading" className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
             Everything Your Boutique Needs
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto mb-16 text-lg">
@@ -242,10 +168,10 @@ const Home = () => {
       </section>
 
       {/* How it Works Section */}
-      <section id="how-it-works" className="py-20 bg-gray-50">
+      <section id="how-it-works" className="py-20 bg-gray-50" aria-labelledby="how-it-works-heading">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
+            <h2 id="how-it-works-heading" className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
               How It Works
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto text-lg">
@@ -282,10 +208,10 @@ const Home = () => {
       </section>
 
       {/* Reviews Section */}
-      <section id="reviews" className="py-20 bg-white">
+      <section id="reviews" className="py-20 bg-white" aria-labelledby="reviews-heading">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
+            <h2 id="reviews-heading" className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
               What Our Users Say
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto text-lg">
@@ -328,20 +254,20 @@ const Home = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white py-12">
+      <footer className="bg-gray-800 text-white py-12" role="contentinfo">
         <div className="container mx-auto px-4 text-center">
           <div className="flex flex-col md:flex-row justify-between items-center mb-8">
             <div className="mb-4 md:mb-0">
               <span className="font-bold text-lg">Style Hub</span>
               <p className="text-sm text-gray-400 mt-1">© 2025 All Rights Reserved.</p>
             </div>
-            <div className="flex space-x-6">
+            <nav className="flex space-x-6" aria-label="Footer navigation">
               <a href="#features" className="text-gray-400 hover:text-white transition duration-300">Features</a>
-              <button className="text-gray-400 hover:text-white transition duration-300">Pricing</button>
-              <button className="text-gray-400 hover:text-white transition duration-300">Support</button>
-              <button className="text-gray-400 hover:text-white transition duration-300">Contact Us</button>
-              <button className="text-gray-400 hover:text-white transition duration-300">Privacy Policy</button>
-            </div>
+              <button className="text-gray-400 hover:text-white transition duration-300" aria-label="View pricing information">Pricing</button>
+              <button className="text-gray-400 hover:text-white transition duration-300" aria-label="Get support">Support</button>
+              <button className="text-gray-400 hover:text-white transition duration-300" aria-label="Contact us">Contact Us</button>
+              <button className="text-gray-400 hover:text-white transition duration-300" aria-label="View privacy policy">Privacy Policy</button>
+            </nav>
             <div className="flex space-x-4 mt-4 md:mt-0">
               <button className="text-gray-400 hover:text-white transition duration-300" aria-label="Twitter">
                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">

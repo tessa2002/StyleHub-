@@ -36,10 +36,42 @@ async function auth(req, res, next) {
 // Authorize by roles
 function allowRoles(...roles) {
   return (req, res, next) => {
-    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (!req.user) {
+      console.log('❌ Authorization failed: No user in request');
+      return res.status(401).json({ message: 'Unauthorized' });
     }
+    
+    // Normalize role (trim whitespace, consistent casing)
+    const userRole = req.user.role ? String(req.user.role).trim() : '';
+    const normalizedRoles = roles.map(r => String(r).trim());
+    
+    console.log('🔐 Role Check:', {
+      userId: req.user.id,
+      userName: req.user.name,
+      userRole: userRole,
+      userRoleOriginal: req.user.role,
+      userRoleLength: userRole.length,
+      userRoleChars: userRole.split('').map(c => c.charCodeAt(0)),
+      userRoleType: typeof req.user.role,
+      requiredRoles: normalizedRoles,
+      allowed: normalizedRoles.includes(userRole)
+    });
+    
+    if (!normalizedRoles.includes(userRole)) {
+      console.log(`❌ Access DENIED: User role "${userRole}" not in allowed roles:`, normalizedRoles);
+      console.log('Detailed comparison:');
+      normalizedRoles.forEach((r, i) => {
+        console.log(`  ${i + 1}. "${r}" === "${userRole}" ? ${r === userRole}`);
+        console.log(`     Role chars: ${r.split('').map(c => c.charCodeAt(0)).join(',')}`);
+      });
+      return res.status(403).json({ 
+        message: 'Forbidden',
+        userRole: userRole,
+        requiredRoles: normalizedRoles
+      });
+    }
+    
+    console.log('✅ Access GRANTED');
     next();
   };
 }

@@ -1,54 +1,223 @@
-/* src/components/CustomerSidebar.css */
-.sidebar {
-  width: 220px;
-  background: #1f2937;
-  color: #fff;
+/* Modern Customer Sidebar - Clean Professional Theme */
+.dashboard-sidebar.customer-sidebar {
+  width: 280px !important;
   height: 100vh;
+  background: #ffffff !important;
+  border-right: 1px solid #e2e8f0 !important;
   display: flex;
   flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.1) !important;
+  padding: 0 !important;
+  gap: 0 !important;
 }
 
-.sidebar.collapsed {
-  width: 60px;
+.customer-sidebar.collapsed {
+  width: 80px;
 }
 
-.sidebar-header {
+/* Sidebar Header */
+.dashboard-sidebar.customer-sidebar .sidebar-header {
+  padding: 20px 16px;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  font-size: 1.2rem;
-  font-weight: bold;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.collapse-btn {
-  background: none;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.sidebar-menu {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.dashboard-sidebar.customer-sidebar .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   flex: 1;
 }
 
-.sidebar-menu li {
-  padding: 0.8rem 1rem;
-  cursor: pointer;
-}
-
-.sidebar-menu li.active, .sidebar-menu li:hover {
-  background: #2563eb;
-}
-
-.menu-item {
+.dashboard-sidebar.customer-sidebar .brand-logo {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.dashboard-sidebar.customer-sidebar .brand-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.sidebar-toggle {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.sidebar-toggle:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #374151;
+  transform: scale(1.05);
+}
+
+/* Navigation */
+.dashboard-sidebar.customer-sidebar .sidebar-nav {
+  flex: 1;
+  padding: 16px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.dashboard-sidebar.customer-sidebar .nav-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dashboard-sidebar.customer-sidebar .nav-item {
+  margin: 2px 8px;
+}
+
+.dashboard-sidebar.customer-sidebar .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: #64748b;
   text-decoration: none;
-  color: #fff;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  font-size: 14px;
+  margin: 2px 8px;
+}
+
+.dashboard-sidebar.customer-sidebar .nav-link:hover {
+  background: #f8fafc;
+  color: #374151;
+  transform: translateX(4px);
+}
+
+.dashboard-sidebar.customer-sidebar .nav-item.active .nav-link {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  font-weight: 600;
+}
+
+.nav-icon {
+  font-size: 16px;
+  min-width: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-label {
+  transition: opacity 0.3s ease;
+}
+
+/* Collapsed State */
+.customer-sidebar.collapsed .brand-name,
+.customer-sidebar.collapsed .nav-label {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+.customer-sidebar.collapsed .nav-link {
+  justify-content: center;
+  padding: 12px;
+}
+
+/* Sidebar Footer */
+.dashboard-sidebar.customer-sidebar .sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.dashboard-sidebar.customer-sidebar .logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.dashboard-sidebar.customer-sidebar .logout-btn:hover {
+  background: #e2e8f0;
+  color: #374151;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.customer-sidebar.collapsed .logout-btn {
+  justify-content: center;
+  padding: 12px;
+}
+
+.customer-sidebar.collapsed .logout-btn span {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+/* Clean Navigation Icons */
+.nav-icon {
+  font-size: 16px;
+  min-width: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .customer-sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .customer-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .customer-sidebar {
+    width: 100%;
+    max-width: 320px;
+  }
+  
+  .customer-sidebar.collapsed {
+    width: 100%;
+  }
 }

@@ -31,12 +31,27 @@ const attachmentSchema = new mongoose.Schema({
 const orderSchema = new mongoose.Schema({
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
   items: [orderItemSchema],
-  status: { type: String, enum: ['Pending', 'In Progress', 'Ready', 'Delivered', 'Cancelled'], default: 'Pending' },
+  status: { type: String, enum: ['Order Placed', 'Pending', 'Cutting', 'Stitching', 'Trial', 'Ready', 'Delivered', 'Cancelled'], default: 'Order Placed' },
   totalAmount: { type: Number, default: 0 },
   measurementSnapshot: measurementSnapshotSchema, // snapshot at order time
   orderType: { type: String, default: '' },
   itemType: { type: String, default: '' },
   assignedTailor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  acceptedByTailor: { type: Boolean, default: false },
+  acceptedAt: { type: Date, default: null },
+  workStartedAt: { type: Date, default: null },
+  workStartedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  completedAt: { type: Date, default: null },
+  completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  changeRequests: [{
+    request: { type: String, required: true },
+    requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    requestedAt: { type: Date, default: Date.now },
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    response: { type: String, default: '' },
+    respondedAt: { type: Date, default: null },
+    respondedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
+  }],
   fabric: {
     source: { type: String, enum: ['shop', 'customer', 'none'], default: 'none' },
     fabricId: { type: mongoose.Schema.Types.ObjectId, ref: 'Fabric' },

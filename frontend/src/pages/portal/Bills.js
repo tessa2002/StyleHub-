@@ -13,7 +13,6 @@ function statusBadge(status) {
 }
 
 export default function BillsPage() {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [rows, setRows] = useState([]);
@@ -123,8 +122,13 @@ export default function BillsPage() {
 
   return (
     <div className="bills-page">
+      {/* Page Header */}
+      <div className="page-header">
+        <h1 className="page-title">Bills & Payments</h1>
+        <p className="page-subtitle">View and manage your billing information</p>
+      </div>
+      
       <div className="bills-header">
-        <h2>Bills & Payments</h2>
         <input className="search-input" placeholder="Search bill/order/date/status/amount" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
 
@@ -185,6 +189,21 @@ export default function BillsPage() {
                         <button className="btn btn-light" onClick={() => openDetails(r._id)}>View</button>
                         {r._id && (
                           <a className="btn btn-light" href={`/api/bills/${r._id}`} target="_blank" rel="noreferrer">Download</a>
+                        )}
+                        {r.status !== 'Paid' && balance > 0 && (
+                          <button 
+                            className="btn btn-primary" 
+                            onClick={() => {
+                              const params = new URLSearchParams();
+                              params.set('bill', r._id);
+                              params.set('amount', String(r.amount));
+                              params.set('open', '1');
+                              params.set('autoPayment', '1');
+                              window.location.href = `/portal/payments?${params.toString()}`;
+                            }}
+                          >
+                            Pay Now
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -304,6 +323,21 @@ export default function BillsPage() {
 
             <div style={{ display:'flex', gap:8, marginTop:12 }}>
               <button className="btn btn-secondary" onClick={() => setDetailsOpen(false)}>Close</button>
+              {bill && bill.status !== 'Paid' && (bill.amount || 0) > (bill.amountPaid || 0) && (
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    params.set('bill', bill._id);
+                    params.set('amount', String(bill.amount));
+                    params.set('open', '1');
+                    params.set('autoPayment', '1');
+                    window.location.href = `/portal/payments?${params.toString()}`;
+                  }}
+                >
+                  Pay Now (₹{((bill.amount || 0) - (bill.amountPaid || 0)).toLocaleString()})
+                </button>
+              )}
             </div>
           </div>
         </div>

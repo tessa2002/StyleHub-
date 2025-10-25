@@ -1,11 +1,11 @@
 .dashboard-container {
-  display: flex;
   min-height: 100vh;
   background-color: #f9f9f9;
+  width: 100%;
 }
 
 .dashboard-main {
-  flex: 1;
   padding: 20px;
   overflow-y: auto;
+  width: 100%;
 }

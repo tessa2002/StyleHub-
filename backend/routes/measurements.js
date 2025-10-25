@@ -5,6 +5,31 @@ const { auth, allowRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Get all measurements (Admin/Staff)
+router.get('/', auth, allowRoles('Admin', 'Staff'), async (req, res) => {
+  try {
+    const customers = await Customer.find({ measurements: { $exists: true, $ne: {} } })
+      .select('name phone measurements styleNotes createdAt updatedAt')
+      .sort({ updatedAt: -1 });
+    
+    const measurements = customers.map(customer => ({
+      id: customer._id,
+      customerId: customer._id,
+      customerName: customer.name,
+      garmentType: 'General', // Default since we don't have specific garment types in current schema
+      measurements: customer.measurements,
+      lastUpdated: customer.updatedAt,
+      notes: customer.styleNotes,
+      status: 'active'
+    }));
+    
+    res.json({ success: true, measurements });
+  } catch (error) {
+    console.error('Error fetching measurements:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Create or update customer's current measurements with style notes (Admin/Staff)
 router.put('/customer/:id', auth, allowRoles('Admin', 'Staff'), async (req, res) => {
   try {

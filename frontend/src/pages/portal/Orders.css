@@ -2,7 +2,27 @@
 
 .orders-page {
   display: grid;
-  gap: 16px;
+  gap: 12px;
+}
+
+/* Page Header */
+.page-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
 }
 
 .orders-toolbar {
@@ -39,10 +59,16 @@
 .badge { display: inline-block; padding: 4px 8px; font-size: 12px; border-radius: 999px; font-weight: 600; }
 
 /* Status badges */
+.status-order-placed { background: #eff6ff; color: #1d4ed8; }
+.status-cutting { background: #fef3c7; color: #d97706; }
+.status-stitching { background: #ddd6fe; color: #7c3aed; }
+.status-trial { background: #fce7f3; color: #be185d; }
+.status-ready { background: #d1fae5; color: #059669; }
+.status-delivered { background: #ecfdf5; color: #047857; }
+.status-cancelled { background: #fef2f2; color: #b91c1c; }
 .status-pending { background: #fff7ed; color: #c2410c; }
 .status-in-progress { background: #eff6ff; color: #1d4ed8; }
 .status-completed { background: #ecfdf5; color: #047857; }
-.status-cancelled { background: #fef2f2; color: #b91c1c; }
 .status-default { background: #f1f5f9; color: #334155; }
 
 /* Payment badges */
@@ -84,6 +110,62 @@
 .items-table th, .items-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: left; }
 .product-cell { display: flex; align-items: center; gap: 8px; }
 .product-cell img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; }
+
+/* Payment History Section */
+.payment-history-section {
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.payment-history-section h4 {
+  margin: 0 0 12px;
+  color: #1f2937;
+  font-size: 1.05rem;
+}
+
+.payment-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.payment-table th,
+.payment-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+}
+
+.payment-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.payment-table td {
+  color: #334155;
+}
+
+.payment-table code {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-family: 'Courier New', monospace;
+}
+
+.loading-small {
+  padding: 16px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.875rem;
+}
 
 .addresses { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .addr { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #0f172a; }

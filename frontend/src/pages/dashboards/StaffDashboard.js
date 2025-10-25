@@ -13,6 +13,7 @@ export default function StaffDashboard() {
   const [orders, setOrders] = useState([]);
   const [tailors, setTailors] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [fabrics, setFabrics] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Per-order selected tailor
@@ -35,10 +36,12 @@ export default function StaffDashboard() {
         const ordersRes = await axios.get(`/api/orders?staffId=${staffId}`);
         const tailorsRes = await axios.get(`/api/tailors`);
         const notificationsRes = await axios.get(`/api/notifications?staffId=${staffId}`);
+        const fabricsRes = await axios.get('/api/fabrics?limit=6');
 
         setOrders(ordersRes.data);
         setTailors(tailorsRes.data);
         setNotifications(notificationsRes.data);
+        setFabrics(fabricsRes.data.fabrics || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -463,6 +466,42 @@ export default function StaffDashboard() {
                   })}
                 </tbody>
               </table>
+            )}
+          </div>
+
+          {/* Fabrics Section */}
+          <div className="section">
+            <h3 className="section-title">Available Fabrics</h3>
+            {fabrics.length > 0 ? (
+              <div className="fabrics-grid">
+                {fabrics.map(fabric => (
+                  <div key={fabric._id} className="fabric-card">
+                    <div className="fabric-image">
+                      {fabric.images && fabric.images.length > 0 ? (
+                        <img src={fabric.images[0].url} alt={fabric.name} />
+                      ) : (
+                        <div className="fabric-placeholder">
+                          🏷️
+                        </div>
+                      )}
+                    </div>
+                    <div className="fabric-info">
+                      <h4 className="fabric-name">{fabric.name}</h4>
+                      <p className="fabric-material">{fabric.material} - {fabric.color}</p>
+                      <div className="fabric-details">
+                        <span className="fabric-category">{fabric.category}</span>
+                        <span className="fabric-stock">{fabric.stock} {fabric.unit}</span>
+                      </div>
+                      <div className="fabric-price">
+                        <span className="price">₹{fabric.price?.toLocaleString()}</span>
+                        <span className="unit">per {fabric.unit}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted">No fabrics available.</p>
             )}
           </div>
 
