@@ -923,14 +923,15 @@ export default function PortalNewOrder() {
                               className={`fabric-card ${selectedFabricId === fabric._id ? 'selected' : ''}`}
                               onClick={() => setSelectedFabricId(fabric._id)}
                             >
-                              {/* Show actual fabric image if available, otherwise show color swatch */}
-                              {fabric.images && fabric.images.length > 0 && fabric.images[0].url ? (
+                              {/* Show actual fabric image if available, otherwise show fabric pattern based on material */}
+                              {fabric.images && fabric.images.length > 0 && fabric.images[0]?.url ? (
                                 <div className="fabric-image-container" style={{
                                   width: '100%',
                                   height: '150px',
                                   overflow: 'hidden',
                                   borderBottom: '2px solid #d1d5db',
-                                  background: '#f8f9fa'
+                                  background: '#f8f9fa',
+                                  position: 'relative'
                                 }}>
                                   <img 
                                     src={fabric.images[0].url} 
@@ -941,27 +942,93 @@ export default function PortalNewOrder() {
                                       objectFit: 'cover'
                                     }}
                                     onError={(e) => {
-                                      // Fallback to color swatch if image fails to load
+                                      // Fallback to fabric texture if image fails to load
                                       e.target.style.display = 'none';
-                                      e.target.parentElement.style.backgroundColor = fabric.color?.toLowerCase() || '#e5e7eb';
+                                      const parent = e.target.parentElement;
+                                      parent.style.background = `linear-gradient(45deg, ${fabric.color?.toLowerCase() || '#e5e7eb'} 25%, transparent 25%, transparent 75%, ${fabric.color?.toLowerCase() || '#e5e7eb'} 75%), linear-gradient(45deg, ${fabric.color?.toLowerCase() || '#e5e7eb'} 25%, transparent 25%, transparent 75%, ${fabric.color?.toLowerCase() || '#e5e7eb'} 75%)`;
+                                      parent.style.backgroundSize = '20px 20px';
+                                      parent.style.backgroundPosition = '0 0, 10px 10px';
                                     }}
                                   />
+                                  <div style={{
+                                    position: 'absolute',
+                                    top: '8px',
+                                    right: '8px',
+                                    background: 'rgba(0,0,0,0.6)',
+                                    color: 'white',
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: '600'
+                                  }}>
+                                    📷 Original
+                                  </div>
                                 </div>
                               ) : (
-                                <div className="fabric-color-swatch" style={{ 
-                                  backgroundColor: fabric.color?.toLowerCase() || '#e5e7eb',
+                                <div className="fabric-texture-preview" style={{ 
+                                  width: '100%',
+                                  height: '150px',
                                   border: '2px solid #d1d5db',
-                                  height: '150px'
-                                }} title={`Color: ${fabric.color || 'Not specified'}`}>
+                                  position: 'relative',
+                                  // Create fabric-like texture based on material type
+                                  background: (() => {
+                                    const baseColor = fabric.color?.toLowerCase() || '#e5e7eb';
+                                    const material = fabric.material?.toLowerCase() || '';
+                                    const pattern = fabric.pattern?.toLowerCase() || 'solid';
+                                    
+                                    // Different textures for different materials
+                                    if (pattern !== 'solid' && pattern !== '') {
+                                      // For patterned fabrics - show a pattern
+                                      if (pattern.includes('stripe')) {
+                                        return `repeating-linear-gradient(90deg, ${baseColor}, ${baseColor} 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px)`;
+                                      } else if (pattern.includes('check') || pattern.includes('plaid')) {
+                                        return `repeating-linear-gradient(0deg, ${baseColor}, ${baseColor} 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 11px), repeating-linear-gradient(90deg, ${baseColor}, ${baseColor} 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 11px)`;
+                                      } else if (pattern.includes('dot') || pattern.includes('polka')) {
+                                        return `radial-gradient(circle at 10px 10px, rgba(0,0,0,0.15) 2px, transparent 2px), ${baseColor}`;
+                                      }
+                                    }
+                                    
+                                    // Material-specific textures
+                                    if (material.includes('cotton')) {
+                                      return `repeating-linear-gradient(45deg, ${baseColor}, ${baseColor} 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px)`;
+                                    } else if (material.includes('silk')) {
+                                      return `linear-gradient(135deg, ${baseColor} 0%, rgba(255,255,255,0.3) 50%, ${baseColor} 100%)`;
+                                    } else if (material.includes('denim')) {
+                                      return `repeating-linear-gradient(90deg, ${baseColor}, ${baseColor} 1px, rgba(255,255,255,0.05) 1px, rgba(255,255,255,0.05) 2px)`;
+                                    } else if (material.includes('linen')) {
+                                      return `repeating-linear-gradient(0deg, ${baseColor}, ${baseColor} 3px, rgba(255,255,255,0.1) 3px, rgba(255,255,255,0.1) 4px), repeating-linear-gradient(90deg, ${baseColor}, ${baseColor} 3px, rgba(0,0,0,0.05) 3px, rgba(0,0,0,0.05) 4px)`;
+                                    } else if (material.includes('wool')) {
+                                      return `radial-gradient(ellipse at center, rgba(255,255,255,0.1) 0%, transparent 50%), ${baseColor}`;
+                                    }
+                                    
+                                    // Default: subtle weave pattern
+                                    return `repeating-linear-gradient(45deg, ${baseColor}, ${baseColor} 3px, rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 6px), repeating-linear-gradient(-45deg, ${baseColor}, ${baseColor} 3px, rgba(255,255,255,0.03) 3px, rgba(255,255,255,0.03) 6px)`;
+                                  })(),
+                                  backgroundSize: pattern.includes('dot') ? '20px 20px' : 'auto'
+                                }} title={`${fabric.material || 'Fabric'} - ${fabric.color || 'Color'}`}>
+                                  <div style={{
+                                    position: 'absolute',
+                                    top: '8px',
+                                    left: '8px',
+                                    background: 'rgba(0,0,0,0.7)',
+                                    color: 'white',
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: '600'
+                                  }}>
+                                    {fabric.material || 'Fabric'} Preview
+                                  </div>
                                   <div style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     height: '100%',
-                                    color: '#fff',
-                                    textShadow: '1px 1px 2px rgba(0,0,0,0.3)',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '600'
+                                    color: 'rgba(255,255,255,0.9)',
+                                    textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+                                    fontSize: '1.2rem',
+                                    fontWeight: '700',
+                                    letterSpacing: '0.5px'
                                   }}>
                                     {fabric.color}
                                   </div>
