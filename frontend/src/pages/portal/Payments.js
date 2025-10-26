@@ -443,11 +443,22 @@ const PaymentsPage = () => {
                 });
               }
               
-              // Auto-open receipt in new tab after a short delay
-              if (receiptUrl) {
-                setTimeout(() => {
-                  console.log('📄 Opening receipt:', receiptUrl);
-                  window.open(receiptUrl, '_blank');
+              // Auto-open receipt in new tab after a short delay (with authentication)
+              if (receiptUrl && billData?.billId) {
+                setTimeout(async () => {
+                  try {
+                    console.log('📄 Opening receipt for bill:', billData.billId);
+                    // Fetch receipt HTML with authentication
+                    const receiptResponse = await axios.get(receiptUrl);
+                    // Open in new window
+                    const receiptWindow = window.open('', '_blank');
+                    if (receiptWindow) {
+                      receiptWindow.document.write(receiptResponse.data);
+                      receiptWindow.document.close();
+                    }
+                  } catch (err) {
+                    console.error('Failed to open receipt:', err);
+                  }
                 }, 1000);
               }
               

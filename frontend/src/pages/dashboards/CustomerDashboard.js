@@ -14,6 +14,7 @@ import './CustomerDashboard.css';
 const OrderRowDashboard = ({ order }) => {
   const [bill, setBill] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
+  const [downloadingReceipt, setDownloadingReceipt] = React.useState(false);
 
   React.useEffect(() => {
     let active = true;
@@ -29,6 +30,23 @@ const OrderRowDashboard = ({ order }) => {
     })();
     return () => { active = false; };
   }, [order._id]);
+
+  const downloadReceipt = async () => {
+    if (!bill) return;
+    setDownloadingReceipt(true);
+    try {
+      const response = await axios.get(`/api/portal/bills/${bill._id}/receipt`);
+      const receiptWindow = window.open('', '_blank');
+      if (receiptWindow) {
+        receiptWindow.document.write(response.data);
+        receiptWindow.document.close();
+      }
+    } catch (error) {
+      console.error('Receipt error:', error);
+    } finally {
+      setDownloadingReceipt(false);
+    }
+  };
 
   return (
     <tr>
@@ -55,15 +73,14 @@ const OrderRowDashboard = ({ order }) => {
             <FaEye />
           </Link>
           {!loading && bill && bill.status === 'Paid' && (
-            <a 
-              href={`/api/portal/bills/${bill._id}/receipt`} 
-              target="_blank" 
-              rel="noreferrer"
+            <button 
+              onClick={downloadReceipt}
+              disabled={downloadingReceipt}
               className="btn btn-sm btn-outline"
               title="Download Receipt"
             >
               <FaDownload />
-            </a>
+            </button>
           )}
         </div>
       </td>

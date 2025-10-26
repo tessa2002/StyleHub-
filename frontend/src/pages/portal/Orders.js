@@ -254,6 +254,7 @@ function OrderRow({ order, onView, onReorder }) {
   const [bill, setBill] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [paying, setPaying] = React.useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = React.useState(false);
 
   React.useEffect(() => {
     let active = true;
@@ -278,6 +279,30 @@ function OrderRow({ order, onView, onReorder }) {
     const twoMinutes = 2 * 60 * 1000;
     return (now - paidTime) < twoMinutes;
   }, [bill]);
+
+  // Function to download receipt with authentication
+  const downloadReceipt = async () => {
+    if (!bill) return;
+    setDownloadingReceipt(true);
+    try {
+      // Fetch receipt HTML with authentication headers (axios automatically adds token)
+      const response = await axios.get(`/api/portal/bills/${bill._id}/receipt`);
+      
+      // Open receipt in new window
+      const receiptWindow = window.open('', '_blank');
+      if (receiptWindow) {
+        receiptWindow.document.write(response.data);
+        receiptWindow.document.close();
+      } else {
+        toast.error('Please allow popups to view receipt');
+      }
+    } catch (error) {
+      console.error('Receipt download error:', error);
+      toast.error('Failed to load receipt: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setDownloadingReceipt(false);
+    }
+  };
 
   const payNow = async () => {
     if (!bill || bill.status === 'Paid') return;
@@ -320,15 +345,14 @@ function OrderRow({ order, onView, onReorder }) {
         )}
         <button className="btn btn-light" title="Reorder" onClick={onReorder}><FaRedoAlt /></button>
         {!loading && bill && bill.status === 'Paid' ? (
-          <a 
+          <button 
             className={`btn btn-success ${isRecentlyPaid ? 'pulse' : ''}`}
-            href={`/api/portal/bills/${bill._id}/receipt`} 
-            target="_blank" 
-            rel="noreferrer"
+            onClick={downloadReceipt}
+            disabled={downloadingReceipt}
             title="Download Receipt"
           >
-            <FaFileInvoice /> Receipt
-          </a>
+            <FaFileInvoice /> {downloadingReceipt ? 'Loading...' : 'Receipt'}
+          </button>
         ) : !loading && bill && bill.status !== 'Paid' ? (
           <button className="btn btn-primary" disabled={paying} onClick={payNow}>{paying ? 'Paying…' : 'Pay Now'}</button>
         ) : null}
