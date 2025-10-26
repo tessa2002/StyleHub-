@@ -174,11 +174,11 @@ export default function PortalNewOrder() {
     loadAllFabrics();
   }, []);
 
-  // Filter fabrics based on search query, type, and color filters
-  // Only show fabrics when user has searched or filtered
+  // Filter fabrics based on search query ONLY
+  // Fabrics only visible when customer actually searches (types in search box)
   useEffect(() => {
-    // Don't show any fabrics if no search query or filter is applied
-    if (!fabricQuery.trim() && !selectedFabricType && !selectedFabricColor) {
+    // ONLY show fabrics if customer has typed something in the search box
+    if (!fabricQuery.trim()) {
       setFabrics([]);
       return;
     }
@@ -186,17 +186,15 @@ export default function PortalNewOrder() {
     let filtered = allFabrics;
     
     // Apply search query filter
-    if (fabricQuery.trim()) {
-      filtered = filtered.filter(fabric => 
-        fabric.name?.toLowerCase().includes(fabricQuery.toLowerCase()) ||
-        fabric.material?.toLowerCase().includes(fabricQuery.toLowerCase()) ||
-        fabric.type?.toLowerCase().includes(fabricQuery.toLowerCase()) ||
-        fabric.color?.toLowerCase().includes(fabricQuery.toLowerCase()) ||
-        fabric.pattern?.toLowerCase().includes(fabricQuery.toLowerCase())
-      );
-    }
+    filtered = filtered.filter(fabric => 
+      fabric.name?.toLowerCase().includes(fabricQuery.toLowerCase()) ||
+      fabric.material?.toLowerCase().includes(fabricQuery.toLowerCase()) ||
+      fabric.type?.toLowerCase().includes(fabricQuery.toLowerCase()) ||
+      fabric.color?.toLowerCase().includes(fabricQuery.toLowerCase()) ||
+      fabric.pattern?.toLowerCase().includes(fabricQuery.toLowerCase())
+    );
     
-    // Apply type filter
+    // Apply type filter (if selected)
     if (selectedFabricType) {
       filtered = filtered.filter(fabric => 
         fabric.material?.toLowerCase() === selectedFabricType.toLowerCase() ||
@@ -204,7 +202,7 @@ export default function PortalNewOrder() {
       );
     }
     
-    // Apply color filter
+    // Apply color filter (if selected)
     if (selectedFabricColor) {
       filtered = filtered.filter(fabric => 
         fabric.color?.toLowerCase() === selectedFabricColor.toLowerCase()
@@ -957,10 +955,10 @@ export default function PortalNewOrder() {
                   </div>
                 ) : (
                   <div className="no-fabrics">
-                    {!fabricQuery.trim() && !selectedFabricType && !selectedFabricColor ? (
+                    {!fabricQuery.trim() ? (
                       <p>🔍 Start typing in the search box above to find fabrics...</p>
                     ) : (
-                      <p>No fabrics match your search. Try different keywords or clear filters.</p>
+                      <p>No fabrics match your search. Try different keywords.</p>
                     )}
                   </div>
                 )}
