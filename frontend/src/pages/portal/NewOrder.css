@@ -404,8 +404,8 @@
 
 .fabric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
   margin-bottom: 1.5rem;
 }
 
@@ -419,6 +419,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 400px;
 }
 
 .fabric-card:hover {
@@ -435,18 +436,28 @@
 
 .fabric-color-swatch {
   width: 100%;
-  height: 60px;
+  height: 150px;
   background: #e5e7eb;
   border-bottom: 2px solid #d1d5db;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .fabric-card:hover .fabric-color-swatch {
-  height: 70px;
+  height: 160px;
 }
 
 .fabric-info {
   padding: 1rem;
+  flex-grow: 1;
+}
+
+.fabric-info h5 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 10px 0;
+  line-height: 1.3;
 }
 
 .fabric-image {

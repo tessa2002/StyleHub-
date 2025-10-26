@@ -923,29 +923,117 @@ export default function PortalNewOrder() {
                               className={`fabric-card ${selectedFabricId === fabric._id ? 'selected' : ''}`}
                               onClick={() => setSelectedFabricId(fabric._id)}
                             >
-                              <div className="fabric-color-swatch" style={{ 
-                                backgroundColor: fabric.color?.toLowerCase() || '#e5e7eb',
-                                border: '2px solid #d1d5db'
-                              }} title={`Color: ${fabric.color || 'Not specified'}`}>
-                              </div>
+                              {/* Show actual fabric image if available, otherwise show color swatch */}
+                              {fabric.images && fabric.images.length > 0 && fabric.images[0].url ? (
+                                <div className="fabric-image-container" style={{
+                                  width: '100%',
+                                  height: '150px',
+                                  overflow: 'hidden',
+                                  borderBottom: '2px solid #d1d5db',
+                                  background: '#f8f9fa'
+                                }}>
+                                  <img 
+                                    src={fabric.images[0].url} 
+                                    alt={fabric.images[0].alt || fabric.name}
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover'
+                                    }}
+                                    onError={(e) => {
+                                      // Fallback to color swatch if image fails to load
+                                      e.target.style.display = 'none';
+                                      e.target.parentElement.style.backgroundColor = fabric.color?.toLowerCase() || '#e5e7eb';
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="fabric-color-swatch" style={{ 
+                                  backgroundColor: fabric.color?.toLowerCase() || '#e5e7eb',
+                                  border: '2px solid #d1d5db',
+                                  height: '150px'
+                                }} title={`Color: ${fabric.color || 'Not specified'}`}>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '100%',
+                                    color: '#fff',
+                                    textShadow: '1px 1px 2px rgba(0,0,0,0.3)',
+                                    fontSize: '0.875rem',
+                                    fontWeight: '600'
+                                  }}>
+                                    {fabric.color}
+                                  </div>
+                                </div>
+                              )}
+                              
                               <div className="fabric-info">
                                 <h5>{fabric.name}</h5>
-                                <p className="fabric-color">
+                                
+                                {/* Material & Pattern */}
+                                <div style={{ marginBottom: '8px' }}>
+                                  <p className="fabric-detail" style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px' }}>
+                                    <strong>Material:</strong> {fabric.material || 'N/A'}
+                                  </p>
+                                  {fabric.pattern && fabric.pattern !== 'solid' && (
+                                    <p className="fabric-detail" style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px' }}>
+                                      <strong>Pattern:</strong> {fabric.pattern}
+                                    </p>
+                                  )}
+                                </div>
+                                
+                                {/* Color with dot */}
+                                <p className="fabric-color" style={{ marginBottom: '6px' }}>
                                   <span className="color-dot" style={{ 
                                     backgroundColor: fabric.color?.toLowerCase() || '#999',
                                     display: 'inline-block',
-                                    width: '12px',
-                                    height: '12px',
+                                    width: '14px',
+                                    height: '14px',
                                     borderRadius: '50%',
                                     marginRight: '6px',
-                                    border: '1px solid #ccc',
+                                    border: '2px solid #fff',
+                                    boxShadow: '0 0 0 1px #ccc',
                                     verticalAlign: 'middle'
                                   }}></span>
-                                  {fabric.color || 'Not specified'}
+                                  <strong>Color:</strong> {fabric.color || 'Not specified'}
                                 </p>
-                                <p className="fabric-price">₹{fabric.price}/meter</p>
-                                <p className="stock-info">Stock: {fabric.stock || 'Available'}</p>
-                                {fabric.pattern && <p className="pattern-info">Pattern: {fabric.pattern}</p>}
+                                
+                                {/* Price */}
+                                <p className="fabric-price" style={{ 
+                                  fontSize: '1.1rem', 
+                                  fontWeight: '700', 
+                                  color: '#059669',
+                                  marginBottom: '6px'
+                                }}>
+                                  ₹{fabric.price}/{fabric.unit || 'meter'}
+                                </p>
+                                
+                                {/* Stock with status badge */}
+                                <p className="stock-info" style={{
+                                  fontSize: '0.85rem',
+                                  marginBottom: '6px'
+                                }}>
+                                  <strong>Stock:</strong> {fabric.stock} {fabric.unit || 'meters'}
+                                  {fabric.stock === 0 && <span style={{ color: '#dc2626', marginLeft: '6px' }}>● Out of Stock</span>}
+                                  {fabric.stock > 0 && fabric.stock <= 5 && <span style={{ color: '#f59e0b', marginLeft: '6px' }}>● Low Stock</span>}
+                                  {fabric.stock > 5 && <span style={{ color: '#059669', marginLeft: '6px' }}>● In Stock</span>}
+                                </p>
+                                
+                                {/* Description if available */}
+                                {fabric.description && (
+                                  <p className="fabric-description" style={{
+                                    fontSize: '0.75rem',
+                                    color: '#888',
+                                    marginTop: '8px',
+                                    fontStyle: 'italic',
+                                    lineHeight: '1.4'
+                                  }}>
+                                    {fabric.description.length > 80 
+                                      ? fabric.description.substring(0, 80) + '...' 
+                                      : fabric.description}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           ))}
