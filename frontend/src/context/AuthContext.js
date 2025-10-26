@@ -2,8 +2,11 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 
 // Configure API URL based on environment
-// In production, REACT_APP_API_URL should be set in Render environment variables
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+// In production, if REACT_APP_API_URL is not set, use empty string (same domain)
+// In development, use localhost:5000
+const API_URL = process.env.REACT_APP_API_URL !== undefined 
+  ? process.env.REACT_APP_API_URL 
+  : (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000');
 
 // Ensure baseURL is set before any component effects run
 axios.defaults.baseURL = API_URL;

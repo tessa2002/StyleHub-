@@ -81,6 +81,11 @@ app.use(express.static(path.join(__dirname, '../frontend/build')));
 // File upload routes
 app.use('/api/uploads', require('./routes/uploads'));
 
+// Catch-all route for React Router (must be last)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+});
+
 // Start Server (even if MongoDB fails)
 app.listen(PORT, async () => {
   console.log(`✅ Server is running on port ${PORT}`);
