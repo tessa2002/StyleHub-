@@ -1004,7 +1004,7 @@ export default function PortalNewOrder() {
                                     // Default: subtle weave pattern
                                     return `repeating-linear-gradient(45deg, ${baseColor}, ${baseColor} 3px, rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 6px), repeating-linear-gradient(-45deg, ${baseColor}, ${baseColor} 3px, rgba(255,255,255,0.03) 3px, rgba(255,255,255,0.03) 6px)`;
                                   })(),
-                                  backgroundSize: pattern.includes('dot') ? '20px 20px' : 'auto'
+                                  backgroundSize: (fabric.pattern?.toLowerCase() || '').includes('dot') ? '20px 20px' : 'auto'
                                 }} title={`${fabric.material || 'Fabric'} - ${fabric.color || 'Color'}`}>
                                   <div style={{
                                     position: 'absolute',
