@@ -15,6 +15,11 @@ export default function PortalNewOrder() {
   const [measurements, setMeasurements] = useState({});
   const [mhistory, setMhistory] = useState([]); // [{_id, measurements, createdAt}]
   const [selectedHistoryId, setSelectedHistoryId] = useState('');
+  
+  // Reference images for tailor
+  const [referenceImages, setReferenceImages] = useState([]);
+  const [referenceImagePreviews, setReferenceImagePreviews] = useState([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   // Section 3: Fabric details
   const [ownFabric, setOwnFabric] = useState(false);
@@ -411,6 +416,52 @@ export default function PortalNewOrder() {
     }
   };
 
+  // Handle reference image selection
+  const handleReferenceImageChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    // Limit to 5 images
+    const limitedFiles = files.slice(0, 5);
+    setReferenceImages(limitedFiles);
+    
+    // Create previews
+    const previews = limitedFiles.map(file => URL.createObjectURL(file));
+    setReferenceImagePreviews(previews);
+  };
+
+  // Remove a reference image
+  const removeReferenceImage = (index) => {
+    const newImages = referenceImages.filter((_, i) => i !== index);
+    const newPreviews = referenceImagePreviews.filter((_, i) => i !== index);
+    setReferenceImages(newImages);
+    setReferenceImagePreviews(newPreviews);
+  };
+
+  // Upload reference images to server
+  const uploadReferenceImages = async () => {
+    if (referenceImages.length === 0) return [];
+    
+    try {
+      setUploadingImages(true);
+      const formData = new FormData();
+      referenceImages.forEach(file => {
+        formData.append('referenceImages', file);
+      });
+      
+      const response = await axios.post('/api/uploads/reference', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      return response.data.attachments || [];
+    } catch (error) {
+      console.error('Error uploading reference images:', error);
+      throw new Error('Failed to upload reference images');
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     console.log('🚀 Form submission started...');
@@ -469,6 +520,20 @@ export default function PortalNewOrder() {
     }
     
     try {
+      // Upload reference images first if any
+      let attachments = [];
+      if (referenceImages.length > 0) {
+        console.log('📸 Uploading reference images...');
+        try {
+          attachments = await uploadReferenceImages();
+          console.log('✅ Reference images uploaded:', attachments.length);
+        } catch (uploadError) {
+          alert('Failed to upload reference images. Please try again.');
+          setSaving(false);
+          return;
+        }
+      }
+      
       const payload = {
         garmentType: details.garmentType,
         sleeveType: customization.sleeveType,
@@ -489,7 +554,8 @@ export default function PortalNewOrder() {
           pattern: emb.pattern,
           colors: emb.colors,
           notes: emb.notes,
-        } : { enabled: false }
+        } : { enabled: false },
+        attachments: attachments // Add uploaded reference images
       };
 
       console.log('📤 Sending order to API...');
@@ -757,15 +823,86 @@ export default function PortalNewOrder() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Upload Photos (Optional)</label>
+                  <label>Upload Reference Images (Optional)</label>
                   <input 
                     type="file" 
                     multiple 
                     accept="image/*"
-                    onChange={(e) => setMeasurements(prev => ({ ...prev, photos: e.target.files }))}
+                    onChange={handleReferenceImageChange}
                     className="file-input"
+                    max="5"
                   />
-                  <p className="file-help">Upload reference photos for better fitting</p>
+                  <p className="file-help">
+                    📸 Upload up to 5 reference photos for the tailor (design inspiration, fitting style, etc.)
+                  </p>
+                  
+                  {/* Image Previews */}
+                  {referenceImagePreviews.length > 0 && (
+                    <div className="image-previews" style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                      gap: '12px',
+                      marginTop: '12px'
+                    }}>
+                      {referenceImagePreviews.map((preview, index) => (
+                        <div key={index} style={{
+                          position: 'relative',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          border: '2px solid #e5e7eb',
+                          aspectRatio: '1'
+                        }}>
+                          <img 
+                            src={preview} 
+                            alt={`Reference ${index + 1}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeReferenceImage(index)}
+                            style={{
+                              position: 'absolute',
+                              top: '4px',
+                              right: '4px',
+                              background: 'rgba(220, 38, 38, 0.9)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '24px',
+                              height: '24px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '14px',
+                              fontWeight: 'bold'
+                            }}
+                            title="Remove image"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {uploadingImages && (
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '12px',
+                      background: '#f0f9ff',
+                      borderRadius: '6px',
+                      color: '#0369a1',
+                      fontSize: '14px',
+                      textAlign: 'center'
+                    }}>
+                      📤 Uploading images...
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

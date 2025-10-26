@@ -614,6 +614,9 @@ router.post('/orders', auth, allowRoles('Customer'), async (req, res) => {
       description: specialInstructions || notes || ''
     }];
 
+    // Handle attachments (reference images from customer)
+    const { attachments = [] } = req.body;
+    
     const order = await Order.create({
       customer: customer._id,
       items: orderItems,
@@ -633,6 +636,7 @@ router.post('/orders', auth, allowRoles('Customer'), async (req, res) => {
         requirements: requirements || {},
         embroidery: embData?.enabled ? { ...embData, pricing: embroideryPricing } : undefined
       },
+      attachments: attachments || [] // Add reference images uploaded by customer
     });
 
     // Save measurements to history

@@ -55,4 +55,23 @@ router.post('/order/:orderId', auth, allowRoles('Admin', 'Staff'), upload.array(
   }
 });
 
+// POST /api/uploads/reference - upload reference images for customers
+router.post('/reference', auth, allowRoles('Customer', 'Admin', 'Staff'), upload.array('referenceImages', 5), async (req, res) => {
+  try {
+    const baseUrl = (process.env.PUBLIC_URL || '') + '/uploads/';
+    const attachments = (req.files || []).map(f => ({
+      filename: f.filename,
+      url: baseUrl + f.filename,
+      mimeType: f.mimetype,
+      size: f.size,
+      category: 'Sketch', // Reference images category
+    }));
+
+    res.status(201).json({ success: true, attachments });
+  } catch (e) {
+    console.error('Upload error:', e.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 module.exports = router;

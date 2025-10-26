@@ -302,6 +302,89 @@ const OrderDetails = () => {
               </div>
             </div>
           )}
+
+          {/* Reference Images from Customer */}
+          {order.attachments && order.attachments.length > 0 && (
+            <div className="info-card full-width">
+              <h3>📸 Reference Images from Customer</h3>
+              <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '16px' }}>
+                Customer provided these reference images for design inspiration and fitting guidance
+              </p>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '16px',
+                marginTop: '12px'
+              }}>
+                {order.attachments
+                  .filter(att => att.category === 'Sketch' || att.mimeType?.startsWith('image/'))
+                  .map((attachment, index) => (
+                    <div 
+                      key={index}
+                      style={{
+                        position: 'relative',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        border: '2px solid #e5e7eb',
+                        backgroundColor: '#f8f9fa',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                      }}
+                      onClick={() => window.open(attachment.url, '_blank')}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.02)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                      }}
+                    >
+                      <img 
+                        src={attachment.url}
+                        alt={attachment.filename || `Reference ${index + 1}`}
+                        style={{
+                          width: '100%',
+                          height: '200px',
+                          objectFit: 'cover'
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#64748b;">Image not available</div>';
+                        }}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
+                        padding: '24px 12px 8px',
+                        color: 'white',
+                        fontSize: '0.75rem',
+                        fontWeight: '500'
+                      }}>
+                        Reference {index + 1}
+                      </div>
+                      <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        background: 'rgba(79, 70, 229, 0.9)',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.7rem',
+                        fontWeight: '600'
+                      }}>
+                        🔍 Click to enlarge
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </TailorDashboardLayout>
