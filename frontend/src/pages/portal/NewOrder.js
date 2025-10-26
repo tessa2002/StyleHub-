@@ -161,7 +161,8 @@ export default function PortalNewOrder() {
         const res = await axios.get('/api/fabrics');
         console.log('All fabrics response:', res.data);
         setAllFabrics(res.data.fabrics || []);
-        setFabrics(res.data.fabrics || []); // Initially show all fabrics
+        // Don't show fabrics initially - user must search first
+        setFabrics([]); // Start with empty - only show after search
       } catch (e) {
         console.error('Failed to load fabrics:', e);
         setAllFabrics([]);
@@ -174,7 +175,14 @@ export default function PortalNewOrder() {
   }, []);
 
   // Filter fabrics based on search query, type, and color filters
+  // Only show fabrics when user has searched or filtered
   useEffect(() => {
+    // Don't show any fabrics if no search query or filter is applied
+    if (!fabricQuery.trim() && !selectedFabricType && !selectedFabricColor) {
+      setFabrics([]);
+      return;
+    }
+    
     let filtered = allFabrics;
     
     // Apply search query filter
@@ -917,9 +925,26 @@ export default function PortalNewOrder() {
                               className={`fabric-card ${selectedFabricId === fabric._id ? 'selected' : ''}`}
                               onClick={() => setSelectedFabricId(fabric._id)}
                             >
+                              <div className="fabric-color-swatch" style={{ 
+                                backgroundColor: fabric.color?.toLowerCase() || '#e5e7eb',
+                                border: '2px solid #d1d5db'
+                              }} title={`Color: ${fabric.color || 'Not specified'}`}>
+                              </div>
                               <div className="fabric-info">
                                 <h5>{fabric.name}</h5>
-                                <p className="fabric-color">Color: {fabric.color || 'Not specified'}</p>
+                                <p className="fabric-color">
+                                  <span className="color-dot" style={{ 
+                                    backgroundColor: fabric.color?.toLowerCase() || '#999',
+                                    display: 'inline-block',
+                                    width: '12px',
+                                    height: '12px',
+                                    borderRadius: '50%',
+                                    marginRight: '6px',
+                                    border: '1px solid #ccc',
+                                    verticalAlign: 'middle'
+                                  }}></span>
+                                  {fabric.color || 'Not specified'}
+                                </p>
                                 <p className="fabric-price">₹{fabric.price}/meter</p>
                                 <p className="stock-info">Stock: {fabric.stock || 'Available'}</p>
                                 {fabric.pattern && <p className="pattern-info">Pattern: {fabric.pattern}</p>}
@@ -932,7 +957,11 @@ export default function PortalNewOrder() {
                   </div>
                 ) : (
                   <div className="no-fabrics">
-                    <p>No fabrics available. Please try again later.</p>
+                    {!fabricQuery.trim() && !selectedFabricType && !selectedFabricColor ? (
+                      <p>🔍 Start typing in the search box above to find fabrics...</p>
+                    ) : (
+                      <p>No fabrics match your search. Try different keywords or clear filters.</p>
+                    )}
                   </div>
                 )}
 
