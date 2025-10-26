@@ -11,6 +11,40 @@ const API_URL = process.env.REACT_APP_API_URL !== undefined
 // Ensure baseURL is set before any component effects run
 axios.defaults.baseURL = API_URL;
 
+// Add axios interceptor to always include token in requests
+axios.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token && !config.headers.Authorization) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Add response interceptor to handle 401 errors (token expired/invalid)
+axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // Token invalid or expired
+            console.warn('⚠️ Authentication error:', error.response?.data?.message);
+            // Only redirect to login if not already on login/register page
+            if (!window.location.pathname.includes('/login') && 
+                !window.location.pathname.includes('/register')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                delete axios.defaults.headers.common['Authorization'];
+                window.location.href = '/login?expired=1';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 // 1. Create Auth Context
 const AuthContext = createContext();
 

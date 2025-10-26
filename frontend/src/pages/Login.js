@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./Auth.css"; // Home-aligned theme for auth pages
 import GoogleButton from "../components/GoogleButton.jsx";
 import { useAuth } from "../context/AuthContext";
@@ -14,6 +14,7 @@ const roleToPath = {
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -24,6 +25,17 @@ const Login = () => {
   const [livePasswordError, setLivePasswordError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [expiredMessage, setExpiredMessage] = useState('');
+
+  // Check if redirected due to token expiration
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('expired') === '1') {
+      setExpiredMessage('Your session has expired. Please login again.');
+      // Clean up URL
+      window.history.replaceState({}, '', '/login');
+    }
+  }, [location]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -90,6 +102,12 @@ const Login = () => {
         </div>
         <h2 className="auth-title">Sign In</h2>
 
+        {expiredMessage && (
+          <div className="field-error" style={{ marginBottom: '16px', textAlign: 'center', background: '#fef3c7', color: '#92400e', padding: '12px', borderRadius: '8px' }}>
+            ⏰ {expiredMessage}
+          </div>
+        )}
+        
         {errors.general && (
           <div className="field-error" style={{ marginBottom: '16px', textAlign: 'center' }}>
             {errors.general}
