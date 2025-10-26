@@ -164,6 +164,7 @@ router.get('/assigned', auth, allowRoles('Staff', 'Tailor'), async (req, res) =>
     
     let orders = await Order.find(query)
       .populate('assignedTailor', 'name')
+      .populate('customer', 'name phone') // Populate basic customer info for tailors
       .sort({ expectedDelivery: 1, createdAt: -1 })
       .lean();
     
@@ -173,8 +174,12 @@ router.get('/assigned', auth, allowRoles('Staff', 'Tailor'), async (req, res) =>
         id: orders[0]._id,
         itemType: orders[0].itemType,
         status: orders[0].status,
-        assignedTailor: orders[0].assignedTailor
+        assignedTailor: orders[0].assignedTailor,
+        attachments: orders[0].attachments?.length || 0
       });
+      if (orders[0].attachments && orders[0].attachments.length > 0) {
+        console.log('📸 Has reference images:', orders[0].attachments.map(a => a.filename));
+      }
     }
     
     // Process orders based on role
@@ -198,10 +203,12 @@ router.get('/assigned', auth, allowRoles('Staff', 'Tailor'), async (req, res) =>
           itemType: order.itemType,
           items: order.items,
           measurements: order.measurements || order.measurementSnapshot, // ✅ FIX: Check both field names
+          measurementSnapshot: order.measurementSnapshot, // Add explicit field
           fabric: order.fabric, // ✅ ADD: Fabric details
           customizations: order.customizations, // ✅ ADD: Design customizations
           designNotes: order.designNotes || order.notes,
           specialInstructions: order.specialInstructions || order.notes,
+          notes: order.notes, // Add notes field
           status: order.status,
           priority: order.priority,
           expectedDelivery: order.expectedDelivery,
@@ -210,7 +217,12 @@ router.get('/assigned', auth, allowRoles('Staff', 'Tailor'), async (req, res) =>
           workStartedAt: order.workStartedAt,
           completedAt: order.completedAt,
           createdAt: order.createdAt,
-          // NO customer details, NO pricing, NO payment info
+          attachments: order.attachments || [], // ✅ ADD: Reference images from customer
+          customer: order.customer ? {
+            name: order.customer.name,
+            phone: order.customer.phone
+          } : null, // Basic customer info needed for order details
+          // NO pricing, NO payment info
         };
       }
       

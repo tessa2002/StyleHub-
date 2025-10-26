@@ -617,6 +617,11 @@ router.post('/orders', auth, allowRoles('Customer'), async (req, res) => {
     // Handle attachments (reference images from customer)
     const { attachments = [] } = req.body;
     
+    console.log('📎 Order attachments received:', attachments.length);
+    if (attachments.length > 0) {
+      console.log('📸 Reference images:', attachments.map(a => ({ filename: a.filename, url: a.url })));
+    }
+    
     const order = await Order.create({
       customer: customer._id,
       items: orderItems,

@@ -58,7 +58,15 @@ router.post('/order/:orderId', auth, allowRoles('Admin', 'Staff'), upload.array(
 // POST /api/uploads/reference - upload reference images for customers
 router.post('/reference', auth, allowRoles('Customer', 'Admin', 'Staff'), upload.array('referenceImages', 5), async (req, res) => {
   try {
-    const baseUrl = (process.env.PUBLIC_URL || '') + '/uploads/';
+    // Generate proper URL that works in both development and production
+    // In production, backend serves frontend so relative URLs work
+    // In development, we need full URL with backend port
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? '/uploads/' 
+      : `${protocol}://${host}/uploads/`;
+    
     const attachments = (req.files || []).map(f => ({
       filename: f.filename,
       url: baseUrl + f.filename,
@@ -66,6 +74,9 @@ router.post('/reference', auth, allowRoles('Customer', 'Admin', 'Staff'), upload
       size: f.size,
       category: 'Sketch', // Reference images category
     }));
+
+    console.log('✅ Reference images uploaded:', attachments.length);
+    console.log('📸 Image URLs:', attachments.map(a => a.url));
 
     res.status(201).json({ success: true, attachments });
   } catch (e) {
