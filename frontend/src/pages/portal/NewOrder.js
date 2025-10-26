@@ -822,88 +822,6 @@ export default function PortalNewOrder() {
                     rows="3"
                   />
                 </div>
-                <div className="form-group">
-                  <label>Upload Reference Images (Optional)</label>
-                  <input 
-                    type="file" 
-                    multiple 
-                    accept="image/*"
-                    onChange={handleReferenceImageChange}
-                    className="file-input"
-                    max="5"
-                  />
-                  <p className="file-help">
-                    📸 Upload up to 5 reference photos for the tailor (design inspiration, fitting style, etc.)
-                  </p>
-                  
-                  {/* Image Previews */}
-                  {referenceImagePreviews.length > 0 && (
-                    <div className="image-previews" style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-                      gap: '12px',
-                      marginTop: '12px'
-                    }}>
-                      {referenceImagePreviews.map((preview, index) => (
-                        <div key={index} style={{
-                          position: 'relative',
-                          borderRadius: '8px',
-                          overflow: 'hidden',
-                          border: '2px solid #e5e7eb',
-                          aspectRatio: '1'
-                        }}>
-                          <img 
-                            src={preview} 
-                            alt={`Reference ${index + 1}`}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover'
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeReferenceImage(index)}
-                            style={{
-                              position: 'absolute',
-                              top: '4px',
-                              right: '4px',
-                              background: 'rgba(220, 38, 38, 0.9)',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '50%',
-                              width: '24px',
-                              height: '24px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '14px',
-                              fontWeight: 'bold'
-                            }}
-                            title="Remove image"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {uploadingImages && (
-                    <div style={{
-                      marginTop: '12px',
-                      padding: '12px',
-                      background: '#f0f9ff',
-                      borderRadius: '6px',
-                      color: '#0369a1',
-                      fontSize: '14px',
-                      textAlign: 'center'
-                    }}>
-                      📤 Uploading images...
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           )}
@@ -1731,6 +1649,158 @@ export default function PortalNewOrder() {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Reference Images Upload Section */}
+          <div className="customization-section" style={{ marginTop: '24px' }}>
+            <h4 style={{ marginBottom: '16px', color: '#1e293b', fontSize: '1.1rem', fontWeight: '600' }}>
+              📸 Reference Images for Tailor
+            </h4>
+            <div className="form-group">
+              <label>Upload Reference Images (Optional)</label>
+              <input 
+                type="file" 
+                multiple 
+                accept="image/*"
+                onChange={handleReferenceImageChange}
+                className="file-input"
+                max="5"
+              />
+              <p className="file-help">
+                📸 Upload up to 5 reference photos for the tailor (design inspiration, fitting style, fabric samples, etc.)
+              </p>
+              
+              {/* Image Previews */}
+              {referenceImagePreviews.length > 0 && (
+                <div className="image-previews" style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                  gap: '16px',
+                  marginTop: '16px',
+                  padding: '16px',
+                  background: '#f8f9fa',
+                  borderRadius: '12px',
+                  border: '2px dashed #d1d5db'
+                }}>
+                  {referenceImagePreviews.map((preview, index) => (
+                    <div key={index} style={{
+                      position: 'relative',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      border: '2px solid #e5e7eb',
+                      aspectRatio: '1',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      transition: 'transform 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <img 
+                        src={preview} 
+                        alt={`Reference ${index + 1}`}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeReferenceImage(index)}
+                        style={{
+                          position: 'absolute',
+                          top: '6px',
+                          right: '6px',
+                          background: 'rgba(220, 38, 38, 0.95)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '28px',
+                          height: '28px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#dc2626';
+                          e.currentTarget.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(220, 38, 38, 0.95)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                        title="Remove image"
+                      >
+                        ×
+                      </button>
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '0',
+                        left: '0',
+                        right: '0',
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
+                        padding: '16px 8px 6px',
+                        color: 'white',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textAlign: 'center'
+                      }}>
+                        Image {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {referenceImagePreviews.length > 0 && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '12px',
+                  background: '#ecfdf5',
+                  borderRadius: '8px',
+                  color: '#065f46',
+                  fontSize: '0.875rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <span style={{ fontSize: '1.2rem' }}>✓</span>
+                  <span>{referenceImagePreviews.length} image(s) selected. These will help the tailor understand your vision!</span>
+                </div>
+              )}
+              
+              {uploadingImages && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '16px',
+                  background: '#f0f9ff',
+                  borderRadius: '8px',
+                  color: '#0369a1',
+                  fontSize: '0.875rem',
+                  textAlign: 'center',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}>
+                  <div className="spinner" style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid #0369a1',
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite'
+                  }}></div>
+                  📤 Uploading images to server...
+                </div>
+              )}
             </div>
           </div>
           
