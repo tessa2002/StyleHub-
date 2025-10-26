@@ -137,6 +137,7 @@ router.post('/verify-payment', async (req, res) => {
 
     if (isAuthentic) {
       // Update bill status and create payment record if billId is provided
+      let billData = null;
       if (billId) {
         try {
           const Bill = require('../models/Bill');
@@ -153,9 +154,10 @@ router.post('/verify-payment', async (req, res) => {
               console.log('Could not fetch payment details from Razorpay, using bill amount');
             }
 
-            // Update bill
+            // Update bill - mark as paid and set paidAt timestamp
             bill.amountPaid = bill.amount;
             bill.paymentMethod = 'Razorpay';
+            bill.paidAt = new Date(); // Set paid date for receipt
             bill.recomputeStatus();
             await bill.save();
 
@@ -174,6 +176,15 @@ router.post('/verify-payment', async (req, res) => {
             });
 
             console.log('✅ Payment record created for bill:', bill._id);
+            console.log('✅ Bill marked as paid, receipt ready for download');
+            
+            // Prepare bill data for response (for auto-receipt generation)
+            billData = {
+              billId: bill._id,
+              billNumber: bill.billNumber,
+              status: bill.status,
+              receiptUrl: `/api/portal/bills/${bill._id}/receipt`
+            };
           }
         } catch (dbError) {
           console.log('ℹ️  Database not available, payment verified but not saved to DB');
@@ -184,7 +195,8 @@ router.post('/verify-payment', async (req, res) => {
       res.json({ 
         success: true, 
         message: 'Payment verified successfully',
-        paymentId: razorpay_payment_id
+        paymentId: razorpay_payment_id,
+        bill: billData // Include bill data with receipt URL
       });
     } else {
       res.status(400).json({ success: false, message: 'Payment verification failed' });

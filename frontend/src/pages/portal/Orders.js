@@ -35,6 +35,17 @@ export default function OrdersPage() {
         setError('');
         const { data } = await axios.get('/api/portal/orders');
         setOrders(data.orders || []);
+        
+        // Check if redirected from successful payment
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('paymentSuccess') === '1') {
+          toast.success('✅ Payment completed! You can download your receipt below.', {
+            position: 'top-center',
+            autoClose: 5000,
+          });
+          // Clean up URL
+          window.history.replaceState({}, '', '/portal/orders');
+        }
       } catch (e) {
         console.error('Failed to load orders', e);
         setError('Failed to load orders. Please try again.');
@@ -259,6 +270,15 @@ function OrderRow({ order, onView, onReorder }) {
     return () => { active = false; };
   }, [order._id]);
 
+  // Check if bill was recently paid (within last 2 minutes) for pulse animation
+  const isRecentlyPaid = React.useMemo(() => {
+    if (!bill || !bill.paidAt || bill.status !== 'Paid') return false;
+    const paidTime = new Date(bill.paidAt).getTime();
+    const now = Date.now();
+    const twoMinutes = 2 * 60 * 1000;
+    return (now - paidTime) < twoMinutes;
+  }, [bill]);
+
   const payNow = async () => {
     if (!bill || bill.status === 'Paid') return;
     setPaying(true);
@@ -301,7 +321,7 @@ function OrderRow({ order, onView, onReorder }) {
         <button className="btn btn-light" title="Reorder" onClick={onReorder}><FaRedoAlt /></button>
         {!loading && bill && bill.status === 'Paid' ? (
           <a 
-            className="btn btn-success" 
+            className={`btn btn-success ${isRecentlyPaid ? 'pulse' : ''}`}
             href={`/api/portal/bills/${bill._id}/receipt`} 
             target="_blank" 
             rel="noreferrer"

@@ -86,6 +86,41 @@
 .btn-primary:hover { background: #1d4ed8; }
 .btn-link { background: none; border: 0; color: #2563eb; text-decoration: underline; cursor: pointer; }
 
+/* Receipt button styling */
+.btn-success {
+  background: #059669;
+  color: #fff;
+  border-color: #059669;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-success:hover {
+  background: #047857;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
+}
+
+/* Pulse animation for newly paid bills */
+@keyframes pulse-green {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(5, 150, 105, 0);
+  }
+}
+
+.btn-success.pulse {
+  animation: pulse-green 2s ease-in-out 3;
+}
+
 .pagination { display: flex; gap: 12px; align-items: center; justify-content: flex-end; }
 .pagination button { padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0; background: #fff; }
 .pagination span { color: #475569; }

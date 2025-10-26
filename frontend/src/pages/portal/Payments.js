@@ -424,25 +424,37 @@ const PaymentsPage = () => {
               setPaymentAmount('');
               setSubmitting(false);
               
-              // Show success toast
+              // Get receipt URL from response
+              const billData = verifyResponse.data.bill;
+              const receiptUrl = billData?.receiptUrl;
+              
+              // Show success toast with receipt download option
               if (fromOrder === '1') {
-                toast.success('🎉 Payment successful! Your order has been confirmed and is now being processed.', {
+                toast.success('🎉 Payment successful! Your order has been confirmed. Opening your receipt...', {
                   position: 'top-center',
-                  autoClose: 3000,
+                  autoClose: 4000,
                   hideProgressBar: false,
                 });
               } else {
-                toast.success('🎉 Payment successful! Your payment has been processed.', {
+                toast.success('🎉 Payment successful! Opening your receipt...', {
                   position: 'top-center',
-                  autoClose: 3000,
+                  autoClose: 4000,
                   hideProgressBar: false,
                 });
               }
               
-              // Redirect immediately to orders page
+              // Auto-open receipt in new tab after a short delay
+              if (receiptUrl) {
+                setTimeout(() => {
+                  console.log('📄 Opening receipt:', receiptUrl);
+                  window.open(receiptUrl, '_blank');
+                }, 1000);
+              }
+              
+              // Redirect to orders page where user can download receipt again
               setTimeout(() => {
-                navigate('/portal/orders', { replace: true });
-              }, 1500);
+                navigate('/portal/orders?paymentSuccess=1', { replace: true });
+              }, 2000);
             } else {
               toast.error('Payment verification failed: ' + verifyResponse.data.message);
             }
