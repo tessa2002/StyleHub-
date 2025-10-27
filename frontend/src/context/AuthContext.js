@@ -65,9 +65,14 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const checkLoggedIn = async () => {
             const token = localStorage.getItem('token');
+            const storedUser = localStorage.getItem('user');
             console.log('🔑 Token found:', token ? 'Yes' : 'No');
+            console.log('👤 Stored user found:', storedUser ? 'Yes' : 'No');
+            
             // Always set a baseURL so we don't rely on the dev proxy
             axios.defaults.baseURL = API_URL;
+            console.log('🌐 API URL:', API_URL || 'Same domain');
+            
             if (token) {
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
                 try {
@@ -75,9 +80,12 @@ export const AuthProvider = ({ children }) => {
                     const response = await axios.get('/api/auth/verify');
                     console.log('✅ Token verified, user:', response.data.user);
                     setUser(response.data.user); // set user with role
+                    // Update localStorage with fresh user data
+                    localStorage.setItem('user', JSON.stringify(response.data.user));
                 } catch (error) {
-                    console.error('❌ Token verification failed:', error);
+                    console.error('❌ Token verification failed:', error.response?.data || error.message);
                     localStorage.removeItem('token');
+                    localStorage.removeItem('user');
                     delete axios.defaults.headers.common['Authorization'];
                 }
             }
@@ -93,10 +101,25 @@ export const AuthProvider = ({ children }) => {
             console.log('🔍 Attempting login for:', email);
             axios.defaults.baseURL = API_URL;
             const response = await axios.post('/api/auth/login', { email, password });
+            
+            console.log('📦 Full response data:', response.data);
+            
             const { token, user } = response.data;
 
-            console.log('✅ Login successful, setting token and user');
+            // Validate response data
+            if (!token || !user) {
+                console.error('❌ Invalid response structure:', response.data);
+                throw new Error('Invalid response from server');
+            }
+
+            if (!user.role) {
+                console.error('❌ User object missing role:', user);
+                throw new Error('User role not provided by server');
+            }
+
+            console.log('✅ Login successful, setting token and user', user);
             localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(user)); // Also store user in localStorage
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             
             // Ensure user state is set before returning
@@ -108,7 +131,7 @@ export const AuthProvider = ({ children }) => {
             return { success: true, user }; // return user for role-based redirect
         } catch (err) {
             console.error('❌ Login failed:', err);
-            const errorMessage = err.response?.data?.message || 'Login failed. Please try again.';
+            const errorMessage = err.response?.data?.message || err.message || 'Login failed. Please try again.';
             setError(errorMessage);
             return { success: false, error: errorMessage };
         }
@@ -161,6 +184,7 @@ export const AuthProvider = ({ children }) => {
     // 6. Logout function
     const logout = () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
         delete axios.defaults.headers.common['Authorization'];
         setUser(null);
     };

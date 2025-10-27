@@ -67,10 +67,25 @@ const Login = () => {
     setIsLoading(true);
     try {
       const result = await login(formData.email, formData.password);
+      console.log('📦 Login result:', result);
+      
       if (result.success) {
-        console.log('Login successful, user role:', result.user.role);
+        // Validate that user object exists and has a role
+        if (!result.user) {
+          console.error('❌ Login successful but user object is missing');
+          setErrors({ general: 'Login failed: Invalid server response' });
+          return;
+        }
+        
+        if (!result.user.role) {
+          console.error('❌ Login successful but user role is missing:', result.user);
+          setErrors({ general: 'Login failed: User role not found' });
+          return;
+        }
+        
+        console.log('✅ Login successful, user role:', result.user.role);
         const path = roleToPath[result.user.role] || "/";
-        console.log('Navigating to:', path);
+        console.log('🚀 Navigating to:', path);
         
         // Navigate immediately - the auth context now handles the timing
         navigate(path, { replace: true });
@@ -78,8 +93,8 @@ const Login = () => {
         setErrors({ general: result.error || 'Login failed' });
       }
     } catch (error) {
-      console.error('Login error:', error);
-      setErrors({ general: 'An unexpected error occurred' });
+      console.error('❌ Login error:', error);
+      setErrors({ general: error.message || 'An unexpected error occurred' });
     } finally {
       setIsLoading(false);
     }
