@@ -1,0 +1,70 @@
+@startuml Sequence_Order_Placement
+
+actor Customer
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+participant "Payment Gateway" as Payment
+
+== Customer Places Order ==
+
+Customer -> Frontend: Login
+Frontend -> API: POST /api/auth/login
+API -> DB: Verify credentials
+DB --> API: User data
+API --> Frontend: Auth token
+Frontend --> Customer: Dashboard
+
+Customer -> Frontend: Browse Fabrics
+Frontend -> API: GET /api/fabrics
+API -> DB: Fetch fabrics
+DB --> API: Fabric list
+API --> Frontend: Fabric data
+Frontend --> Customer: Display fabrics
+
+Customer -> Frontend: Select Fabric & Enter Details
+Frontend -> Frontend: Validate form
+
+Customer -> Frontend: Place Order
+Frontend -> API: POST /api/orders\n(customerId, items, fabric, measurements)
+API -> DB: Check fabric stock
+DB --> API: Stock available
+
+API -> DB: Create Order
+DB --> API: Order created
+
+API -> DB: Update fabric stock
+DB --> API: Stock updated
+
+API -> DB: Save measurement snapshot
+DB --> API: Measurements saved
+
+API -> Payment: Create payment session
+Payment --> API: Payment link
+
+API --> Frontend: Order created + Payment link
+Frontend --> Customer: Order confirmation\n+ Payment page
+
+== Payment Processing ==
+
+Customer -> Payment: Make Payment
+Payment -> Payment: Process payment
+Payment --> API: Payment webhook
+API -> DB: Update order status
+API -> DB: Create/Update Bill
+DB --> API: Bill updated
+
+API -> DB: Create notification
+DB --> API: Notification created
+
+API --> Frontend: Payment success
+Frontend --> Customer: Payment confirmation
+
+note right of DB
+  Order Status: "Order Placed"
+  Bill Status: "Paid"
+end note
+
+@enduml
+
+

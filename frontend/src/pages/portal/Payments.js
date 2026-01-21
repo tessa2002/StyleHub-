@@ -294,7 +294,7 @@ const PaymentsPage = () => {
         // Redirect to orders page
         setTimeout(() => {
           navigate('/portal/orders');
-        }, 1500);
+        }, 500);
       }, 2000);
       
       return;
@@ -327,7 +327,7 @@ const PaymentsPage = () => {
         // Redirect to orders page
         setTimeout(() => {
           navigate('/portal/orders');
-        }, 1500);
+        }, 500);
       } else {
         toast.error('Payment failed: ' + (response.data.message || 'Unknown error'));
       }
@@ -465,7 +465,7 @@ const PaymentsPage = () => {
               // Redirect to orders page where user can download receipt again
               setTimeout(() => {
                 navigate('/portal/orders?paymentSuccess=1', { replace: true });
-              }, 2000);
+              }, 500);
             } else {
               toast.error('Payment verification failed: ' + verifyResponse.data.message);
             }

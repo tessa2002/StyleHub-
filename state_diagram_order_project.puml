@@ -1,0 +1,85 @@
+@startuml Order_State_Diagram_Project
+
+skinparam state {
+  BackgroundColor #E8F4F8
+  BorderColor #2E86AB
+  ArrowColor #2E86AB
+  FontSize 11
+}
+
+title Order State Diagram\nBased on Project Database Schema
+
+[*] --> OrderPlaced : Customer places order
+
+OrderPlaced --> Pending : Order created\nPayment received
+
+state Pending {
+  [*] --> WaitingAssignment
+}
+
+Pending --> Cutting : Admin assigns to tailor\nTailor accepts order
+
+state Cutting {
+  [*] --> InProgress
+}
+
+Cutting --> Stitching : Cutting completed\nTailor updates stage
+
+state Stitching {
+  [*] --> InProgress
+}
+
+Stitching --> Ready : Stitching completed\nTailor marks ready
+
+state Ready {
+  [*] --> AwaitingCollection
+}
+
+Ready --> Delivered : Customer collects order
+
+Delivered --> [*] : Order completed
+
+Pending --> Cancelled : Customer cancels order
+Cutting --> Cancelled : Cancelled during work
+Stitching --> Cancelled : Cancelled during work
+Ready --> Cancelled : Customer cancels before pickup
+
+Cancelled --> [*] : Order closed
+
+note right of OrderPlaced
+  Status: "Order Placed"
+  Bill created
+  Fabric stock checked
+end note
+
+note right of Pending
+  Status: "Pending"
+  Waiting for tailor assignment
+  assignedTailor: null
+end note
+
+note right of Cutting
+  Status: "Cutting"
+  assignedTailor: set
+  workStartedAt: timestamp
+end note
+
+note right of Stitching
+  Status: "Stitching"
+  Work in progress
+end note
+
+note right of Ready
+  Status: "Ready"
+  completedAt: timestamp
+  Customer notified
+end note
+
+note right of Delivered
+  Status: "Delivered"
+  Order completed
+end note
+
+@enduml
+
+

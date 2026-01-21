@@ -8,13 +8,15 @@ const fabricSchema = new mongoose.Schema({
   },
   material: {
     type: String,
-    required: true,
-    trim: true
+    required: false, // Make it optional
+    trim: true,
+    default: 'Fabric'
   },
   color: {
     type: String,
-    required: true,
-    trim: true
+    required: false, // Make it optional
+    trim: true,
+    default: 'Various'
   },
   pattern: {
     type: String,
@@ -33,21 +35,37 @@ const fabricSchema = new mongoose.Schema({
   },
   unit: {
     type: String,
-    default: 'meters',
-    enum: ['meters', 'yards', 'pieces']
+    default: 'm',
+    enum: ['meters', 'yards', 'pieces', 'm', 'units']
   },
   category: {
     type: String,
-    required: true,
-    enum: ['cotton', 'silk', 'linen', 'wool', 'polyester', 'denim', 'chiffon', 'georgette', 'other']
+    required: false, // Make it optional
+    enum: ['cotton', 'silk', 'linen', 'wool', 'polyester', 'denim', 'chiffon', 'georgette', 'premium fabric', 'wool blend', 'natural fiber', 'everyday cotton', 'linings', 'hardware', 'fasteners', 'other'],
+    default: 'other'
   },
   description: {
     type: String,
     trim: true
   },
+  composition: {
+    type: String,
+    trim: true
+  },
+  width: {
+    type: Number,
+    min: 0
+  },
+  weight: {
+    type: Number,
+    min: 0
+  },
   images: [{
     url: String,
-    alt: String
+    alt: String,
+    filename: String,
+    mimeType: String,
+    size: Number
   }],
   supplier: {
     name: String,

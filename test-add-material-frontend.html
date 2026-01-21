@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Add Material</title>
+</head>
+<body>
+    <h1>Test Add Material Functionality</h1>
+    
+    <div id="status"></div>
+    
+    <form id="testForm">
+        <input type="text" id="name" placeholder="Material Name" value="Test Silk Fabric" required><br><br>
+        <input type="number" id="price" placeholder="Price" value="150" required><br><br>
+        <input type="number" id="stock" placeholder="Stock" value="25" required><br><br>
+        <select id="category">
+            <option value="PREMIUM FABRIC">Premium Fabric</option>
+        </select><br><br>
+        <input type="text" id="unit" value="m" required><br><br>
+        <button type="submit">Add Material</button>
+    </form>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        
+        function log(message) {
+            console.log(message);
+            statusDiv.innerHTML += message + '<br>';
+        }
+
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            log('🔍 Starting test...');
+            
+            // Get token from localStorage (you need to login first)
+            const token = localStorage.getItem('token');
+            log('🔑 Token found: ' + !!token);
+            
+            if (!token) {
+                log('❌ No token found. Please login first at http://localhost:3000');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('name', document.getElementById('name').value);
+            formData.append('price', document.getElementById('price').value);
+            formData.append('stock', document.getElementById('stock').value);
+            formData.append('category', document.getElementById('category').value);
+            formData.append('unit', document.getElementById('unit').value);
+            formData.append('description', 'Test material from debug page');
+            
+            try {
+                log('🚀 Sending request...');
+                const response = await fetch('http://localhost:5000/api/fabrics', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                log('📋 Response status: ' + response.status);
+                const data = await response.json();
+                log('📋 Response data: ' + JSON.stringify(data, null, 2));
+                
+                if (response.ok) {
+                    log('✅ Material added successfully!');
+                } else {
+                    log('❌ Failed to add material: ' + data.message);
+                }
+            } catch (error) {
+                log('❌ Network error: ' + error.message);
+            }
+        });
+        
+        log('📝 Instructions:');
+        log('1. Login at http://localhost:3000 first');
+        log('2. Come back to this page');
+        log('3. Click "Add Material" button');
+        log('4. Check the results above');
+    </script>
+</body>
+</html>

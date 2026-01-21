@@ -1,0 +1,208 @@
+@startuml Database_Complete_Schema
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' ============================================
+' TABLE 1: Users
+' ============================================
+class Users {
+  -- Primary Key --
+  + _id : ObjectId <<PK>>
+  -- Attributes --
+  + name : String <<NOT NULL>>
+  + email : String <<UNIQUE, NOT NULL>>
+  + password : String <<NOT NULL>>
+  + role : String <<ENUM: Customer, Admin, Tailor, Staff>> <<NOT NULL>>
+  + status : String <<ENUM: Active, Suspended, Pending>> <<NOT NULL>>
+  + phone : String
+  + address : String
+  + gender : String
+  -- Timestamps --
+  + createdAt : Date
+  + updatedAt : Date
+}
+
+' ============================================
+' TABLE 2: Customers
+' ============================================
+class Customers {
+  -- Primary Key --
+  + _id : ObjectId <<PK>>
+  -- Foreign Keys --
+  + user : ObjectId <<FK -> Users>> <<UNIQUE>>
+  -- Attributes --
+  + name : String <<NOT NULL>>
+  + phone : String <<NOT NULL>>
+  + email : String <<NOT NULL>>
+  + address : String <<NOT NULL>>
+  + measurements : Object <<NOT NULL>>
+  + notes : String <<NOT NULL>>
+  + styleNotes : String <<NOT NULL>>
+  -- Timestamps --
+  + createdAt : Date <<NOT NULL>>
+  + updatedAt : Date <<NOT NULL>>
+}
+
+' ============================================
+' TABLE 3: Orders
+' ============================================
+class Orders {
+  -- Primary Key --
+  + _id : ObjectId <<PK>>
+  -- Foreign Keys --
+  + customer : ObjectId <<FK -> Customers>> <<NOT NULL>>
+  + assignedTailor : ObjectId <<FK -> Users>>
+  -- Attributes --
+  + items : Array
+  + status : String <<ENUM>> <<NOT NULL>>
+  + totalAmount : Number <<NOT NULL>>
+  + measurementSnapshot : Object <<NOT NULL>>
+  + fabric : Object <<NOT NULL>>
+  + customizations : Object <<NOT NULL>>
+  + orderDate : Date <<NOT NULL>>
+  + expectedDelivery : Date <<NOT NULL>>
+  + stage : String <<ENUM>>
+  + notes : String <<NOT NULL>>
+  -- Timestamps --
+  + createdAt : Date <<NOT NULL>>
+  + updatedAt : Date <<NOT NULL>>
+}
+
+' ============================================
+' TABLE 4: Fabrics
+' ============================================
+class Fabrics {
+  -- Primary Key --
+  + _id : ObjectId <<PK>>
+  -- Foreign Keys --
+  + createdBy : ObjectId <<FK -> Users>>
+  -- Attributes --
+  + name : String <<NOT NULL>>
+  + material : String <<NOT NULL>>
+  + color : String <<NOT NULL>>
+  + price : Number <<NOT NULL>>
+  + stock : Number <<NOT NULL>>
+  + category : String <<ENUM>> <<NOT NULL>>
+  + description : String <<NOT NULL>>
+  + images : Array <<NOT NULL>>
+  + isActive : Boolean <<NOT NULL>>
+  -- Timestamps --
+  + createdAt : Date <<NOT NULL>>
+  + updatedAt : Date <<NOT NULL>>
+}
+
+' ============================================
+' TABLE 5: Bills
+' ============================================
+class Bills {
+  -- Primary Key --
+  + _id : ObjectId <<PK>>
+  -- Foreign Keys --
+  + order : ObjectId <<FK -> Orders>> <<UNIQUE, NOT NULL>>
+  + customer : ObjectId <<FK -> Customers>>
+  -- Attributes --
+  + billNumber : String <<UNIQUE, AUTO-GENERATED>>
+  + amount : Number <<NOT NULL>>
+  + amountPaid : Number <<NOT NULL>>
+  + paymentMethod : String <<NOT NULL>>
+  + status : String <<ENUM>> <<NOT NULL>>
+  + payments : Array <<NOT NULL>>
+  -- Timestamps --
+  + createdAt : Date <<NOT NULL>>
+  + updatedAt : Date <<NOT NULL>>
+}
+
+' ============================================
+' TABLE 6: Appointments
+' ============================================
+class Appointments {
+  -- Primary Key --
+  + _id : ObjectId <<PK>>
+  -- Foreign Keys --
+  + customer : ObjectId <<FK -> Customers>> <<NOT NULL>>
+  + approvedBy : ObjectId <<FK -> Users>>
+  + relatedOrder : ObjectId <<FK -> Orders>>
+  -- Attributes --
+  + service : String <<NOT NULL>>
+  + scheduledAt : Date <<NOT NULL>>
+  + status : String <<ENUM>> <<NOT NULL>>
+  + approved : Boolean <<NOT NULL>>
+  -- Timestamps --
+  + createdAt : Date <<NOT NULL>>
+  + updatedAt : Date <<NOT NULL>>
+}
+
+' ============================================
+' TABLE 7: MeasurementHistory
+' ============================================
+class MeasurementHistory {
+  -- Primary Key --
+  + _id : ObjectId <<PK>>
+  -- Foreign Keys --
+  + customer : ObjectId <<FK -> Customers>> <<NOT NULL>>
+  -- Attributes --
+  + measurements : Object <<NOT NULL>>
+  + styleNotes : String <<NOT NULL>>
+  + source : String <<ENUM>> <<NOT NULL>>
+  -- Timestamps --
+  + createdAt : Date <<NOT NULL>>
+  + updatedAt : Date <<NOT NULL>>
+}
+
+' ============================================
+' TABLE 8: Notifications
+' ============================================
+class Notifications {
+  -- Primary Key --
+  + _id : ObjectId <<PK>>
+  -- Foreign Keys --
+  + recipientId : ObjectId <<FK -> Users>> <<NOT NULL>>
+  + relatedOrder : ObjectId <<FK -> Orders>>
+  -- Attributes --
+  + message : String <<NOT NULL>>
+  + type : String <<ENUM>> <<NOT NULL>>
+  + priority : String <<ENUM>> <<NOT NULL>>
+  + isRead : Boolean <<NOT NULL>>
+  -- Timestamps --
+  + createdAt : Date <<NOT NULL>>
+  + updatedAt : Date <<NOT NULL>>
+}
+
+' ============================================
+' RELATIONSHIPS
+' ============================================
+Users ||--o| Customers : "has (optional)"
+Customers ||--o{ Orders : "places"
+Users ||--o{ Orders : "assigned as tailor"
+Orders ||--|| Bills : "has (1:1)"
+Customers ||--o{ Appointments : "schedules"
+Customers ||--o{ MeasurementHistory : "has history"
+Orders }o--|| Fabrics : "uses"
+Users ||--o{ Fabrics : "creates"
+Users ||--o{ Notifications : "receives"
+Orders ||--o{ Notifications : "triggers"
+Appointments }o--o| Orders : "related to"
+
+note right of Users
+  Roles: Customer, Admin, Tailor, Staff
+  Status: Active, Suspended, Pending
+end note
+
+note right of Orders
+  Status: Pending, Cutting, Stitching, 
+  Ready, Delivered, Cancelled
+  Stage: Cutting, Stitching, Finishing, Ready
+end note
+
+note right of Bills
+  Status: Unpaid, Partial, Paid, Pending
+end note
+
+note right of Appointments
+  Status: Pending, Scheduled, Completed, Cancelled
+end note
+
+@enduml
+
+

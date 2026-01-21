@@ -1,0 +1,133 @@
+@startuml Database_ER_Diagram
+
+!define TABLE(name,desc) class name as desc << (T,#FFAAAA) >>
+!define PK(x) <b>x</b>
+!define FK(x) <color:blue>x</color>
+
+TABLE(Users, "Users Table") {
+  PK(_id) : ObjectId
+  name : String [NOT NULL]
+  email : String [UNIQUE, NOT NULL]
+  password : String [NOT NULL]
+  role : String [ENUM] [NOT NULL]
+  status : String [ENUM] [NOT NULL]
+  phone : String
+  address : String
+  gender : String
+  createdAt : Date
+  updatedAt : Date
+}
+
+TABLE(Customers, "Customers Table") {
+  PK(_id) : ObjectId
+  FK(user) : ObjectId [FK -> Users, UNIQUE]
+  name : String [NOT NULL]
+  phone : String [NOT NULL]
+  email : String [NOT NULL]
+  address : String [NOT NULL]
+  measurements : Object [NOT NULL]
+  notes : String [NOT NULL]
+  styleNotes : String [NOT NULL]
+  createdAt : Date [NOT NULL]
+  updatedAt : Date [NOT NULL]
+}
+
+TABLE(Orders, "Orders Table") {
+  PK(_id) : ObjectId
+  FK(customer) : ObjectId [FK -> Customers, NOT NULL]
+  items : Array
+  status : String [ENUM, NOT NULL]
+  totalAmount : Number [NOT NULL]
+  measurementSnapshot : Object [NOT NULL]
+  FK(assignedTailor) : ObjectId [FK -> Users]
+  fabric : Object [NOT NULL]
+  customizations : Object [NOT NULL]
+  orderDate : Date [NOT NULL]
+  expectedDelivery : Date [NOT NULL]
+  stage : String [ENUM]
+  notes : String [NOT NULL]
+  createdAt : Date [NOT NULL]
+  updatedAt : Date [NOT NULL]
+}
+
+TABLE(Fabrics, "Fabrics Table") {
+  PK(_id) : ObjectId
+  name : String [NOT NULL]
+  material : String [NOT NULL]
+  color : String [NOT NULL]
+  price : Number [NOT NULL]
+  stock : Number [NOT NULL]
+  category : String [ENUM, NOT NULL]
+  description : String [NOT NULL]
+  images : Array [NOT NULL]
+  isActive : Boolean [NOT NULL]
+  FK(createdBy) : ObjectId [FK -> Users]
+  createdAt : Date [NOT NULL]
+  updatedAt : Date [NOT NULL]
+}
+
+TABLE(Bills, "Bills Table") {
+  PK(_id) : ObjectId
+  billNumber : String [UNIQUE, AUTO-GENERATED]
+  FK(order) : ObjectId [FK -> Orders, UNIQUE, NOT NULL]
+  FK(customer) : ObjectId [FK -> Customers]
+  amount : Number [NOT NULL]
+  amountPaid : Number [NOT NULL]
+  paymentMethod : String [NOT NULL]
+  status : String [ENUM, NOT NULL]
+  payments : Array [NOT NULL]
+  createdAt : Date [NOT NULL]
+  updatedAt : Date [NOT NULL]
+}
+
+TABLE(Appointments, "Appointments Table") {
+  PK(_id) : ObjectId
+  FK(customer) : ObjectId [FK -> Customers, NOT NULL]
+  service : String [NOT NULL]
+  scheduledAt : Date [NOT NULL]
+  status : String [ENUM, NOT NULL]
+  approved : Boolean [NOT NULL]
+  FK(approvedBy) : ObjectId [FK -> Users]
+  FK(relatedOrder) : ObjectId [FK -> Orders]
+  createdAt : Date [NOT NULL]
+  updatedAt : Date [NOT NULL]
+}
+
+TABLE(MeasurementHistory, "MeasurementHistory Table") {
+  PK(_id) : ObjectId
+  FK(customer) : ObjectId [FK -> Customers, NOT NULL]
+  measurements : Object [NOT NULL]
+  styleNotes : String [NOT NULL]
+  source : String [ENUM, NOT NULL]
+  createdAt : Date [NOT NULL]
+  updatedAt : Date [NOT NULL]
+}
+
+TABLE(Notifications, "Notifications Table") {
+  PK(_id) : ObjectId
+  FK(recipientId) : ObjectId [FK -> Users, NOT NULL]
+  message : String [NOT NULL]
+  type : String [ENUM, NOT NULL]
+  priority : String [ENUM, NOT NULL]
+  FK(relatedOrder) : ObjectId [FK -> Orders]
+  isRead : Boolean [NOT NULL]
+  createdAt : Date [NOT NULL]
+  updatedAt : Date [NOT NULL]
+}
+
+' Relationships with cardinality
+Users ||--o| Customers : "has (optional)"
+Customers ||--o{ Orders : "places"
+Users ||--o{ Orders : "assigned as tailor"
+Orders ||--|| Bills : "has"
+Customers ||--o{ Appointments : "schedules"
+Customers ||--o{ MeasurementHistory : "has history"
+Orders }o--|| Fabrics : "uses"
+Users ||--o{ Fabrics : "creates"
+Users ||--o{ Notifications : "receives"
+Orders ||--o{ Notifications : "triggers"
+Appointments }o--o| Orders : "related to"
+
+@enduml
+
+

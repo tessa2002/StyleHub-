@@ -10,6 +10,7 @@ const API_URL = process.env.REACT_APP_API_URL !== undefined
 
 // Ensure baseURL is set before any component effects run
 axios.defaults.baseURL = API_URL;
+axios.defaults.withCredentials = true; // Enable credentials for cross-origin requests
 
 // Add axios interceptor to always include token in requests
 axios.interceptors.request.use(
@@ -95,12 +96,24 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     // 5. Login function
-    const login = async (email, password) => {
+    const login = async (email, password, isGoogleLogin = false, googleToken = null) => {
         try {
             setError('');
             console.log('🔍 Attempting login for:', email);
             axios.defaults.baseURL = API_URL;
-            const response = await axios.post('/api/auth/login', { email, password });
+            
+            let response;
+            if (isGoogleLogin && googleToken) {
+                // For Google login, we already have the token from the backend
+                response = { data: { token: googleToken, user: { email } } };
+                // We need to verify this token with our backend
+                axios.defaults.headers.common['Authorization'] = `Bearer ${googleToken}`;
+                const verifyResponse = await axios.get('/api/auth/verify');
+                response.data.user = verifyResponse.data.user;
+            } else {
+                // Regular email/password login
+                response = await axios.post('/api/auth/login', { email, password });
+            }
             
             console.log('📦 Full response data:', response.data);
             

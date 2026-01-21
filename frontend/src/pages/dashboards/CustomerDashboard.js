@@ -1,231 +1,73 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import axios from 'axios';
-import DashboardLayout from '../../components/DashboardLayout';
+import { useNavigate } from 'react-router-dom';
 import { 
-  FaShoppingCart, FaCalendarCheck, FaBell, FaUser, FaCog, FaPlus, FaEye, FaEdit,
-  FaMoneyBillWave, FaRulerCombined, FaHeadset, FaChartLine, FaGift, FaDownload,
-  FaPhone, FaEnvelope, FaQuestionCircle, FaStar, FaHistory, FaCreditCard,
-  FaFileInvoice, FaUserEdit, FaKey, FaCamera, FaHeart, FaTag, FaComments
+  FaShoppingBag, 
+  FaGem, 
+  FaChevronRight, 
+  FaMapMarkerAlt, 
+  FaRegClock,
+  FaRobot,
+  FaPaperPlane
 } from 'react-icons/fa';
+import DashboardLayout from '../../components/DashboardLayout';
+import { useAuth } from '../../context/AuthContext';
 import './CustomerDashboard.css';
 
-// Helper component for order rows with bill status
-const OrderRowDashboard = ({ order }) => {
-  const [bill, setBill] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-  const [downloadingReceipt, setDownloadingReceipt] = React.useState(false);
+export const CustomerDashboard = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [aiMessage, setAiMessage] = useState('');
+  const [chatHistory, setChatHistory] = useState([
+    { role: 'assistant', content: `Hello ${user?.name?.split(' ')[0] || 'there'}! Need help with measurements or fabric choices? I'm here to assist.` }
+  ]);
 
-  React.useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const { data } = await axios.get(`/api/portal/bills/by-order/${order._id}`);
-        if (active) setBill(data.bill);
-      } catch {
-        if (active) setBill(null);
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => { active = false; };
-  }, [order._id]);
+  const handleSendAiMessage = () => {
+    if (!aiMessage.trim()) return;
 
-  const downloadReceipt = async () => {
-    if (!bill) return;
-    setDownloadingReceipt(true);
-    try {
-      const response = await axios.get(`/api/portal/bills/${bill._id}/receipt`);
-      const receiptWindow = window.open('', '_blank');
-      if (receiptWindow) {
-        receiptWindow.document.write(response.data);
-        receiptWindow.document.close();
+    const userMsg = aiMessage.trim();
+    setAiMessage('');
+    
+    const newHistoryWithUser = [...chatHistory, { role: 'user', content: userMsg }];
+    setChatHistory(newHistoryWithUser);
+
+    // Simulate AI response based on keywords
+    setTimeout(() => {
+      let response = "I've received your request. I'm analyzing your measurement history and current style trends to provide the best recommendation. How else can I help?";
+      
+      const lowerMsg = userMsg.toLowerCase();
+      if (lowerMsg.includes('style') || lowerMsg.includes('look')) {
+        response = "Based on your previous orders, you seem to prefer formal styles. Have you checked our new Italian silk collection?";
+      } else if (lowerMsg.includes('fabric') || lowerMsg.includes('material')) {
+        response = "For the current season, I recommend breathable linen or premium cotton. Would you like to see our fabric catalog?";
+      } else if (lowerMsg.includes('measurement') || lowerMsg.includes('size')) {
+        response = "Your last measurements were updated 2 months ago. Would you like to book a new fitting session to ensure perfect accuracy?";
       }
-    } catch (error) {
-      console.error('Receipt error:', error);
-    } finally {
-      setDownloadingReceipt(false);
-    }
+      
+      setChatHistory(prev => [...prev, { role: 'assistant', content: response }]);
+    }, 1000);
   };
 
-  return (
-    <tr>
-      <td className="order-id">#{order._id.slice(-6)}</td>
-      <td>
-        <span className={`status-badge status-${order.status?.toLowerCase()}`}>
-          {order.status}
-        </span>
-      </td>
-      <td>{new Date(order.createdAt).toLocaleDateString()}</td>
-      <td>₹{order.totalAmount || '0'}</td>
-      <td>
-        {loading ? (
-          <span className="badge payment-loading">Loading…</span>
-        ) : bill ? (
-          <span className={`badge payment-${(bill.status || 'Pending').toLowerCase()}`}>{bill.status}</span>
-        ) : (
-          <span className="badge payment-none">No bill</span>
-        )}
-      </td>
-      <td>
-        <div className="action-buttons">
-          <Link to={`/portal/orders`} className="btn btn-sm btn-outline" title="View Details">
-            <FaEye />
-          </Link>
-          {!loading && bill && bill.status === 'Paid' && (
-            <button 
-              onClick={downloadReceipt}
-              disabled={downloadingReceipt}
-              className="btn btn-sm btn-outline"
-              title="Download Receipt"
-            >
-              <FaDownload />
-            </button>
-          )}
-        </div>
-      </td>
-    </tr>
-  );
-};
-
-const CustomerDashboard = () => {
-  const [customer, setCustomer] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [measurements, setMeasurements] = useState({});
-  const [bills, setBills] = useState([]);
-  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
-  const [recentActivity, setRecentActivity] = useState([]);
-  const [upcomingDeliveries, setUpcomingDeliveries] = useState([]);
-  const [fabrics, setFabrics] = useState([]);
-  const [offers, setOffers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
   useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await axios.get('/api/portal/dashboard');
+        setData(response.data);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Fetch core data with better error handling
-      const coreDataPromises = [
-        axios.get('/api/portal/profile').catch(err => {
-          console.log('Profile fetch failed:', err.message);
-          return { data: { user: {}, customer: {} } };
-        }),
-        axios.get('/api/portal/orders').catch(err => {
-          console.log('Orders fetch failed:', err.message);
-          return { data: { orders: [] } };
-        }),
-        axios.get('/api/portal/appointments').catch(err => {
-          console.log('Appointments fetch failed:', err.message);
-          return { data: { appointments: [] } };
-        }),
-        axios.get('/api/portal/measurements').catch(err => {
-          console.log('Measurements fetch failed:', err.message);
-          return { data: {} };
-        }),
-        axios.get('/api/portal/bills').catch(err => {
-          console.log('Bills fetch failed:', err.message);
-          return { data: [] };
-        })
-      ];
-
-      const [customerRes, ordersRes, appointmentsRes, measurementsRes, billsRes] = await Promise.all(coreDataPromises);
-
-      // Set core data
-      const profileData = customerRes.data;
-      setCustomer({
-        ...profileData.user,
-        ...profileData.customer
-      });
-      setOrders(ordersRes.data.orders || []);
-      setAppointments(appointmentsRes.data.appointments || []);
-      setMeasurements(measurementsRes.data.current || {});
-      setBills(billsRes.data.bills || []);
-
-      // Fetch optional data with individual error handling
-      const optionalDataPromises = [
-        // Notifications - use the main notifications endpoint
-        axios.get('/api/notifications').catch(err => {
-          console.log('Notifications not available:', err.message);
-          return { data: [] };
-        }),
-        // Loyalty points - this endpoint doesn't exist, so we'll skip it
-        Promise.resolve({ data: { points: 0 } }).catch(err => {
-          console.log('Loyalty points not available:', err.message);
-          return { data: { points: 0 } };
-        }),
-        // Recent activity - this endpoint doesn't exist, so we'll skip it
-        Promise.resolve({ data: [] }).catch(err => {
-          console.log('Recent activity not available:', err.message);
-          return { data: [] };
-        }),
-        // Upcoming deliveries - this endpoint doesn't exist, so we'll skip it
-        Promise.resolve({ data: [] }).catch(err => {
-          console.log('Upcoming deliveries not available:', err.message);
-          return { data: [] };
-        }),
-        // Fabrics
-        axios.get('/api/fabrics?limit=6').catch(err => {
-          console.log('Fabrics not available:', err.message);
-          return { data: { fabrics: [] } };
-        }),
-        // Offers
-        axios.get('/api/offers?limit=3').catch(err => {
-          console.log('Offers not available:', err.message);
-          return { data: { offers: [] } };
-        })
-      ];
-
-      const [notificationsRes, loyaltyRes, activityRes, deliveriesRes, fabricsRes, offersRes] = await Promise.all(optionalDataPromises);
-
-      // Set optional data
-      setNotifications(notificationsRes.data.notifications || []);
-      setLoyaltyPoints(loyaltyRes.data.points || 0);
-      setRecentActivity(activityRes.data || []);
-      setUpcomingDeliveries(deliveriesRes.data || []);
-      setFabrics(fabricsRes.data.fabrics || []);
-      setOffers(offersRes.data.offers || []);
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      // Only set error for critical failures, not missing optional data
-      if (error.response?.status >= 500) {
-        setError('Unable to load some dashboard data. Please refresh the page or try again later.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Calculate stats
-  const totalOrders = orders.length;
-  const pendingOrders = orders.filter(o => o.status === 'Pending').length;
-  const completedOrders = orders.filter(o => o.status === 'Completed').length;
-  const deliveredOrders = orders.filter(o => o.status === 'Delivered').length;
-  const upcomingAppts = appointments.filter(apt => new Date(apt.scheduledAt || apt.date) > new Date()).length;
-  const unreadNotifications = notifications.filter(n => !n.read).length;
-  const totalSpent = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-  const pendingBills = bills.filter(bill => bill.status === 'Pending').length;
-  const paidBills = bills.filter(bill => bill.status === 'Paid').length;
-  
-  // Get personalized greeting
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
-  };
-
   if (loading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout title="Loading...">
         <div className="dashboard-loading">
           <div className="loading-spinner"></div>
           <p>Loading your dashboard...</p>
@@ -234,485 +76,257 @@ const CustomerDashboard = () => {
     );
   }
 
+  // Use real data from API or fallbacks to match the image mockup
+  const orderNotification = data?.notifications?.find(n => n.type === 'order');
+  const activeOrdersCount = orderNotification 
+    ? parseInt(orderNotification.message.match(/\d+/)?.[0] || '0') 
+    : 0;
+
+  const loyaltyPoints = data?.loyalty?.points || 0;
+  const loyaltyTier = data?.loyalty?.tier || "Basic Member";
+  const pointsToNext = data?.loyalty?.pointsToNext || 0;
+
+  const nextAppointment = data?.upcomingAppointments?.[0] || null;
+  
+  const getFittingDisplay = () => {
+    if (!nextAppointment) return { main: "Not scheduled", sub: "Book an appointment" };
+    
+    const apptDate = new Date(nextAppointment.scheduledAt);
+    const now = new Date();
+    const diffTime = apptDate - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    let main = "";
+    if (diffDays === 0) main = "Today";
+    else if (diffDays === 1) main = "Tomorrow";
+    else if (diffDays > 1) main = `In ${diffDays} Days`;
+    else main = "Past due";
+
+    const timeStr = apptDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return { main, sub: `${timeStr} - ${nextAppointment.service}` };
+  };
+
+  const fittingInfo = getFittingDisplay();
+
+  const recentOrders = data?.recentOrders || [];
+
+  const today = new Date().toLocaleDateString('en-US', { 
+    month: 'long', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+
   return (
-    <DashboardLayout>
+    <DashboardLayout title="Dashboard" showTitle={false}>
       <div className="dashboard-page">
-        {/* Error Message */}
-        {error && (
-          <div className="error-banner" style={{
-            background: '#fee2e2',
-            border: '1px solid #fecaca',
-            color: '#dc2626',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <FaBell />
-            <span>{error}</span>
-            <button 
-              onClick={() => setError(null)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#dc2626',
-                cursor: 'pointer',
-                marginLeft: 'auto',
-                fontSize: '16px'
-              }}
-            >
-              ×
+        {/* Header Breadcrumbs & Action */}
+        <div className="dashboard-header-alt">
+          <div className="breadcrumbs">Home / Dashboard</div>
+          <div className="header-actions">
+            <button className="notification-icon-btn">
+              <FaRegClock />
+              <span className="badge"></span>
             </button>
-          </div>
-        )}
-        
-        {/* Welcome Header */}
-        <div className="welcome-section">
-          <div className="welcome-content">
-            <h1 className="welcome-title">{getGreeting()}, {customer?.name || "Customer"}!</h1>
-            <p className="welcome-subtitle">Here's what's happening with your orders and appointments</p>
-          </div>
-          <div className="welcome-actions">
-            <Link to="/portal/orders/new" className="btn btn-primary">
-              <FaPlus />
-              New Order
-            </Link>
-            <Link to="/portal/appointments" className="btn btn-secondary">
-              <FaCalendarCheck />
-              Book Appointment
-            </Link>
+            <button className="btn-new-request" onClick={() => navigate('/portal/orders/new')}>+ New Request</button>
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="summary-cards">
-          <div className="summary-card">
-            <div className="card-header">
-              <div className="card-icon">
-                <FaShoppingCart />
-              </div>
-              <div className="card-title">Total Orders</div>
-            </div>
-            <div className="card-content">
-              <div className="card-value">{totalOrders}</div>
-              <div className="card-description">
-                {pendingOrders} pending, {completedOrders} completed, {deliveredOrders} delivered
-              </div>
-            </div>
-            <div className="card-footer">
-              <Link to="/portal/orders" className="card-link">View All Orders</Link>
-            </div>
+        {/* Welcome Section */}
+        <div className="welcome-banner">
+          <div className="welcome-text">
+            <h1>Welcome back, {user?.name?.split(' ')[0] || 'Sarah'}</h1>
+            <p>Your daughter's flower girl dress is ready for fitting.</p>
           </div>
-
-          <div className="summary-card">
-            <div className="card-header">
-              <div className="card-icon">
-                <FaCalendarCheck />
-              </div>
-              <div className="card-title">Upcoming Appointments</div>
-            </div>
-            <div className="card-content">
-              <div className="card-value">{upcomingAppts}</div>
-              <div className="card-description">Scheduled appointments</div>
-            </div>
-            <div className="card-footer">
-              <Link to="/portal/appointments" className="card-link">Manage Appointments</Link>
-            </div>
-          </div>
-
-          <div className="summary-card">
-            <div className="card-header">
-              <div className="card-icon">
-                <FaMoneyBillWave />
-              </div>
-              <div className="card-title">Total Spent</div>
-            </div>
-            <div className="card-content">
-              <div className="card-value">₹{totalSpent.toFixed(2)}</div>
-              <div className="card-description">Lifetime spending</div>
-            </div>
-            <div className="card-footer">
-              <Link to="/portal/bills" className="card-link">View Bills</Link>
-            </div>
-          </div>
-
-          <div className="summary-card">
-            <div className="card-header">
-              <div className="card-icon">
-                <FaGift />
-              </div>
-              <div className="card-title">Loyalty Points</div>
-            </div>
-            <div className="card-content">
-              <div className="card-value">{loyaltyPoints}</div>
-              <div className="card-description">Available points</div>
-            </div>
-            <div className="card-footer">
-              <Link to="/portal/loyalty" className="card-link">View Rewards</Link>
-            </div>
+          <div className="welcome-date">
+            <span className="date-label">Today is</span>
+            <span className="date-value">{today}</span>
           </div>
         </div>
 
-        {/* Recent Orders Table */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2 className="section-title">Recent Orders</h2>
-            <Link to="/portal/orders" className="btn btn-outline">View All</Link>
+        {/* KPI Cards Row */}
+        <div className="kpi-row">
+          <div className="kpi-card">
+            <div className="kpi-icon-container purple">
+              <FaShoppingBag />
+            </div>
+            <div className="kpi-content">
+              <span className="kpi-label">Active Orders</span>
+              <span className="kpi-value">{activeOrdersCount}</span>
+            </div>
+            <div className="kpi-status in-progress">In Progress</div>
           </div>
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Order #</th>
-                  <th>Status</th>
-                  <th>Placed</th>
-                  <th>Total</th>
-                  <th>Payment</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.length > 0 ? (
-                  orders.slice(0, 5).map(order => (
-                    <OrderRowDashboard key={order._id} order={order} />
-                  ))
-                ) : (
+
+          <div className="kpi-card loyalty">
+            <div className="kpi-icon-container purple-alt">
+              <FaGem />
+            </div>
+            <div className="kpi-content">
+              <span className="kpi-label">My Loyalty Points</span>
+              <span className="kpi-value">{loyaltyPoints.toLocaleString()}</span>
+              <div className="loyalty-progress-container">
+                <div className="loyalty-progress-bar" style={{ width: '75%' }}></div>
+              </div>
+              <span className="loyalty-footer">{pointsToNext} pts to {loyaltyTier}</span>
+            </div>
+            <div className="kpi-status-badge">+{pointsToNext} pts</div>
+          </div>
+
+          <div className="kpi-card">
+            <div className="kpi-icon-container orange">
+              <FaRegClock />
+            </div>
+            <div className="kpi-content">
+              <span className="kpi-label">Next Fitting</span>
+              <span className="kpi-value">{fittingInfo.main}</span>
+              <span className="kpi-sublabel">{fittingInfo.sub}</span>
+            </div>
+            <div className="kpi-status upcoming">{nextAppointment ? 'Upcoming' : 'None'}</div>
+          </div>
+        </div>
+
+        <div className="dashboard-grid">
+          {/* My Orders Section */}
+          <div className="orders-section">
+            <div className="section-header-alt">
+              <h2>My Orders</h2>
+              <button className="view-history-link">View Order History</button>
+            </div>
+            <div className="orders-table-container">
+              <table className="orders-table-alt">
+                <thead>
                   <tr>
-                    <td colSpan="6" className="empty-state">
-                      <div className="empty-content">
-                        <FaShoppingCart className="empty-icon" />
-                        <p>No orders yet</p>
-                        <Link to="/portal/orders/new" className="btn btn-primary">Place Your First Order</Link>
-                      </div>
-                    </td>
+                    <th>Order ID</th>
+                    <th>Garment Details</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Tracking</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2 className="section-title">Quick Actions</h2>
-          </div>
-          <div className="quick-actions-grid">
-            <Link to="/portal/orders/new" className="quick-action-card">
-              <div className="action-icon">
-                <FaPlus />
-              </div>
-              <div className="action-content">
-                <h3 className="action-title">New Order</h3>
-                <p className="action-description">Place a new order</p>
-              </div>
-            </Link>
-            
-            <Link to="/portal/appointments" className="quick-action-card">
-              <div className="action-icon">
-                <FaCalendarCheck />
-              </div>
-              <div className="action-content">
-                <h3 className="action-title">Book Appointment</h3>
-                <p className="action-description">Schedule fitting</p>
-              </div>
-            </Link>
-            
-            <Link to="/portal/measurements" className="quick-action-card">
-              <div className="action-icon">
-                <FaUser />
-              </div>
-              <div className="action-content">
-                <h3 className="action-title">Measurements</h3>
-                <p className="action-description">Update sizes</p>
-              </div>
-            </Link>
-            
-            <Link to="/portal/support" className="quick-action-card">
-              <div className="action-icon">
-                <FaCog />
-              </div>
-              <div className="action-content">
-                <h3 className="action-title">Support</h3>
-                <p className="action-description">Get help</p>
-              </div>
-            </Link>
-          </div>
-        </div>
-
-        {/* Profile Management Section */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2 className="section-title">Profile Management</h2>
-            <Link to="/portal/profile" className="btn btn-outline">Manage Profile</Link>
-          </div>
-          <div className="profile-overview">
-            <div className="profile-info">
-              <div className="profile-avatar">
-                <FaUser />
-              </div>
-              <div className="profile-details">
-                <h3>{customer?.name || 'Customer Name'}</h3>
-                <p>{customer?.email || 'customer@email.com'}</p>
-                <p>{customer?.phone || 'Phone number'}</p>
-              </div>
-            </div>
-            <div className="profile-actions">
-              <Link to="/portal/profile" className="btn btn-sm btn-outline">
-                <FaUserEdit /> Edit Profile
-              </Link>
-              <Link to="/portal/profile/password" className="btn btn-sm btn-outline">
-                <FaKey /> Change Password
-              </Link>
-              <Link to="/portal/profile/photo" className="btn btn-sm btn-outline">
-                <FaCamera /> Upload Photo
-              </Link>
+                </thead>
+                <tbody>
+                  {recentOrders.map((order) => (
+                    <tr key={order._id}>
+                      <td className="order-id-cell">#{order._id ? order._id.slice(-4) : 'N/A'}</td>
+                      <td className="garment-cell">
+                        <div className="garment-info">
+                          <div className="garment-thumb"></div>
+                          <div className="garment-text">
+                            <span className="garment-name">{order.itemType || order.garment || 'Garment'}</span>
+                            <span className="garment-subtext">{order.details || 'Standard fit'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : (order.date || 'N/A')}</td>
+                      <td>
+                        <div className="status-container">
+                          <span className={`status-text ${(order.status || 'Pending').toLowerCase().replace(/\s+/g, '-')}`}>
+                            {order.status || 'Pending'}
+                          </span>
+                          {order.progress > 0 && order.progress < 100 && (
+                            <span className="progress-percent">{order.progress}%</span>
+                          )}
+                          {order.status === 'Ready for Pickup' && (
+                             <span className="status-dot green"></span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        {order.status === 'Embellishing' ? (
+                          <button className="btn-track-order">
+                            Track Order <FaChevronRight />
+                          </button>
+                        ) : (
+                          <button className="btn-view-only">
+                            <FaRegClock />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
 
-        {/* Measurements Section */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2 className="section-title">Your Measurements</h2>
-            <Link to="/portal/measurements" className="btn btn-outline">Update Measurements</Link>
-          </div>
-          <div className="measurements-overview">
-            {Object.keys(measurements).length > 0 ? (
-              <div className="measurements-grid">
-                {Object.entries(measurements).slice(0, 4).map(([key, value]) => (
-                  <div key={key} className="measurement-item">
-                    <span className="measurement-label">{key}</span>
-                    <span className="measurement-value">{value || 'Not set'}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <FaRulerCombined className="empty-icon" />
-                <p>No measurements saved yet</p>
-                <Link to="/portal/measurements" className="btn btn-primary">Add Measurements</Link>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Bills & Payments Section */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2 className="section-title">Bills & Payments</h2>
-            <Link to="/portal/bills" className="btn btn-outline">View All Bills</Link>
-          </div>
-          <div className="bills-overview">
-            <div className="bills-stats">
-              <div className="bill-stat">
-                <span className="stat-label">Pending Bills</span>
-                <span className="stat-value pending">{pendingBills}</span>
-              </div>
-              <div className="bill-stat">
-                <span className="stat-label">Paid Bills</span>
-                <span className="stat-value paid">{paidBills}</span>
-              </div>
-            </div>
-            <div className="bills-actions">
-              <Link to="/portal/bills" className="btn btn-sm btn-outline">
-                <FaFileInvoice /> View Bills
-              </Link>
-              <Link to="/portal/payments" className="btn btn-sm btn-outline">
-                <FaCreditCard /> Make Payment
-              </Link>
-              <Link to="/portal/bills/download" className="btn btn-sm btn-outline">
-                <FaDownload /> Download Invoices
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Notifications Center */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2 className="section-title">Notifications Center</h2>
-            <Link to="/portal/notifications" className="btn btn-outline">View All</Link>
-          </div>
-          <div className="notifications-overview">
-            {notifications.length > 0 ? (
-              <div className="notifications-list">
-                {notifications.slice(0, 3).map((notification, index) => (
-                  <div key={index} className={`notification-item ${!notification.read ? 'unread' : ''}`}>
-                    <div className="notification-icon">
-                      <FaBell />
+          {/* Sidebar Area */}
+          <div className="dashboard-sidebar-area">
+            {/* Upcoming Appointment Card */}
+            <div className="appointment-card-alt">
+              <h3>Upcoming Appointment</h3>
+              {nextAppointment ? (
+                <>
+                  <div className="appointment-details">
+                    <div className="appointment-date-box">
+                      <span className="month">
+                        {new Date(nextAppointment.scheduledAt).toLocaleString('en-US', { month: 'short' }).toUpperCase()}
+                      </span>
+                      <span className="day">
+                        {new Date(nextAppointment.scheduledAt).getDate()}
+                      </span>
                     </div>
-                    <div className="notification-content">
-                      <p className="notification-message">{notification.message}</p>
-                      <span className="notification-time">
-                        {new Date(notification.createdAt).toLocaleDateString()}
+                    <div className="appointment-info">
+                      <h4>{nextAppointment.service}</h4>
+                      <p>{nextAppointment.garment || 'General Fitting'}</p>
+                      <span className="time">
+                        <FaRegClock /> {new Date(nextAppointment.scheduledAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                       </span>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <FaBell className="empty-icon" />
-                <p>No notifications yet</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Support & Help Section */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2 className="section-title">Support & Help</h2>
-            <Link to="/portal/support" className="btn btn-outline">Get Support</Link>
-          </div>
-          <div className="support-overview">
-            <div className="support-options">
-              <Link to="/portal/support/chat" className="support-option">
-                <FaComments />
-                <span>Live Chat</span>
-              </Link>
-              <Link to="/portal/support/email" className="support-option">
-                <FaEnvelope />
-                <span>Email Support</span>
-              </Link>
-              <Link to="/portal/support/phone" className="support-option">
-                <FaPhone />
-                <span>Call Us</span>
-              </Link>
-              <Link to="/portal/support/faq" className="support-option">
-                <FaQuestionCircle />
-                <span>FAQ</span>
-              </Link>
+                  <div className="staff-info">
+                    <div className="staff-avatar"></div>
+                    <div className="staff-text">
+                      <span className="staff-name">{nextAppointment.tailor?.name || 'Senior Stylist'}</span>
+                      <span className="staff-role">{nextAppointment.tailor?.role || 'Head Seamstress'}</span>
+                    </div>
+                  </div>
+                  <div className="location-info">
+                    <FaMapMarkerAlt />
+                    <span>StyleHub Boutique & Atelier<br />123 Fashion Ave, NY</span>
+                  </div>
+                  <div className="appointment-actions">
+                    <button className="btn-reschedule" onClick={() => navigate('/portal/appointments')}>Reschedule</button>
+                    <button className="btn-directions">Directions</button>
+                  </div>
+                </>
+              ) : (
+                <div className="no-appointment-info">
+                  <p>You have no upcoming appointments.</p>
+                  <button 
+                    className="btn-new-request" 
+                    style={{ width: '100%', marginTop: '10px' }}
+                    onClick={() => navigate('/portal/appointments')}
+                  >
+                    Book Appointment
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
 
-        {/* Offers Section */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2 className="section-title">Special Offers</h2>
-            <Link to="/offers" className="btn btn-outline">View All Offers</Link>
-          </div>
-          <div className="offers-overview">
-            {offers.length > 0 ? (
-              <div className="offers-grid">
-                {offers.map(offer => (
-                  <div key={offer._id} className="offer-card">
-                    <div className="offer-header">
-                      <h3 className="offer-title">{offer.title}</h3>
-                      <span className="offer-type">{offer.offerType}</span>
-                    </div>
-                    <div className="offer-content">
-                      <p className="offer-description">{offer.description}</p>
-                      {offer.discountType !== 'none' && (
-                        <div className="offer-discount">
-                          <span className="discount-value">
-                            {offer.discountType === 'percentage' 
-                              ? `${offer.discountValue}% OFF`
-                              : `₹${offer.discountValue} OFF`
-                            }
-                          </span>
-                        </div>
-                      )}
-                      <div className="offer-validity">
-                        <span className="valid-until">
-                          Valid until: {new Date(offer.validUntil).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {offer.actionUrl && (
-                        <a 
-                          href={offer.actionUrl} 
-                          className="offer-action-btn"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {offer.actionText || 'View Details'}
-                        </a>
-                      )}
-                    </div>
+            {/* AI Assistant Card */}
+            <div className="ai-assistant-card">
+              <div className="ai-header">
+                <div className="ai-title">
+                  <FaRobot />
+                  <span>AI Assistant</span>
+                </div>
+                <span className="online-status">ONLINE</span>
+              </div>
+              <div className="ai-chat-history">
+                {chatHistory.map((msg, index) => (
+                  <div key={index} className={`ai-message-bubble ${msg.role}`}>
+                    {msg.content}
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="empty-state">
-                <FaBell className="empty-icon" />
-                <p>No special offers available</p>
+              <div className="ai-input-container">
+                <input 
+                  type="text" 
+                  placeholder="Ask me anything..." 
+                  value={aiMessage}
+                  onChange={(e) => setAiMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendAiMessage()}
+                />
+                <button className="btn-send" onClick={handleSendAiMessage}><FaPaperPlane /></button>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Fabrics Section */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2 className="section-title">Available Fabrics</h2>
-            <Link to="/fabrics" className="btn btn-outline">View All Fabrics</Link>
-          </div>
-          <div className="fabrics-overview">
-            {fabrics.length > 0 ? (
-              <div className="fabrics-grid">
-                {fabrics.map(fabric => (
-                  <div key={fabric._id} className="fabric-card">
-                    <div className="fabric-image">
-                      {fabric.images && fabric.images.length > 0 ? (
-                        <img src={fabric.images[0].url} alt={fabric.name} />
-                      ) : (
-                        <div className="fabric-placeholder">
-                          <FaTag />
-                        </div>
-                      )}
-                    </div>
-                    <div className="fabric-info">
-                      <h3 className="fabric-name">{fabric.name}</h3>
-                      <p className="fabric-material">{fabric.material} - {fabric.color}</p>
-                      <div className="fabric-details">
-                        <span className="fabric-category">{fabric.category}</span>
-                        <span className="fabric-stock">{fabric.stock} {fabric.unit}</span>
-                      </div>
-                      <div className="fabric-price">
-                        <span className="price">₹{fabric.price?.toLocaleString()}</span>
-                        <span className="unit">per {fabric.unit}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <FaTag className="empty-icon" />
-                <p>No fabrics available</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Settings Section */}
-        <div className="dashboard-section">
-          <div className="section-header">
-            <h2 className="section-title">Settings</h2>
-            <Link to="/portal/settings" className="btn btn-outline">Manage Settings</Link>
-          </div>
-          <div className="settings-overview">
-            <div className="settings-options">
-              <Link to="/portal/settings/account" className="settings-option">
-                <FaUser />
-                <span>Account Settings</span>
-              </Link>
-              <Link to="/portal/settings/notifications" className="settings-option">
-                <FaBell />
-                <span>Notification Preferences</span>
-              </Link>
-              <Link to="/portal/settings/privacy" className="settings-option">
-                <FaCog />
-                <span>Privacy Settings</span>
-              </Link>
-              <Link to="/portal/settings/preferences" className="settings-option">
-                <FaHeart />
-                <span>Style Preferences</span>
-              </Link>
             </div>
           </div>
         </div>

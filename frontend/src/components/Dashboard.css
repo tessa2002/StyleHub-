@@ -189,8 +189,8 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter
 }
 
 .dashboard-main.with-sidebar {
-  margin-left: 250px;
-  width: calc(100% - 250px);
+  margin-left: 260px;
+  width: calc(100% - 260px);
 }
 
 .dashboard-main.sidebar-collapsed {

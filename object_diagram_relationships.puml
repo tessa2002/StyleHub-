@@ -1,0 +1,104 @@
+@startuml Object_Relationships
+
+skinparam object {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Object Diagram - Entity Relationships
+
+object "User" as user1 {
+  _id = "507f1f77bcf86cd799439031"
+  name = "John Doe"
+  email = "john@example.com"
+  role = "Customer"
+}
+
+object "Customer" as cust1 {
+  _id = "507f191e810c19729de860ec"
+  name = "John Doe"
+  phone = "+1234567890"
+  user = "507f1f77bcf86cd799439031"
+}
+
+object "Order" as ord1 {
+  _id = "507f1f77bcf86cd799439032"
+  orderNumber = "ORD-001"
+  customer = "507f191e810c19729de860ec"
+  assignedTailor = "507f1f77bcf86cd799439033"
+}
+
+object "Tailor (User)" as tailor1 {
+  _id = "507f1f77bcf86cd799439033"
+  name = "Mike Smith"
+  role = "Tailor"
+}
+
+object "Bill" as bill1 {
+  _id = "507f1f77bcf86cd799439034"
+  billNumber = "BILL-000101"
+  order = "507f1f77bcf86cd799439032"
+  customer = "507f191e810c19729de860ec"
+}
+
+object "Fabric" as fab1 {
+  _id = "507f1f77bcf86cd799439035"
+  name = "Blue Cotton"
+  createdBy = "507f1f77bcf86cd799439036"
+}
+
+object "Admin (User)" as admin1 {
+  _id = "507f1f77bcf86cd799439036"
+  name = "Admin User"
+  role = "Admin"
+}
+
+object "Appointment" as apt1 {
+  _id = "507f1f77bcf86cd799439037"
+  customer = "507f191e810c19729de860ec"
+  relatedOrder = "507f1f77bcf86cd799439032"
+}
+
+object "MeasurementHistory" as hist1 {
+  _id = "507f1f77bcf86cd799439038"
+  customer = "507f191e810c19729de860ec"
+  source = "order"
+}
+
+object "Notification" as notif1 {
+  _id = "507f1f77bcf86cd799439039"
+  recipientId = "507f1f77bcf86cd799439033"
+  relatedOrder = "507f1f77bcf86cd799439032"
+}
+
+' Relationships
+user1 ||--|| cust1 : "1:1"
+cust1 ||--o{ ord1 : "1:N"
+tailor1 ||--o{ ord1 : "1:N"
+ord1 ||--|| bill1 : "1:1"
+ord1 }o--|| fab1 : "N:1"
+admin1 ||--o{ fab1 : "1:N"
+cust1 ||--o{ apt1 : "1:N"
+ord1 ||--o| apt1 : "1:1"
+cust1 ||--o{ hist1 : "1:N"
+ord1 ||--o{ notif1 : "1:N"
+tailor1 ||--o{ notif1 : "1:N"
+
+note right of user1
+  User can be Customer,
+  Admin, Tailor, or Staff
+end note
+
+note right of ord1
+  Order has relationships
+  with multiple entities
+end note
+
+@enduml
+
+

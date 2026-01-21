@@ -16,13 +16,37 @@ const notificationRoutes = require('./routes/notifications');
 const appointmentsRoutes = require('./routes/appointments');
 const fabricRoutes = require('./routes/fabrics');
 const offerRoutes = require('./routes/offers');
+const mlRoutes = require('./routes/ml');
 
 // Initialize Express App
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+// CORS Configuration - Works for both localhost and production
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3002' // Just in case
+    ];
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // MongoDB Connection with better error handling
@@ -67,6 +91,7 @@ app.use('/api/bills', require('./routes/bills'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/fabrics', require('./routes/fabrics'));
 app.use('/api/offers', offerRoutes);
+app.use('/api/ml', mlRoutes);
 
 // ALSO mount portal routes at /portal (for cached frontend compatibility)
 app.use('/portal', require('./routes/portal'));

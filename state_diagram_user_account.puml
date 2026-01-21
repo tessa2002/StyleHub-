@@ -1,0 +1,47 @@
+@startuml State_User_Account
+
+[*] --> Pending : User registers
+
+state Pending {
+  [*] --> EmailVerification
+  EmailVerification --> Pending : Waiting for verification
+}
+
+Pending --> Active : Account activated\nEmail verified
+
+state Active {
+  [*] --> LoggedIn
+  LoggedIn --> Active : User active
+  Active --> LoggedOut : User logs out
+  LoggedOut --> Active : User logs in
+}
+
+Active --> Suspended : Admin suspends account\n(Violation of terms)
+
+state Suspended {
+  [*] --> AccessDenied
+  AccessDenied --> Suspended : Cannot access system
+}
+
+Suspended --> Active : Admin reactivates account
+
+Active --> [*] : Account deleted
+
+note right of Pending
+  New user registration
+  Email verification pending
+end note
+
+note right of Active
+  User can access all features
+  based on their role
+end note
+
+note right of Suspended
+  Account temporarily disabled
+  User cannot login
+end note
+
+@enduml
+
+

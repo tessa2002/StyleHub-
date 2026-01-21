@@ -1,0 +1,75 @@
+@startuml Order_State_Diagram_Clean
+
+skinparam state {
+  BackgroundColor White
+  BorderColor Black
+  ArrowColor Black
+  FontColor Black
+  FontSize 11
+}
+
+skinparam note {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+title Order Lifecycle State Diagram
+
+[*] --> Pending : Customer places order
+
+state Pending {
+  [*] --> WaitingAssignment
+}
+
+Pending --> Cutting : Admin assigns to tailor\nTailor accepts order
+
+state Cutting {
+  [*] --> InProgress
+}
+
+Cutting --> Stitching : Cutting completed\nTailor updates stage
+
+state Stitching {
+  [*] --> InProgress
+}
+
+Stitching --> Ready : Stitching completed\nTailor marks ready
+
+state Ready {
+  [*] --> AwaitingCollection
+}
+
+Ready --> Delivered : Customer collects order
+
+Delivered --> [*] : Order completed
+
+Pending --> Cancelled : Customer cancels order
+Cutting --> Cancelled : Cancelled during work
+Stitching --> Cancelled : Cancelled during work
+Ready --> Cancelled : Customer cancels before pickup
+
+Cancelled --> [*] : Order closed
+
+note right of Pending
+  Order created and waiting
+  for assignment to tailor
+end note
+
+note right of Cutting
+  Tailor is cutting fabric
+  according to measurements
+end note
+
+note right of Stitching
+  Tailor is stitching
+  garment pieces together
+end note
+
+note right of Ready
+  Order complete and ready
+  for customer collection
+end note
+
+@enduml
+

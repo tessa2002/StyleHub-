@@ -1,0 +1,61 @@
+@startuml Activity_Fabric_Management
+
+skinparam activity {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Fabric Management Activity Diagram
+
+start
+
+partition "Add Fabric" {
+  :Admin logs in;
+  :Admin accesses fabric management;
+  :Click "Add New Fabric";
+  :Fill fabric details\n(name, material, color, price, stock, category);
+  :Upload fabric images;
+  :Submit fabric;
+  :Create fabric record;
+  :Set isActive = true;
+  stop
+}
+
+partition "Update Stock" {
+  :Admin views fabrics;
+  :Admin selects fabric;
+  :View current stock;
+  :Update stock quantity;
+  :Save changes;
+  
+  if (Stock <= threshold?) then (yes)
+    :Send low stock alert to admin;
+  else (no)
+  endif
+  
+  stop
+}
+
+partition "Order Uses Fabric" {
+  :Customer places order with fabric;
+  :Check fabric stock;
+  
+  if (Stock available?) then (yes)
+    :Reserve fabric quantity;
+    :Reduce fabric stock;
+    :Create order;
+    stop
+  else (no)
+    :Show "Out of stock" message;
+    stop
+  endif
+}
+
+@enduml
+
+

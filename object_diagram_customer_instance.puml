@@ -1,0 +1,93 @@
+@startuml Object_Customer_Instance
+
+skinparam object {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Object Diagram - Customer Instance
+
+object "Customer: Sarah Johnson" as cust1 {
+  _id = "507f191e810c19729de860eb"
+  name = "Sarah Johnson"
+  phone = "+1987654321"
+  email = "sarah@example.com"
+  address = "456 Oak Ave"
+}
+
+object "User Account" as user1 {
+  _id = "507f1f77bcf86cd799439015"
+  name = "Sarah Johnson"
+  email = "sarah@example.com"
+  role = "Customer"
+  status = "Active"
+}
+
+object "Current Measurements" as meas1 {
+  height = 165
+  chest = 90
+  waist = 75
+  hips = 95
+  shoulder = 40
+  sleeve = 55
+  neck = 35
+}
+
+object "Order #ORD-002" as ord1 {
+  _id = "507f1f77bcf86cd799439016"
+  orderNumber = "ORD-002"
+  status = "Ready"
+  totalAmount = 3500.00
+}
+
+object "Order #ORD-003" as ord2 {
+  _id = "507f1f77bcf86cd799439017"
+  orderNumber = "ORD-003"
+  status = "Pending"
+  totalAmount = 4500.00
+}
+
+object "Appointment #APT-001" as apt1 {
+  _id = "507f1f77bcf86cd799439018"
+  service = "Measurement"
+  status = "Scheduled"
+  scheduledAt = "2024-01-20 10:00"
+}
+
+object "Measurement History #1" as hist1 {
+  _id = "507f1f77bcf86cd799439019"
+  source = "manual"
+  createdAt = "2024-01-10"
+}
+
+object "Measurement History #2" as hist2 {
+  _id = "507f1f77bcf86cd799439020"
+  source = "order"
+  createdAt = "2024-01-15"
+}
+
+cust1 --> user1 : user
+cust1 --> meas1 : measurements
+cust1 --> ord1 : places
+cust1 --> ord2 : places
+cust1 --> apt1 : schedules
+cust1 --> hist1 : has history
+cust1 --> hist2 : has history
+
+note right of cust1
+  Customer has:
+  - User account
+  - Current measurements
+  - Multiple orders
+  - Appointment scheduled
+  - Measurement history
+end note
+
+@enduml
+
+

@@ -11,14 +11,11 @@ import {
   FaUsers,
   FaUserPlus,
   FaRuler,
-  FaBoxes,
   FaTshirt,
-  FaGem,
   FaMoneyBillWave,
   FaFileInvoiceDollar,
   FaExclamationTriangle,
   FaChartLine,
-  FaWarehouse,
   FaBell,
   FaCog,
   FaUser,
@@ -71,14 +68,6 @@ const TailorDashboardLayout = ({ children, title }) => {
       ]
     },
     {
-      title: 'Inventory',
-      icon: FaBoxes,
-      submenu: [
-        { title: 'Fabric Stock', icon: FaTshirt, path: '/tailor/inventory/fabrics' },
-        { title: 'Accessories Stock', icon: FaGem, path: '/tailor/inventory/accessories' }
-      ]
-    },
-    {
       title: 'Payments',
       icon: FaMoneyBillWave,
       submenu: [
@@ -90,8 +79,7 @@ const TailorDashboardLayout = ({ children, title }) => {
       title: 'Reports',
       icon: FaChartLine,
       submenu: [
-        { title: 'Sales Reports', icon: FaChartLine, path: '/tailor/reports/sales' },
-        { title: 'Inventory Reports', icon: FaWarehouse, path: '/tailor/reports/inventory' }
+        { title: 'Sales Reports', icon: FaChartLine, path: '/tailor/reports/sales' }
       ]
     },
     {

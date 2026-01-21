@@ -1,0 +1,76 @@
+@startuml Activity_Order_Processing
+
+skinparam activity {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Order Processing Activity Diagram
+
+start
+
+:Admin views pending orders;
+:Admin selects order;
+:Admin views available tailors;
+:Admin assigns order to tailor;
+
+:Send notification to tailor;
+
+:Tailor views assigned orders;
+:Tailor opens order details;
+:Tailor reviews measurements and fabric;
+
+if (Tailor accepts order?) then (yes)
+  :Update order status to "Cutting";
+  :Set acceptedByTailor = true;
+  :Send notification to admin;
+  
+  :Tailor starts work;
+  :Update workStartedAt timestamp;
+  :Send notification to customer;
+  
+  :Tailor cuts fabric;
+  :Update order stage to "Cutting";
+  
+  :Tailor stitches garment;
+  :Update order stage to "Stitching";
+  
+  if (Trial required?) then (yes)
+    :Update status to "Trial";
+    :Customer tries garment;
+    
+    if (Customer approves?) then (yes)
+      :Tailor marks order ready;
+      :Update status to "Ready";
+      :Set completedAt timestamp;
+      :Send notification to customer;
+      :Send notification to admin;
+      stop
+    else (no)
+      :Request changes;
+      :Update status to "Stitching";
+      :Tailor makes adjustments;
+    endif
+  else (no)
+    :Tailor marks order ready;
+    :Update status to "Ready";
+    :Set completedAt timestamp;
+    :Send notification to customer;
+    :Send notification to admin;
+    stop
+  endif
+else (no)
+  :Tailor rejects order;
+  :Send notification to admin;
+  :Admin reassigns order;
+  stop
+endif
+
+@enduml
+
+

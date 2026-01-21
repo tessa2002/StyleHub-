@@ -1,64 +1,442 @@
-/* frontend/src/pages/Login.css */
-.auth-container {
-  max-width: 400px;
-  margin: 80px auto;
-  padding: 40px;
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  text-align: center;
-  font-family: Arial, sans-serif;
+/* Login Page Styles - Two Column Layout */
+
+.login-page {
+  display: flex;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
 }
 
-.auth-container h1 {
-  margin-bottom: 10px;
-  color: var(--color-text-primary);
+/* Left Side - Image with Overlay */
+.login-left {
+  flex: 1;
+  position: relative;
+  display: none;
 }
 
-.auth-container p {
-  margin-bottom: 20px;
-  color: #555;
-}
-
-.auth-form input {
+.login-image-wrapper {
+  position: relative;
   width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  height: 100%;
+  overflow: hidden;
 }
 
-.auth-form button {
+.login-image {
   width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border: 1px solid rgba(108,43,217,0.25);
-  border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, var(--color-brand), var(--color-brand-600));
-  color: #fff;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.login-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.7) 100%);
+  padding: 3rem 2rem 2rem;
+}
+
+.overlay-content {
+  max-width: 500px;
+}
+
+.overlay-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.overlay-logo-icon {
+  width: 40px;
+  height: 40px;
+  color: #ffffff;
+}
+
+.overlay-logo-text {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.overlay-tagline {
   font-size: 1rem;
-  cursor: pointer;
+  color: #ffffff;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  opacity: 0.95;
 }
 
-.auth-form button:hover {
-  box-shadow: var(--shadow-md);
+.overlay-social-proof {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-.error-msg {
-  color: red;
-  margin-bottom: 10px;
+.overlay-avatars {
+  display: flex;
+  gap: -0.5rem;
 }
 
-.auth-footer {
-  margin-top: 15px;
-  color: #555;
+.overlay-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.3);
+  border: 2px solid #ffffff;
+  margin-left: -0.5rem;
 }
 
-.auth-footer a {
-  color: var(--color-brand);
+.overlay-avatar:first-child {
+  margin-left: 0;
+}
+
+.overlay-text {
+  font-size: 0.875rem;
+  color: #ffffff;
+  opacity: 0.9;
+}
+
+/* Right Side - Login Form */
+.login-right {
+  flex: 1;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.login-form-container {
+  width: 100%;
+  max-width: 440px;
+}
+
+.login-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 2rem;
+}
+
+.create-account-link {
+  font-size: 0.875rem;
+  color: #6B7280;
   text-decoration: none;
 }
 
-.auth-footer a:hover {
+.link-highlight {
+  color: #EC4899;
+  font-weight: 600;
+}
+
+.login-content {
+  width: 100%;
+}
+
+.login-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.login-subtitle {
+  font-size: 0.875rem;
+  color: #6B7280;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.login-error-message {
+  background-color: #FEF3C7;
+  color: #92400E;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+
+/* Form Styles */
+.login-form {
+  margin-bottom: 2rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #111827;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #EC4899;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
+}
+
+.form-input.error {
+  border-color: #EF4444;
+}
+
+.form-input::placeholder {
+  color: #9CA3AF;
+}
+
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6B7280;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-toggle:hover {
+  color: #374151;
+}
+
+.field-error {
+  font-size: 0.75rem;
+  color: #EF4444;
+  margin-top: 0.5rem;
+}
+
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #374151;
+  cursor: pointer;
+}
+
+.checkbox-input {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: #EC4899;
+}
+
+.forgot-password-link {
+  color: #EC4899;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.forgot-password-link:hover {
   text-decoration: underline;
+}
+
+.login-button {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  background-color: #EC4899;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.login-button:hover:not(:disabled) {
+  background-color: #DB2777;
+}
+
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Social Login */
+.social-login {
+  margin-bottom: 2rem;
+}
+
+.social-divider {
+  text-align: center;
+  margin: 2rem 0 1.5rem;
+  position: relative;
+  font-size: 0.875rem;
+  color: #6B7280;
+}
+
+.social-divider::before,
+.social-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 45%;
+  height: 1px;
+  background-color: #E5E7EB;
+}
+
+.social-divider::before {
+  left: 0;
+}
+
+.social-divider::after {
+  right: 0;
+}
+
+.social-divider span {
+  background-color: #ffffff;
+  padding: 0 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.social-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.social-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: #ffffff;
+  border: 1px solid #D1D5DB;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.social-button:hover {
+  background-color: #F9FAFB;
+  border-color: #9CA3AF;
+}
+
+.social-button svg {
+  flex-shrink: 0;
+}
+
+.google-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.apple-button svg {
+  width: 18px;
+  height: 18px;
+  color: #111827;
+}
+
+.login-copyright {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  margin-top: 2rem;
+}
+
+/* Responsive Design */
+@media (min-width: 1024px) {
+  .login-left {
+    display: block;
+  }
+
+  .login-right {
+    padding: 3rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  .login-page {
+    flex-direction: column;
+  }
+
+  .login-left {
+    display: none;
+  }
+
+  .login-right {
+    min-height: 100vh;
+  }
+}
+/* Google Loading Spinner */
+.google-loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #4285F4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.social-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.social-button:disabled:hover {
+  background-color: #ffffff;
+  border-color: #D1D5DB;
+}
+/* Google Button Container */
+.google-button-container {
+  position: relative;
+  width: 100%;
+}
+
+#google-signin-button {
+  width: 100%;
+}
+
+#google-signin-button > div {
+  width: 100% !important;
+}
+
+#google-signin-button iframe {
+  width: 100% !important;
+}
+
+/* Hide custom button when Google button is rendered */
+.google-button-container:has(#google-signin-button:not([style*="display: none"])) .google-button {
+  display: none;
 }

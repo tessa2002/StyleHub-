@@ -1057,4 +1057,53 @@ router.post('/:id/assign-tailor', auth, allowRoles('Admin', 'Staff'), async (req
   }
 });
 
+// Create bill for own fabric orders after appointment (Admin only)
+router.post('/:id/create-bill', auth, allowRoles('Admin'), async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id).populate('customer');
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    
+    // Check if order is own fabric order
+    if (order.fabric?.source !== 'customer') {
+      return res.status(400).json({ message: 'This order does not require manual bill creation' });
+    }
+    
+    // Check if bill already exists
+    const Bill = require('../models/Bill');
+    const existingBill = await Bill.findOne({ order: order._id });
+    if (existingBill) {
+      return res.status(400).json({ message: 'Bill already exists for this order', bill: existingBill });
+    }
+    
+    // Create bill
+    const bill = await Bill.create({
+      order: order._id,
+      customer: order.customer._id,
+      amount: order.totalAmount,
+      paymentMethod: 'Razorpay',
+      status: 'Pending',
+      amountPaid: 0,
+      payments: [],
+    });
+    
+    // Update order status
+    order.status = 'Order Placed';
+    await order.save();
+    
+    console.log('💳 Bill created for own fabric order:', bill._id, 'Amount:', order.totalAmount);
+    res.status(201).json({ 
+      success: true,
+      message: 'Bill created successfully',
+      bill: bill,
+      order: order
+    });
+  } catch (error) {
+    console.error('❌ CREATE BILL ERROR:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
+  }
+});
+
 module.exports = router;

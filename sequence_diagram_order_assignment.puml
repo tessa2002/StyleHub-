@@ -1,0 +1,67 @@
+@startuml Sequence_Order_Assignment
+
+actor Admin
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+actor Tailor
+
+== Admin Assigns Order to Tailor ==
+
+Admin -> Frontend: View Orders
+Frontend -> API: GET /api/orders
+API -> DB: Fetch all orders
+DB --> API: Orders list
+API --> Frontend: Orders data
+Frontend --> Admin: Display orders
+
+Admin -> Frontend: Select Order to Assign
+Frontend -> API: GET /api/orders/:id
+API -> DB: Fetch order details
+DB --> API: Order details
+API --> Frontend: Order data
+Frontend --> Admin: Order details
+
+Admin -> Frontend: View Available Tailors
+Frontend -> API: GET /api/tailors
+API -> DB: Fetch tailors
+DB --> API: Tailors list
+API --> Frontend: Tailors data
+Frontend --> Admin: Display tailors
+
+Admin -> Frontend: Assign Order to Tailor
+Frontend -> API: POST /api/orders/:id/assign-tailor\n(tailorId)
+API -> DB: Update order\n(assignedTailor)
+DB --> API: Order updated
+
+API -> DB: Create notification for tailor
+DB --> API: Notification created
+
+API --> Frontend: Assignment successful
+Frontend --> Admin: Success message
+
+== Tailor Receives Notification ==
+
+DB -> Tailor: Notification (via system)
+Tailor -> Frontend: View Notifications
+Frontend -> API: GET /api/notifications
+API -> DB: Fetch notifications
+DB --> API: Notifications
+API --> Frontend: Notifications list
+Frontend --> Tailor: Display notifications
+
+Tailor -> Frontend: View Assigned Orders
+Frontend -> API: GET /api/orders/assigned
+API -> DB: Fetch orders\n(assignedTailor = tailorId)
+DB --> API: Assigned orders
+API --> Frontend: Orders list
+Frontend --> Tailor: Display assigned orders
+
+note right of DB
+  Order Status: "Pending"
+  assignedTailor: Tailor ID
+end note
+
+@enduml
+
+

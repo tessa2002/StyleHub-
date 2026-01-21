@@ -7,16 +7,27 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 async function auth(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
-  if (!token) return res.status(401).json({ message: 'No token provided' });
+  
+  // Log auth attempt for debugging
+  console.log(`🔐 Auth middleware - Path: ${req.path}, Token: ${token ? 'Present' : 'Missing'}, Header: ${header ? 'Present' : 'Missing'}`);
+  
+  if (!token) {
+    console.error('❌ Auth failed: No token provided');
+    return res.status(401).json({ message: 'No token provided' });
+  }
   
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('✅ Token decoded successfully, user ID:', decoded.id);
     
     // Fetch the full user object from database
     const user = await User.findById(decoded.id).select('-password');
     if (!user) {
+      console.error('❌ Auth failed: User not found in database, ID:', decoded.id);
       return res.status(401).json({ message: 'User not found' });
     }
+    
+    console.log('✅ User found in database:', user.email, user.role);
     
     // Set both decoded payload and full user object for compatibility
     req.user = {
@@ -29,6 +40,12 @@ async function auth(req, res, next) {
     
     next();
   } catch (e) {
+    console.error('Token verification error:', e.name, e.message);
+    if (e.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token expired. Please log in again.' });
+    } else if (e.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Invalid token. Please log in again.' });
+    }
     return res.status(401).json({ message: 'Invalid token' });
   }
 }

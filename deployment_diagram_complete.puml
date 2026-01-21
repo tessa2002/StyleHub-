@@ -1,0 +1,100 @@
+@startuml Deployment_Complete
+
+skinparam node {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam component {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Deployment Diagram - Tailoring Management System
+
+node "Client Tier" {
+  component [Web Browser] as browser {
+    [React Frontend] as frontend
+  }
+  
+  component [Mobile Browser] as mobile {
+    [React Frontend] as mobileFrontend
+  }
+}
+
+node "Application Server" {
+  component [Node.js Server] as nodejs {
+    [Express.js] as express
+    [REST API] as api
+    [Authentication] as auth
+    [File Upload] as upload
+  }
+  
+  database "Session Storage" as session
+}
+
+node "ML Service" {
+  component [Python API] as python {
+    [ML Models] as ml
+    [Prediction Service] as prediction
+  }
+}
+
+node "Database Server" {
+  database "MongoDB" as mongodb {
+    [Users Collection] as users
+    [Orders Collection] as orders
+    [Customers Collection] as customers
+    [Fabrics Collection] as fabrics
+    [Bills Collection] as bills
+    [Appointments Collection] as appointments
+  }
+}
+
+node "External Services" {
+  component [Razorpay] as razorpay {
+    [Payment Gateway] as payment
+  }
+  
+  component [File Storage] as storage {
+    [Image Storage] as images
+    [Document Storage] as documents
+  }
+}
+
+' Connections
+browser --> nodejs : HTTP/HTTPS
+mobile --> nodejs : HTTP/HTTPS
+nodejs --> mongodb : MongoDB Connection
+nodejs --> python : HTTP API
+nodejs --> razorpay : Payment API
+nodejs --> storage : File Upload
+nodejs --> session : Session Data
+
+note right of nodejs
+  Port: 5000
+  Environment: Production
+  Framework: Express.js
+end note
+
+note right of mongodb
+  Database: style_hub
+  Connection: MongoDB Atlas
+  Port: 27017
+end note
+
+note right of python
+  Port: 5001
+  Framework: Flask/FastAPI
+  ML Models: KNN, SVM, Naive Bayes
+end note
+
+@enduml
+
+

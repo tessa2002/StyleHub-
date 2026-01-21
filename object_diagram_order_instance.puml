@@ -1,0 +1,85 @@
+@startuml Object_Order_Instance
+
+skinparam object {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Object Diagram - Order Instance
+
+object "Order #ORD-001" as ord1 {
+  _id = "507f1f77bcf86cd799439011"
+  orderNumber = "ORD-001"
+  status = "Cutting"
+  totalAmount = 5000.00
+  orderDate = "2024-01-15"
+  expectedDelivery = "2024-01-25"
+  stage = "Cutting"
+  itemType = "Men's Suit"
+}
+
+object "Customer: John Doe" as cust1 {
+  _id = "507f191e810c19729de860ea"
+  name = "John Doe"
+  phone = "+1234567890"
+  email = "john@example.com"
+  address = "123 Main St"
+}
+
+object "Tailor: Mike Smith" as tailor1 {
+  _id = "507f1f77bcf86cd799439012"
+  name = "Mike Smith"
+  email = "mike@tailor.com"
+  role = "Tailor"
+  status = "Active"
+}
+
+object "Fabric: Blue Cotton" as fab1 {
+  _id = "507f1f77bcf86cd799439013"
+  name = "Blue Cotton"
+  material = "Cotton"
+  color = "Blue"
+  price = 500.00
+  stock = 25.5
+  category = "cotton"
+}
+
+object "Bill #BILL-000101" as bill1 {
+  _id = "507f1f77bcf86cd799439014"
+  billNumber = "BILL-000101"
+  amount = 5000.00
+  amountPaid = 5000.00
+  status = "Paid"
+  paymentMethod = "Razorpay"
+}
+
+object "Measurement Snapshot" as meas1 {
+  height = 175
+  chest = 100
+  waist = 85
+  hips = 95
+  shoulder = 45
+  sleeve = 60
+  neck = 38
+}
+
+ord1 --> cust1 : customer
+ord1 --> tailor1 : assignedTailor
+ord1 --> fab1 : fabric.fabricId
+ord1 --> meas1 : measurementSnapshot
+ord1 --> bill1 : has bill
+
+note right of ord1
+  Order is in "Cutting" stage
+  Assigned to tailor Mike Smith
+  Bill is fully paid
+end note
+
+@enduml
+
+

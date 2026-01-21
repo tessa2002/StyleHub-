@@ -1,0 +1,80 @@
+@startuml Order_State_Diagram
+
+skinparam state {
+  BackgroundColor #E1F5FF
+  BorderColor #0066CC
+  ArrowColor #0066CC
+  FontSize 12
+}
+
+title Order State Diagram\nTailoring Management System
+
+[*] --> OrderPlaced : Customer places order
+
+state OrderPlaced {
+  [*] --> PaymentPending
+  PaymentPending --> OrderPlaced : Payment received
+}
+
+OrderPlaced --> Pending : Order created
+
+state Pending {
+  [*] --> WaitingAssignment
+  WaitingAssignment --> Pending : Waiting for tailor
+}
+
+Pending --> Cutting : Admin assigns to tailor\nTailor accepts
+
+state Cutting {
+  [*] --> InProgress
+  InProgress --> Cutting : Work continues
+}
+
+Cutting --> Stitching : Cutting completed\nTailor updates stage
+
+state Stitching {
+  [*] --> InProgress
+  InProgress --> Stitching : Work continues
+}
+
+Stitching --> Ready : Stitching completed\nTailor marks ready
+
+state Ready {
+  [*] --> AwaitingCollection
+  AwaitingCollection --> Ready : Customer notified
+}
+
+Ready --> Delivered : Customer collects order
+
+Delivered --> [*] : Order completed
+
+Pending --> Cancelled : Customer/Admin cancels
+Cutting --> Cancelled : Cancelled during work
+Stitching --> Cancelled : Cancelled during work
+Ready --> Cancelled : Cancelled before delivery
+
+Cancelled --> [*] : Order closed
+
+note right of Pending
+  Order is created and waiting
+  for assignment to tailor
+end note
+
+note right of Cutting
+  Tailor is cutting the fabric
+  according to measurements
+end note
+
+note right of Stitching
+  Tailor is stitching the garment
+  pieces together
+end note
+
+note right of Ready
+  Order is complete and ready
+  for customer collection
+end note
+
+@enduml
+
+

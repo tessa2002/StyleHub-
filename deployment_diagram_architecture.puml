@@ -1,0 +1,116 @@
+@startuml Deployment_Architecture
+
+skinparam node {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam component {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title System Architecture Deployment Diagram
+
+cloud "Internet" {
+  node "Client Devices" {
+    component [Web Browser] as web
+    component [Mobile Browser] as mobile
+  }
+}
+
+node "Load Balancer" as lb {
+  note right
+    Routes traffic to
+    application servers
+  end note
+}
+
+node "Web Server Tier" {
+  node "Web Server 1" as ws1 {
+    component [React App] as react1
+    component [Static Files] as static1
+  }
+  
+  node "Web Server 2" as ws2 {
+    component [React App] as react2
+    component [Static Files] as static2
+  }
+}
+
+node "Application Tier" {
+  node "App Server 1" as app1 {
+    component [Node.js] as node1
+    component [Express API] as api1
+  }
+  
+  node "App Server 2" as app2 {
+    component [Node.js] as node2
+    component [Express API] as api2
+  }
+}
+
+node "ML Service Tier" {
+  node "ML Server" as mlserver {
+    component [Python API] as python
+    component [ML Models] as models
+  }
+}
+
+node "Database Tier" {
+  database "MongoDB Primary" as mongo1 {
+    [Primary DB] as primary
+  }
+  
+  database "MongoDB Replica" as mongo2 {
+    [Replica DB] as replica
+  }
+}
+
+node "External Services" {
+  component [Razorpay API] as razorpay
+  component [Cloud Storage] as cloud
+}
+
+' Connections
+web --> lb
+mobile --> lb
+lb --> ws1
+lb --> ws2
+ws1 --> app1
+ws2 --> app2
+app1 --> mongo1
+app2 --> mongo1
+app1 --> mlserver
+app2 --> mlserver
+mongo1 --> mongo2 : Replication
+app1 --> razorpay
+app2 --> razorpay
+app1 --> cloud
+app2 --> cloud
+
+note right of app1
+  Handles:
+  - Authentication
+  - Business Logic
+  - API Requests
+end note
+
+note right of mongo1
+  Stores:
+  - Users
+  - Orders
+  - Customers
+  - Fabrics
+  - Bills
+end note
+
+@enduml
+
+

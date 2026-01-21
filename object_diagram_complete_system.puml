@@ -1,0 +1,127 @@
+@startuml Object_Complete_System
+
+skinparam object {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Object Diagram - Complete System Instance
+
+package "Users" {
+  object "Admin: Admin User" as admin1 {
+    _id = "507f1f77bcf86cd799439021"
+    name = "Admin User"
+    email = "admin@tailor.com"
+    role = "Admin"
+    status = "Active"
+  }
+  
+  object "Tailor: Mike Smith" as tailor1 {
+    _id = "507f1f77bcf86cd799439022"
+    name = "Mike Smith"
+    email = "mike@tailor.com"
+    role = "Tailor"
+    status = "Active"
+  }
+  
+  object "Customer: John Doe" as cust1 {
+    _id = "507f1f77bcf86cd799439023"
+    name = "John Doe"
+    email = "john@example.com"
+    role = "Customer"
+    status = "Active"
+  }
+}
+
+package "Orders" {
+  object "Order #ORD-001" as ord1 {
+    _id = "507f1f77bcf86cd799439024"
+    orderNumber = "ORD-001"
+    status = "Cutting"
+    totalAmount = 5000.00
+    assignedTailor = "507f1f77bcf86cd799439022"
+  }
+  
+  object "Order #ORD-002" as ord2 {
+    _id = "507f1f77bcf86cd799439025"
+    orderNumber = "ORD-002"
+    status = "Ready"
+    totalAmount = 3500.00
+    assignedTailor = "507f1f77bcf86cd799439022"
+  }
+}
+
+package "Bills" {
+  object "Bill #BILL-000101" as bill1 {
+    _id = "507f1f77bcf86cd799439026"
+    billNumber = "BILL-000101"
+    amount = 5000.00
+    status = "Paid"
+    order = "507f1f77bcf86cd799439024"
+  }
+  
+  object "Bill #BILL-000102" as bill2 {
+    _id = "507f1f77bcf86cd799439027"
+    billNumber = "BILL-000102"
+    amount = 3500.00
+    status = "Paid"
+    order = "507f1f77bcf86cd799439025"
+  }
+}
+
+package "Fabrics" {
+  object "Fabric: Blue Cotton" as fab1 {
+    _id = "507f1f77bcf86cd799439028"
+    name = "Blue Cotton"
+    stock = 25.5
+    price = 500.00
+    isActive = true
+  }
+  
+  object "Fabric: Red Silk" as fab2 {
+    _id = "507f1f77bcf86cd799439029"
+    name = "Red Silk"
+    stock = 10.0
+    price = 800.00
+    isActive = true
+  }
+}
+
+package "Appointments" {
+  object "Appointment #APT-001" as apt1 {
+    _id = "507f1f77bcf86cd799439030"
+    service = "Measurement"
+    status = "Scheduled"
+    scheduledAt = "2024-01-20 10:00"
+  }
+}
+
+cust1 --> ord1 : places
+cust1 --> ord2 : places
+cust1 --> apt1 : schedules
+
+ord1 --> tailor1 : assigned to
+ord2 --> tailor1 : assigned to
+
+ord1 --> bill1 : has
+ord2 --> bill2 : has
+
+ord1 --> fab1 : uses
+ord2 --> fab2 : uses
+
+admin1 --> ord1 : manages
+admin1 --> ord2 : manages
+
+note right of ord1
+  System shows relationships
+  between all entities
+end note
+
+@enduml
+
+

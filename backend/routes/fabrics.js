@@ -1,9 +1,43 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const Fabric = require('../models/Fabric');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { auth } = require('../middleware/auth');
+
+// Ensure uploads directory exists
+const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+// Configure multer for image uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, UPLOAD_DIR);
+  },
+  filename: function (req, file, cb) {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    cb(null, unique + '-' + safe);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit for fabric images
+  fileFilter: function (req, file, cb) {
+    // Only allow image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  }
+});
 
 // @route   GET /api/fabrics
 // @desc    Get all fabrics with search and filters
@@ -85,7 +119,12 @@ router.get('/:id', async (req, res) => {
 // @route   POST /api/fabrics
 // @desc    Create new fabric
 // @access  Private (Admin/Staff)
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, upload.single('image'), async (req, res) => {
+  console.log('🔍 POST /api/fabrics called');
+  console.log('👤 User:', req.user?.email, req.user?.role);
+  console.log('📋 Body:', req.body);
+  console.log('📸 File:', req.file ? 'Image uploaded' : 'No image');
+  
   try {
     const {
       name,
@@ -97,33 +136,75 @@ router.post('/', auth, async (req, res) => {
       unit,
       category,
       description,
-      images,
       supplier,
-      lowStockThreshold
+      lowStockThreshold,
+      composition,
+      width,
+      weight
     } = req.body;
+    
+    console.log('📝 Extracted data:', { name, price, stock, category, unit });
     
     // Check if user has permission (Admin or Staff)
     if (!['Admin', 'Staff'].includes(req.user.role)) {
+      console.log('❌ Access denied for role:', req.user.role);
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
+
+    // Handle image upload
+    let images = [];
+    if (req.file) {
+      const protocol = req.protocol;
+      const host = req.get('host');
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? '/uploads/' 
+        : `${protocol}://${host}/uploads/`;
+      
+      images = [{
+        filename: req.file.filename,
+        url: baseUrl + req.file.filename,
+        mimeType: req.file.mimetype,
+        size: req.file.size
+      }];
+      console.log('📸 Image processed:', images[0].url);
+    }
+    
+    // Map frontend categories to backend enum values
+    const categoryMap = {
+      'PREMIUM FABRIC': 'premium fabric',
+      'WOOL BLEND': 'wool blend', 
+      'NATURAL FIBER': 'natural fiber',
+      'EVERYDAY COTTON': 'everyday cotton',
+      'LININGS': 'linings',
+      'HARDWARE': 'hardware',
+      'FASTENERS': 'fasteners'
+    };
+    
+    const mappedCategory = categoryMap[category] || category?.toLowerCase() || 'other';
+    console.log('📂 Category mapping:', category, '->', mappedCategory);
     
     const fabric = new Fabric({
       name,
-      material,
-      color,
-      pattern,
-      price,
-      stock,
-      unit,
-      category,
-      description,
+      material: material || name, // Use name as material if not provided
+      color: color || 'Various',
+      pattern: pattern || 'solid',
+      price: parseFloat(price),
+      stock: parseFloat(stock),
+      unit: unit || 'm',
+      category: mappedCategory,
+      description: description || '',
       images,
       supplier,
-      lowStockThreshold,
+      lowStockThreshold: lowStockThreshold || 10,
+      composition,
+      width: width ? parseFloat(width) : undefined,
+      weight: weight ? parseFloat(weight) : undefined,
       createdBy: req.user.id
     });
     
+    console.log('💾 Saving fabric:', fabric.name);
     await fabric.save();
+    console.log('✅ Fabric saved successfully');
     
     // Send notification to all users about new fabric
     try {
@@ -144,6 +225,7 @@ router.post('/', auth, async (req, res) => {
           })
         )
       );
+      console.log('📢 Notifications sent to', users.length, 'users');
     } catch (notificationError) {
       console.error('Error sending fabric notification:', notificationError);
       // Don't fail the fabric creation if notification fails
@@ -151,15 +233,15 @@ router.post('/', auth, async (req, res) => {
     
     res.status(201).json({ success: true, fabric });
   } catch (error) {
-    console.error('Error creating fabric:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('❌ Error creating fabric:', error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 });
 
 // @route   PUT /api/fabrics/:id
 // @desc    Update fabric
 // @access  Private (Admin/Staff)
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, upload.single('image'), async (req, res) => {
   try {
     // Check if user has permission
     if (!['Admin', 'Staff'].includes(req.user.role)) {
@@ -175,6 +257,22 @@ router.put('/:id', auth, async (req, res) => {
       ...req.body,
       updatedBy: req.user.id
     };
+
+    // Handle image upload
+    if (req.file) {
+      const protocol = req.protocol;
+      const host = req.get('host');
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? '/uploads/' 
+        : `${protocol}://${host}/uploads/`;
+      
+      updateData.images = [{
+        filename: req.file.filename,
+        url: baseUrl + req.file.filename,
+        mimeType: req.file.mimetype,
+        size: req.file.size
+      }];
+    }
     
     const updatedFabric = await Fabric.findByIdAndUpdate(
       req.params.id,

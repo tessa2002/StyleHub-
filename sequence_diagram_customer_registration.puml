@@ -1,0 +1,82 @@
+@startuml Sequence_Customer_Registration
+
+actor Customer
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+== Customer Registration ==
+
+Customer -> Frontend: Access Registration Page
+Frontend --> Customer: Display registration form
+
+Customer -> Frontend: Fill Registration Form\n(name, email, password, phone)
+Frontend -> Frontend: Validate form data
+
+Customer -> Frontend: Submit Registration
+Frontend -> API: POST /api/auth/register\n(name, email, password, phone, role="Customer")
+API -> DB: Check if email exists
+DB --> API: Email not found
+
+API -> API: Hash password
+API -> DB: Create User\n(role = "Customer",\nstatus = "Active")
+DB --> API: User created
+
+API -> DB: Create Customer record\n(link to user)
+DB --> API: Customer created
+
+API -> API: Generate JWT token
+API --> Frontend: Registration success\n+ Auth token
+Frontend --> Customer: Registration successful\nRedirect to dashboard
+
+== Customer Login ==
+
+Customer -> Frontend: Access Login Page
+Frontend --> Customer: Display login form
+
+Customer -> Frontend: Enter Credentials\n(email, password)
+Customer -> Frontend: Submit Login
+Frontend -> API: POST /api/auth/login\n(email, password)
+API -> DB: Find user by email
+DB --> API: User data
+
+API -> API: Verify password
+alt Valid Credentials
+  API -> API: Generate JWT token
+  API --> Frontend: Login success\n+ Auth token + User data
+  Frontend -> Frontend: Store token
+  Frontend --> Customer: Redirect to dashboard
+else Invalid Credentials
+  API --> Frontend: Error: Invalid credentials
+  Frontend --> Customer: Error message
+end
+
+== Customer Profile Update ==
+
+Customer -> Frontend: View Profile
+Frontend -> API: GET /api/profile
+API -> DB: Fetch user data
+DB --> API: User data
+API --> Frontend: Profile data
+Frontend --> Customer: Display profile
+
+Customer -> Frontend: Update Profile\n(address, phone, gender)
+Frontend -> API: PUT /api/profile\n(updated fields)
+API -> DB: Update user
+DB --> API: User updated
+
+API -> DB: Update customer record
+DB --> API: Customer updated
+
+API --> Frontend: Profile updated
+Frontend --> Customer: Success message
+
+note right of DB
+  User Role: "Customer"
+  Status: "Active"
+  Linked to Customer record
+end note
+
+@enduml
+
+

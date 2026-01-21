@@ -18,11 +18,17 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "google-auth-library": "^10.5.0",
     "jsonwebtoken": "^9.0.2",
+    "ml-cart": "^2.1.1",
+    "ml-knn": "^3.0.0",
+    "ml-naivebayes": "^4.0.0",
+    "ml-svm": "^2.1.2",
     "mongoose": "^8.0.3",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
-    "razorpay": "^2.9.6"
+    "razorpay": "^2.9.6",
+    "synaptic": "^1.1.4"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

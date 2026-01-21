@@ -31,7 +31,7 @@ const attachmentSchema = new mongoose.Schema({
 const orderSchema = new mongoose.Schema({
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
   items: [orderItemSchema],
-  status: { type: String, enum: ['Order Placed', 'Pending', 'Cutting', 'Stitching', 'Trial', 'Ready', 'Delivered', 'Cancelled'], default: 'Order Placed' },
+  status: { type: String, enum: ['Order Placed', 'Pending', 'Pending Appointment', 'Cutting', 'Stitching', 'Trial', 'Ready', 'Delivered', 'Cancelled'], default: 'Order Placed' },
   totalAmount: { type: Number, default: 0 },
   measurementSnapshot: measurementSnapshotSchema, // snapshot at order time
   orderType: { type: String, default: '' },
@@ -57,7 +57,9 @@ const orderSchema = new mongoose.Schema({
     fabricId: { type: mongoose.Schema.Types.ObjectId, ref: 'Fabric' },
     name: { type: String, default: '' },
     code: { type: String, default: '' },
+    type: { type: String, default: '' }, // Customer fabric type (Cotton, Silk, etc.)
     color: { type: String, default: '' },
+    meters: { type: Number, default: 0 }, // Customer fabric quantity in meters
     quantity: { type: Number, default: 0 },
     unit: { type: String, default: 'm' },
     unitPrice: { type: Number, default: 0 },
@@ -67,9 +69,9 @@ const orderSchema = new mongoose.Schema({
   customizations: {
     embroidery: {
       enabled: { type: Boolean, default: false },
-      type: { type: String, enum: ['hand','machine','zardosi','aari','bead','thread'], default: 'machine' },
-      placements: [{ type: String, enum: ['collar','sleeves','neckline','hem','full','custom'] }],
-      pattern: { type: String, enum: ['floral','geometric','custom'], default: 'floral' },
+      type: { type: String, enum: ['hand','machine','zardosi','aari','bead','thread','resham','mirror','chikankari'], default: 'machine' },
+      placements: [{ type: String, enum: ['collar','sleeves','neckline','hem','full','custom','border','back','all-over'] }],
+      pattern: { type: String, enum: ['floral','geometric','custom','paisley','abstract'], default: 'floral' },
       colors: [{ type: String }],
       notes: { type: String, default: '' },
       status: { type: String, enum: ['pending','complete'], default: 'pending' },

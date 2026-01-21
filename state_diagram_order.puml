@@ -1,0 +1,71 @@
+@startuml State_Order_Lifecycle
+
+[*] --> OrderPlaced : Customer places order
+
+state OrderPlaced {
+  [*] --> PendingPayment
+  PendingPayment --> OrderPlaced : Payment received
+}
+
+OrderPlaced --> Pending : Order created
+Pending --> PendingAppointment : Appointment required
+
+PendingAppointment --> Pending : Appointment completed
+Pending --> Cutting : Assigned to tailor\nTailor accepts
+
+state Cutting {
+  [*] --> InProgress
+  InProgress --> Cutting : Work continues
+}
+
+Cutting --> Stitching : Cutting completed
+
+state Stitching {
+  [*] --> InProgress
+  InProgress --> Stitching : Work continues
+}
+
+Stitching --> Trial : Stitching completed\n(if required)
+
+Trial --> Stitching : Changes needed
+Trial --> Ready : Trial approved
+
+state Ready {
+  [*] --> AwaitingCollection
+  AwaitingCollection --> Ready : Customer notified
+}
+
+Ready --> Delivered : Customer collects order
+
+Delivered --> [*] : Order completed
+
+Pending --> Cancelled : Customer/Admin cancels
+Cutting --> Cancelled : Cancelled during work
+Stitching --> Cancelled : Cancelled during work
+Ready --> Cancelled : Cancelled before delivery
+
+Cancelled --> [*] : Order closed
+
+note right of Pending
+  Order is created and waiting
+  for assignment to tailor
+end note
+
+note right of Cutting
+  Tailor is cutting the fabric
+  according to measurements
+end note
+
+note right of Stitching
+  Tailor is stitching the garment
+  pieces together
+end note
+
+note right of Ready
+  Order is complete and ready
+  for customer collection
+end note
+
+@enduml
+
+

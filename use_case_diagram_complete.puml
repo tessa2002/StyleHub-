@@ -1,0 +1,245 @@
+@startuml Use_Case_Diagram_Complete
+
+left to right direction
+
+' Actors
+actor Customer
+actor Admin
+actor Staff
+actor Tailor
+
+' System Boundary
+rectangle "Tailoring Management System" {
+
+  ' Customer Use Cases
+  package "Customer Management" {
+    usecase UC1 "Register Account" as UC1
+    usecase UC2 "Login" as UC2
+    usecase UC3 "View Profile" as UC3
+    usecase UC4 "Update Profile" as UC4
+    usecase UC5 "View Measurements" as UC5
+    usecase UC6 "Update Measurements" as UC6
+  }
+
+  package "Order Management" {
+    usecase UC7 "Place Order" as UC7
+    usecase UC8 "View Orders" as UC8
+    usecase UC9 "Track Order Status" as UC9
+    usecase UC10 "View Order Details" as UC10
+    usecase UC11 "Cancel Order" as UC11
+  }
+
+  package "Appointment Management" {
+    usecase UC12 "Book Appointment" as UC12
+    usecase UC13 "View Appointments" as UC13
+    usecase UC14 "Cancel Appointment" as UC14
+  }
+
+  package "Payment & Billing" {
+    usecase UC15 "View Bills" as UC15
+    usecase UC16 "Make Payment" as UC16
+    usecase UC17 "View Payment History" as UC17
+  }
+
+  package "Fabric & Catalog" {
+    usecase UC18 "Browse Fabrics" as UC18
+    usecase UC19 "View Fabric Details" as UC19
+  }
+
+  package "Notifications" {
+    usecase UC20 "View Notifications" as UC20
+    usecase UC21 "Mark Notification as Read" as UC21
+  }
+
+  ' Admin Use Cases
+  package "User Management" {
+    usecase UC22 "Manage Users" as UC22
+    usecase UC23 "Create Staff Account" as UC23
+    usecase UC24 "Create Tailor Account" as UC24
+    usecase UC25 "Suspend/Activate User" as UC25
+  }
+
+  package "Customer Management (Admin)" {
+    usecase UC26 "View All Customers" as UC26
+    usecase UC27 "Add Customer" as UC27
+    usecase UC28 "Edit Customer" as UC28
+    usecase UC29 "View Customer Details" as UC29
+    usecase UC30 "Manage Customer Measurements" as UC30
+  }
+
+  package "Order Management (Admin)" {
+    usecase UC31 "View All Orders" as UC31
+    usecase UC32 "Create Order" as UC32
+    usecase UC33 "Update Order Status" as UC33
+    usecase UC34 "Assign Order to Tailor" as UC34
+    usecase UC35 "Edit Order Details" as UC35
+    usecase UC36 "Delete Order" as UC36
+  }
+
+  package "Fabric Management" {
+    usecase UC37 "Add Fabric" as UC37
+    usecase UC38 "Edit Fabric" as UC38
+    usecase UC39 "Delete Fabric" as UC39
+    usecase UC40 "Manage Fabric Stock" as UC40
+    usecase UC41 "View Fabric Inventory" as UC41
+  }
+
+  package "Appointment Management (Admin)" {
+    usecase UC42 "View All Appointments" as UC42
+    usecase UC43 "Approve Appointment" as UC43
+    usecase UC44 "Reject Appointment" as UC44
+    usecase UC45 "Reschedule Appointment" as UC45
+  }
+
+  package "Billing & Payments (Admin)" {
+    usecase UC46 "Create Bill" as UC46
+    usecase UC47 "View All Bills" as UC47
+    usecase UC48 "Process Payment" as UC48
+    usecase UC49 "Generate Reports" as UC49
+  }
+
+  package "Dashboard & Analytics" {
+    usecase UC50 "View Dashboard" as UC50
+    usecase UC51 "View Analytics" as UC51
+    usecase UC52 "Generate Reports" as UC52
+  }
+
+  ' Staff Use Cases
+  package "Order Management (Staff)" {
+    usecase UC53 "View Orders" as UC53
+    usecase UC54 "Create Order" as UC54
+    usecase UC55 "Update Order" as UC55
+    usecase UC56 "Assign Order to Tailor" as UC56
+  }
+
+  package "Customer Management (Staff)" {
+    usecase UC57 "View Customers" as UC57
+    usecase UC58 "Add Customer" as UC58
+    usecase UC59 "Edit Customer" as UC59
+    usecase UC60 "Manage Measurements" as UC60
+  }
+
+  package "Appointment Management (Staff)" {
+    usecase UC61 "View Appointments" as UC61
+    usecase UC62 "Approve Appointments" as UC62
+  }
+
+  ' Tailor Use Cases
+  package "Order Management (Tailor)" {
+    usecase UC63 "View Assigned Orders" as UC63
+    usecase UC64 "Accept Order" as UC64
+    usecase UC65 "Start Work on Order" as UC65
+    usecase UC66 "Update Order Stage" as UC66
+    usecase UC67 "Mark Order as Ready" as UC67
+    usecase UC68 "Request Order Changes" as UC68
+    usecase UC69 "Add Order Notes" as UC69
+  }
+
+  package "Customer Management (Tailor)" {
+    usecase UC70 "View Customer Details" as UC70
+    usecase UC71 "View Measurements" as UC71
+  }
+
+  package "Notifications (Tailor)" {
+    usecase UC72 "View Notifications" as UC72
+  }
+}
+
+' Customer Relationships
+Customer --> UC1
+Customer --> UC2
+Customer --> UC3
+Customer --> UC4
+Customer --> UC5
+Customer --> UC6
+Customer --> UC7
+Customer --> UC8
+Customer --> UC9
+Customer --> UC10
+Customer --> UC11
+Customer --> UC12
+Customer --> UC13
+Customer --> UC14
+Customer --> UC15
+Customer --> UC16
+Customer --> UC17
+Customer --> UC18
+Customer --> UC19
+Customer --> UC20
+Customer --> UC21
+
+' Admin Relationships
+Admin --> UC2
+Admin --> UC22
+Admin --> UC23
+Admin --> UC24
+Admin --> UC25
+Admin --> UC26
+Admin --> UC27
+Admin --> UC28
+Admin --> UC29
+Admin --> UC30
+Admin --> UC31
+Admin --> UC32
+Admin --> UC33
+Admin --> UC34
+Admin --> UC35
+Admin --> UC36
+Admin --> UC37
+Admin --> UC38
+Admin --> UC39
+Admin --> UC40
+Admin --> UC41
+Admin --> UC42
+Admin --> UC43
+Admin --> UC44
+Admin --> UC45
+Admin --> UC46
+Admin --> UC47
+Admin --> UC48
+Admin --> UC49
+Admin --> UC50
+Admin --> UC51
+Admin --> UC52
+
+' Staff Relationships
+Staff --> UC2
+Staff --> UC53
+Staff --> UC54
+Staff --> UC55
+Staff --> UC56
+Staff --> UC57
+Staff --> UC58
+Staff --> UC59
+Staff --> UC60
+Staff --> UC61
+Staff --> UC62
+
+' Tailor Relationships
+Tailor --> UC2
+Tailor --> UC63
+Tailor --> UC64
+Tailor --> UC65
+Tailor --> UC66
+Tailor --> UC67
+Tailor --> UC68
+Tailor --> UC69
+Tailor --> UC70
+Tailor --> UC71
+Tailor --> UC72
+
+' Extend relationships
+UC7 ..> UC12 : <<extend>>
+UC7 ..> UC18 : <<extend>>
+UC9 ..> UC20 : <<extend>>
+UC33 ..> UC34 : <<extend>>
+UC65 ..> UC66 : <<extend>>
+
+' Include relationships
+UC7 ..> UC5 : <<include>>
+UC32 ..> UC29 : <<include>>
+UC54 ..> UC58 : <<include>>
+
+@enduml
+
+

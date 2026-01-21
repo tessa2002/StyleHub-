@@ -1,0 +1,94 @@
+@startuml Deployment_Cloud
+
+skinparam node {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam component {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Cloud Deployment Architecture
+
+cloud "Cloud Provider (Render/AWS)" {
+  
+  node "Frontend Hosting" {
+    component [Static Site Hosting] as frontend {
+      [React Build] as build
+      [CDN] as cdn
+    }
+  }
+  
+  node "Backend Services" {
+    component [Web Service] as backend {
+      [Node.js Runtime] as node
+      [Express Server] as express
+      [API Routes] as routes
+    }
+  }
+  
+  node "ML Service" {
+    component [Python Service] as ml {
+      [Flask API] as flask
+      [ML Models] as models
+    }
+  }
+  
+  node "Database Service" {
+    database [MongoDB Atlas] as atlas {
+      [Primary Cluster] as primary
+      [Replica Set] as replica
+    }
+  }
+  
+  node "Storage Service" {
+    component [Object Storage] as storage {
+      [Images] as images
+      [Documents] as docs
+    }
+  }
+}
+
+cloud "External Services" {
+  component [Razorpay] as razorpay
+  component [Email Service] as email
+}
+
+' Connections
+frontend --> backend : API Requests
+backend --> atlas : Database Connection
+backend --> ml : ML API Calls
+backend --> storage : File Operations
+backend --> razorpay : Payment Gateway
+backend --> email : Email Notifications
+
+note right of backend
+  Render Web Service
+  Auto-scaling enabled
+  Environment: Production
+end note
+
+note right of atlas
+  MongoDB Atlas
+  Managed Database
+  Automatic Backups
+  High Availability
+end note
+
+note right of ml
+  Python ML Service
+  Port: 5001
+  Models: KNN, SVM, Naive Bayes
+end note
+
+@enduml
+
+

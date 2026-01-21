@@ -30,6 +30,10 @@ const userSchema = new mongoose.Schema(
     },
     dob: { type: Date, default: null },
     avatarUrl: { type: String, trim: true, default: "" },
+    
+    // Google OAuth fields
+    googleId: { type: String, unique: true, sparse: true },
+    profilePicture: { type: String, trim: true, default: "" },
   },
   { timestamps: true }
 );

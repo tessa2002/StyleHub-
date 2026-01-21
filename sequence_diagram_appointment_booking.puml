@@ -1,0 +1,89 @@
+@startuml Sequence_Appointment_Booking
+
+actor Customer
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+actor Admin
+actor Staff
+
+== Customer Books Appointment ==
+
+Customer -> Frontend: Login
+Frontend -> API: POST /api/auth/login
+API -> DB: Verify credentials
+DB --> API: User data
+API --> Frontend: Auth token
+
+Customer -> Frontend: Book Appointment
+Frontend -> Frontend: Fill appointment form\n(service, date, time)
+
+Customer -> Frontend: Submit Appointment Request
+Frontend -> API: POST /api/appointments\n(customerId, service, scheduledAt)
+API -> DB: Create appointment\n(status = "Pending")
+DB --> API: Appointment created
+
+API -> DB: Create notification for admin
+DB --> API: Notification created
+
+API --> Frontend: Appointment request submitted
+Frontend --> Customer: Confirmation message\n"Pending approval"
+
+== Admin/Staff Approves Appointment ==
+
+DB -> Admin: Notification: "New appointment request"
+
+Admin -> Frontend: View Appointments
+Frontend -> API: GET /api/appointments?status=Pending
+API -> DB: Fetch pending appointments
+DB --> API: Appointments list
+API --> Frontend: Pending appointments
+Frontend --> Admin: Display appointments
+
+Admin -> Frontend: View Appointment Details
+Frontend -> API: GET /api/appointments/:id
+API -> DB: Fetch appointment
+DB --> API: Appointment details
+API --> Frontend: Appointment data
+Frontend --> Admin: Appointment details
+
+Admin -> Frontend: Approve Appointment
+Frontend -> API: PUT /api/appointments/:id/approve\n(approved = true, approvedBy)
+API -> DB: Update appointment\n(status = "Scheduled",\napproved = true,\napprovedBy = adminId)
+DB --> API: Appointment updated
+
+API -> DB: Create notification for customer
+DB --> API: Notification created
+
+API --> Frontend: Appointment approved
+Frontend --> Admin: Success message
+
+== Customer Receives Approval ==
+
+DB -> Customer: Notification: "Appointment approved"
+
+Customer -> Frontend: View Appointments
+Frontend -> API: GET /api/appointments
+API -> DB: Fetch customer appointments
+DB --> API: Appointments (status = "Scheduled")
+API --> Frontend: Appointments list
+Frontend --> Customer: Display approved appointments
+
+== Appointment Completed ==
+
+Admin -> Frontend: Mark Appointment Complete
+Frontend -> API: PUT /api/appointments/:id\n(status = "Completed")
+API -> DB: Update appointment
+DB --> API: Appointment updated
+
+API --> Frontend: Appointment completed
+Frontend --> Admin: Confirmation
+
+note right of DB
+  Appointment Status Flow:
+  Pending → Scheduled → Completed
+end note
+
+@enduml
+
+

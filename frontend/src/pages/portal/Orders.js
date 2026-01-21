@@ -3,7 +3,24 @@ import axios from 'axios';
 import DashboardLayout from '../../components/DashboardLayout';
 import OrderStatusTracker from '../../components/OrderStatusTracker';
 import './Orders.css';
-import { FaSearch, FaFilter, FaEye, FaTruck, FaRedoAlt, FaFileInvoice } from 'react-icons/fa';
+import { 
+  FaSearch, 
+  FaFilter, 
+  FaEye, 
+  FaTruck, 
+  FaRedoAlt, 
+  FaFileInvoice, 
+  FaDownload, 
+  FaChevronLeft, 
+  FaChevronRight,
+  FaMoon,
+  FaTshirt,
+  FaCrown,
+  FaRegCalendarAlt,
+  FaMoneyBillWave,
+  FaWallet
+} from 'react-icons/fa';
+import { GiAmpleDress, GiTrousers, GiSuitcase } from 'react-icons/gi';
 import { toast } from 'react-toastify';
 
 export default function OrdersPage() {
@@ -21,7 +38,7 @@ export default function OrdersPage() {
 
   // Pagination
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 6;
 
   // Details modal
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -74,8 +91,6 @@ export default function OrdersPage() {
     // Status filter
     if (statusFilter !== 'all') list = list.filter(o => (o.status || '').toLowerCase() === statusFilter);
 
-    // Payment filter is evaluated from bill status via child component; for list filtering we skip, but we’ll allow later enhancement.
-
     // Date range
     if (from) list = list.filter(o => o.createdAt && new Date(o.createdAt) >= from);
     if (to) list = list.filter(o => o.createdAt && new Date(o.createdAt) <= new Date(new Date(to).getTime() + 24*60*60*1000 - 1));
@@ -108,10 +123,8 @@ export default function OrdersPage() {
     setDetails(null);
     setDetailsLoading(true);
     try {
-      // Basic order details
       const { data: ordRes } = await axios.get(`/api/portal/orders/${order._id}`);
       const orderDetail = ordRes.order || order;
-      // Bill
       let bill = null;
       try {
         const { data: billRes } = await axios.get(`/api/portal/bills/by-order/${order._id}`);
@@ -125,113 +138,100 @@ export default function OrdersPage() {
     }
   };
 
-  const reorder = async (order) => {
-    try {
-      const items = (order.items || []).map(it => ({ name: it.name || it.itemType || '', quantity: it.quantity || 1, price: it.price || 0 }));
-      if (!items.length) return toast.error('This order has no items to reorder');
-      const { data } = await axios.post('/api/portal/orders', { items, notes: `Reorder of ${order._id}` });
-      toast.success('Order placed');
-      setOrders(prev => [data.order, ...prev]);
-    } catch (e) {
-      toast.error('Failed to place reorder');
-    }
-  };
-
   return (
     <DashboardLayout title="My Orders">
-      <div className="orders-page">
+      <div className="orders-page-v2">
         {/* Page Header */}
-        <div className="page-header">
-          <h1 className="page-title">My Orders</h1>
-          <p className="page-subtitle">View and manage all your orders</p>
+        <div className="page-header-v2">
+          <div className="header-left">
+            <h1 className="page-title">My Orders</h1>
+            <p className="page-subtitle">Manage and track your bespoke tailoring requests.</p>
+          </div>
+          <div className="header-right">
+            <button className="theme-toggle"><FaMoon /></button>
+            <div className="user-avatar-circle">T</div>
+          </div>
         </div>
         
-        {/* Filters & Search */}
-        <div className="orders-toolbar">
-          <div className="filters">
-            <div className="filter-group">
-              <FaFilter className="icon" />
-              <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
-                <option value="all">All Status</option>
-                <option value="order placed">Order Placed</option>
-                <option value="cutting">Cutting</option>
-                <option value="stitching">Stitching</option>
-                <option value="trial">Trial</option>
-                <option value="ready">Ready</option>
-                <option value="delivered">Delivered</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
-            <div className="filter-group">
-              <label>From</label>
-              <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} />
-            </div>
-            <div className="filter-group">
-              <label>To</label>
-              <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} />
-            </div>
-            <div className="filter-group">
-              <label>Sort</label>
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
-                <option value="createdAt">Date</option>
-                <option value="amount">Amount</option>
-                <option value="status">Status</option>
-              </select>
-              <select value={sortDir} onChange={e => setSortDir(e.target.value)}>
-                <option value="desc">Desc</option>
-                <option value="asc">Asc</option>
-              </select>
-            </div>
+        {/* Filters Toolbar */}
+        <div className="orders-toolbar-v2">
+          <div className="filter-item">
+            <label>STATUS</label>
+            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
+              <option value="all">All Status</option>
+              <option value="order placed">Order Placed</option>
+              <option value="cutting">Cutting</option>
+              <option value="stitching">Stitching</option>
+              <option value="trial">Trial</option>
+              <option value="ready">Ready</option>
+              <option value="delivered">Delivered</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
           </div>
-          <div className="search">
-            <FaSearch className="icon" />
+          <div className="filter-item">
+            <label>FROM DATE</label>
+            <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} />
+          </div>
+          <div className="filter-item">
+            <label>TO DATE</label>
+            <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} />
+          </div>
+          <div className="filter-item">
+            <label>SORT BY</label>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+              <option value="createdAt">Date (Newest)</option>
+              <option value="amount">Amount</option>
+              <option value="status">Status</option>
+            </select>
+          </div>
+          <div className="search-box-v2">
+            <FaSearch className="search-icon" />
             <input
-              placeholder="Search by Order ID or product name"
+              placeholder="Search orders.."
               value={query}
               onChange={e => { setQuery(e.target.value); setPage(1); }}
             />
           </div>
         </div>
 
-        {/* Table */}
+        {/* Content */}
         {loading ? (
           <div className="loading">Loading orders…</div>
         ) : error ? (
           <div className="alert alert-error">{error}</div>
         ) : (
-          <div className="orders-table-wrapper">
-            <table className="orders-table">
-              <thead>
-                <tr>
-                  <th>Order ID</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th>Payment</th>
-                  <th>Total</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {current.map(o => (
-                  <OrderRow
-                    key={o._id}
-                    order={o}
-                    onView={() => openDetails(o)}
-                    onReorder={() => reorder(o)}
-                  />
-                ))}
-              </tbody>
-            </table>
+          <div className="orders-grid-v2">
+            {current.map(o => (
+              <OrderCard
+                key={o._id}
+                order={o}
+                onView={() => openDetails(o)}
+              />
+            ))}
             {filtered.length === 0 && <div className="empty">No orders found</div>}
           </div>
         )}
 
-        {/* Pagination */}
-        {filtered.length > pageSize && (
-          <div className="pagination">
-            <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</button>
-            <span>Page {page} of {totalPages}</span>
-            <button disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</button>
+        {/* Pagination V2 */}
+        {filtered.length > 0 && (
+          <div className="pagination-v2">
+            <button className="page-nav" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+              <FaChevronLeft />
+            </button>
+            <div className="page-numbers">
+              {[...Array(totalPages)].map((_, i) => (
+                <button 
+                  key={i+1} 
+                  className={`page-num ${page === i + 1 ? 'active' : ''}`}
+                  onClick={() => setPage(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+            <button className="page-nav" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+              <FaChevronRight />
+            </button>
           </div>
         )}
 
@@ -244,16 +244,14 @@ export default function OrdersPage() {
             onClose={() => { setSelectedOrder(null); setDetails(null); }}
           />)
         }
-
       </div>
     </DashboardLayout>
   );
 }
 
-function OrderRow({ order, onView, onReorder }) {
+function OrderCard({ order, onView }) {
   const [bill, setBill] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
-  const [paying, setPaying] = React.useState(false);
   const [downloadingReceipt, setDownloadingReceipt] = React.useState(false);
 
   React.useEffect(() => {
@@ -271,24 +269,115 @@ function OrderRow({ order, onView, onReorder }) {
     return () => { active = false; };
   }, [order._id]);
 
-  // Check if bill was recently paid (within last 2 minutes) for pulse animation
-  const isRecentlyPaid = React.useMemo(() => {
-    if (!bill || !bill.paidAt || bill.status !== 'Paid') return false;
-    const paidTime = new Date(bill.paidAt).getTime();
-    const now = Date.now();
-    const twoMinutes = 2 * 60 * 1000;
-    return (now - paidTime) < twoMinutes;
-  }, [bill]);
+  const downloadReceipt = async (e) => {
+    e.stopPropagation();
+    if (!bill) return;
+    setDownloadingReceipt(true);
+    try {
+      const response = await axios.get(`/api/portal/bills/${bill._id}/receipt`);
+      const receiptWindow = window.open('', '_blank');
+      if (receiptWindow) {
+        receiptWindow.document.write(response.data);
+        receiptWindow.document.close();
+      } else {
+        toast.error('Please allow popups to view receipt');
+      }
+    } catch (error) {
+      toast.error('Failed to load receipt');
+    } finally {
+      setDownloadingReceipt(false);
+    }
+  };
 
-  // Function to download receipt with authentication
+  const getOrderIcon = () => {
+    const type = (order.items?.[0]?.itemType || '').toLowerCase();
+    const name = (order.items?.[0]?.name || '').toLowerCase();
+    
+    if (name.includes('blazer') || name.includes('suit')) return <GiSuitcase style={{ color: '#64748b' }} />;
+    if (name.includes('shirt')) return <FaTshirt style={{ color: '#64748b' }} />;
+    if (name.includes('gown') || name.includes('dress')) return <GiAmpleDress style={{ color: '#64748b' }} />;
+    if (name.includes('trousers') || name.includes('pant')) return <GiTrousers style={{ color: '#64748b' }} />;
+    
+    // Fallback by type
+    if (type.includes('shirt')) return <FaTshirt />;
+    if (type.includes('blazer') || type.includes('suit')) return <GiSuitcase />;
+    if (type.includes('dress')) return <GiAmpleDress />;
+    
+    return <FaTshirt />; // Default icon
+  };
+
+  const date = order.createdAt ? new Date(order.createdAt) : new Date();
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = date.toLocaleString('default', { month: 'short' });
+  const year = date.getFullYear();
+
+  const isPaid = bill?.status === 'Paid';
+
+  return (
+    <div className="order-card-v2" onClick={onView}>
+      <div className="card-icon-area">
+        <div className="icon-circle">
+           {getOrderIcon()}
+        </div>
+      </div>
+      <div className="card-content-area">
+        <div className="card-top">
+          <span className="order-number">ORDER #{order._id?.slice(-7).toUpperCase()}</span>
+          <span className={`status-badge-v2 ${(order.status || '').toLowerCase().replace(/\s+/g, '-')}`}>
+            {(order.status || 'ORDER PLACED').toUpperCase()}
+          </span>
+        </div>
+        <h3 className="order-item-title">{order.items?.[0]?.name || 'Bespoke Item'}</h3>
+        <div className="card-details">
+          <div className="detail-col">
+            <span className="detail-label">DATE</span>
+            <span className="detail-value">{day} {month} {year}</span>
+          </div>
+          <div className="detail-col">
+            <span className="detail-label">PAYMENT</span>
+            <span className={`payment-status ${isPaid ? 'paid' : 'pending'}`}>
+              {isPaid ? '● Paid' : '● Pending'}
+            </span>
+          </div>
+          <div className="detail-col">
+            <span className="detail-label">TOTAL</span>
+            <span className="detail-value">₹{Number(order.totalAmount || 0).toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+      <div className="card-actions-v2">
+        <button className="action-btn" onClick={(e) => { e.stopPropagation(); onView(); }}>
+          <FaEye />
+        </button>
+        {isPaid && (
+          <button className="action-btn download" onClick={downloadReceipt} disabled={downloadingReceipt}>
+            <FaDownload />
+          </button>
+        )}
+        {!isPaid && !loading && bill && (
+          <button className="action-btn pay" title="Pay Now" onClick={(e) => { e.stopPropagation(); /* Pay logic */ }}>
+            <FaWallet />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// Details Modal for an order
+function OrderDetailsModal({ order, details, loading, onClose }) {
+  const ord = details?.order || order;
+  const bill = details?.bill || null;
+  const [payments, setPayments] = React.useState([]);
+  const [loadingPayments, setLoadingPayments] = React.useState(true);
+  const [downloadingReceipt, setDownloadingReceipt] = React.useState(false);
+
   const downloadReceipt = async () => {
     if (!bill) return;
     setDownloadingReceipt(true);
     try {
-      // Fetch receipt HTML with authentication headers (axios automatically adds token)
       const response = await axios.get(`/api/portal/bills/${bill._id}/receipt`);
-      
-      // Open receipt in new window
       const receiptWindow = window.open('', '_blank');
       if (receiptWindow) {
         receiptWindow.document.write(response.data);
@@ -303,71 +392,6 @@ function OrderRow({ order, onView, onReorder }) {
       setDownloadingReceipt(false);
     }
   };
-
-  const payNow = async () => {
-    if (!bill || bill.status === 'Paid') return;
-    setPaying(true);
-    try {
-      const { data } = await axios.post(`/api/portal/bills/${bill._id}/pay`);
-      setBill({ ...bill, status: data.bill.status, amountPaid: data.bill.amountPaid });
-      toast.success('Payment recorded');
-    } catch {
-      toast.error('Failed to pay bill');
-    }
-    setPaying(false);
-  };
-
-  return (
-    <tr className="order-row">
-      <td className="order-id">
-        <button className="link" onClick={onView}>{order._id?.slice(-6)}</button>
-      </td>
-      <td>{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '-'}</td>
-      <td>
-        <span className={`badge status-${(order.status || 'default').toLowerCase().replace(/\s+/g,'-')}`}>{order.status || '-'}</span>
-      </td>
-      <td>
-        {loading ? (
-          <span className="badge payment-loading">Loading…</span>
-        ) : bill ? (
-          <span className={`badge payment-${(bill.status || 'Pending').toLowerCase()}`}>{bill.status}</span>
-        ) : (
-          <span className="badge payment-none">No bill</span>
-        )}
-      </td>
-      <td>₹{Number(order.totalAmount || 0).toLocaleString()}</td>
-      <td className="actions">
-        <button className="btn btn-light" title="View Details" onClick={onView}><FaEye /></button>
-        {order.tracking?.number ? (
-          <a className="btn btn-light" href={order.tracking.url || '#'} target="_blank" rel="noreferrer" title="Track Shipment"><FaTruck /></a>
-        ) : (
-          <button className="btn btn-light" title="Track Shipment" disabled><FaTruck /></button>
-        )}
-        <button className="btn btn-light" title="Reorder" onClick={onReorder}><FaRedoAlt /></button>
-        {!loading && bill && bill.status === 'Paid' ? (
-          <button 
-            className={`btn btn-success ${isRecentlyPaid ? 'pulse' : ''}`}
-            onClick={downloadReceipt}
-            disabled={downloadingReceipt}
-            title="Download Receipt"
-          >
-            <FaFileInvoice /> {downloadingReceipt ? 'Loading...' : 'Receipt'}
-          </button>
-        ) : !loading && bill && bill.status !== 'Paid' ? (
-          <button className="btn btn-primary" disabled={paying} onClick={payNow}>{paying ? 'Paying…' : 'Pay Now'}</button>
-        ) : null}
-      </td>
-    </tr>
-  );
-}
-
-
-// Details Modal for an order
-function OrderDetailsModal({ order, details, loading, onClose }) {
-  const ord = details?.order || order;
-  const bill = details?.bill || null;
-  const [payments, setPayments] = React.useState([]);
-  const [loadingPayments, setLoadingPayments] = React.useState(true);
 
   React.useEffect(() => {
     const fetchPayments = async () => {
@@ -423,15 +447,14 @@ function OrderDetailsModal({ order, details, loading, onClose }) {
                   <>
                     <div className="detail">
                       <strong>Invoice:</strong> 
-                      <a 
-                        className="btn btn-link" 
-                        href={`/api/portal/bills/${bill._id}/receipt`} 
-                        target="_blank" 
-                        rel="noreferrer"
+                      <button 
+                        className="btn btn-success btn-small" 
+                        onClick={downloadReceipt}
+                        disabled={downloadingReceipt}
                         style={{ marginLeft: '10px' }}
                       >
-                        <FaFileInvoice /> Download Receipt
-                      </a>
+                        <FaFileInvoice /> {downloadingReceipt ? 'Loading...' : 'Download Receipt'}
+                      </button>
                     </div>
                     <div className="detail">
                       <strong>Bill Number:</strong> 

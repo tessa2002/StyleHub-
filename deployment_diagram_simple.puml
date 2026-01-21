@@ -1,0 +1,72 @@
+@startuml Deployment_Simple
+
+skinparam node {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam component {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Simple Deployment Diagram
+
+node "Client" {
+  [Browser] as browser
+}
+
+node "Frontend Server" {
+  [React Application] as react
+  [Static Assets] as assets
+}
+
+node "Backend Server" {
+  [Node.js/Express] as backend
+  [REST API] as api
+}
+
+node "ML Service" {
+  [Python API] as python
+}
+
+node "Database" {
+  database [MongoDB] as db
+}
+
+node "External" {
+  [Razorpay] as payment
+  [File Storage] as files
+}
+
+browser --> react : HTTP/HTTPS
+react --> backend : API Calls
+backend --> db : MongoDB
+backend --> python : ML Requests
+backend --> payment : Payment API
+backend --> files : File Upload
+
+note right of backend
+  Port: 5000
+  Environment Variables:
+  - PORT
+  - MONGODB_URI
+  - JWT_SECRET
+  - RAZORPAY_KEY
+end note
+
+note right of db
+  MongoDB Atlas
+  Connection String
+  Database: style_hub
+end note
+
+@enduml
+
+

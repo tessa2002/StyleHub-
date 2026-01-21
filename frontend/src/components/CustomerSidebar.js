@@ -14,7 +14,8 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaStore,
-  FaPlus
+  FaPlus,
+  FaRobot
 } from "react-icons/fa";
 import "./CustomerSidebar.css";
 
@@ -23,15 +24,13 @@ export default function CustomerSidebar({ collapsed, onToggle, onLogout }) {
 
   const menuItems = [
     { label: "Dashboard", path: "/portal", icon: <FaTachometerAlt />, exact: true },
-    { label: "Profile", path: "/portal/profile", icon: <FaUser /> },
-    { label: "Orders", path: "/portal/orders", icon: <FaShoppingBag /> },
-    { label: "New Order", path: "/portal/orders/new", icon: <FaPlus /> },
-    { label: "Appointments", path: "/portal/appointments", icon: <FaCalendarAlt /> },
+    { label: "New Request", path: "/portal/orders/new", icon: <FaPlus /> },
+    { label: "My Orders", path: "/portal/orders", icon: <FaShoppingBag /> },
     { label: "Measurements", path: "/portal/measurements", icon: <FaRuler /> },
-    { label: "Payments", path: "/portal/payments", icon: <FaFileInvoiceDollar /> },
-    { label: "Notifications", path: "/portal/notifications", icon: <FaBell /> },
-    { label: "Support", path: "/portal/support", icon: <FaLifeRing /> },
-    { label: "Settings", path: "/portal/settings", icon: <FaCog /> }
+    { label: "Fabric Catalog", path: "/fabrics", icon: <FaStore /> },
+    { label: "Appointments", path: "/portal/appointments", icon: <FaCalendarAlt /> },
+    { label: "Kids' Profiles", path: "/portal/kids", icon: <FaUser /> },
+    { label: "AI Stylist", path: "/portal/ai-stylist", icon: <FaRobot /> }
   ];
 
   const isActive = (path, exact = false) => {

@@ -1,0 +1,130 @@
+@startuml Database_Schema_Simple
+
+' Simplified Class Diagram
+
+class Users {
+  + _id : ObjectId [PK]
+  + name : String
+  + email : String [UNIQUE]
+  + password : String
+  + role : String [ENUM]
+  + status : String [ENUM]
+  + phone : String
+  + address : String
+  + gender : String
+  + createdAt : Date
+  + updatedAt : Date
+}
+
+class Customers {
+  + _id : ObjectId [PK]
+  + user : ObjectId [FK]
+  + name : String
+  + phone : String [UNIQUE]
+  + email : String
+  + address : String
+  + measurements : Object
+  + notes : String
+  + styleNotes : String
+  + createdAt : Date
+  + updatedAt : Date
+}
+
+class Orders {
+  + _id : ObjectId [PK]
+  + customer : ObjectId [FK]
+  + items : Array
+  + status : String [ENUM]
+  + totalAmount : Number
+  + measurementSnapshot : Object
+  + assignedTailor : ObjectId [FK]
+  + fabric : Object
+  + customizations : Object
+  + orderDate : Date
+  + expectedDelivery : Date
+  + stage : String [ENUM]
+  + notes : String
+  + createdAt : Date
+  + updatedAt : Date
+}
+
+class Fabrics {
+  + _id : ObjectId [PK]
+  + name : String
+  + material : String
+  + color : String
+  + price : Number
+  + stock : Number
+  + category : String [ENUM]
+  + description : String
+  + images : Array
+  + isActive : Boolean
+  + createdBy : ObjectId [FK]
+  + createdAt : Date
+  + updatedAt : Date
+}
+
+class Bills {
+  + _id : ObjectId [PK]
+  + billNumber : String [UNIQUE]
+  + order : ObjectId [FK, UNIQUE]
+  + customer : ObjectId [FK]
+  + amount : Number
+  + amountPaid : Number
+  + paymentMethod : String
+  + status : String [ENUM]
+  + payments : Array
+  + createdAt : Date
+  + updatedAt : Date
+}
+
+class Appointments {
+  + _id : ObjectId [PK]
+  + customer : ObjectId [FK]
+  + service : String
+  + scheduledAt : Date
+  + status : String [ENUM]
+  + approved : Boolean
+  + approvedBy : ObjectId [FK]
+  + relatedOrder : ObjectId [FK]
+  + createdAt : Date
+  + updatedAt : Date
+}
+
+class MeasurementHistory {
+  + _id : ObjectId [PK]
+  + customer : ObjectId [FK]
+  + measurements : Object
+  + styleNotes : String
+  + source : String [ENUM]
+  + createdAt : Date
+  + updatedAt : Date
+}
+
+class Notifications {
+  + _id : ObjectId [PK]
+  + recipientId : ObjectId [FK]
+  + message : String
+  + type : String [ENUM]
+  + priority : String [ENUM]
+  + relatedOrder : ObjectId [FK]
+  + isRead : Boolean
+  + createdAt : Date
+  + updatedAt : Date
+}
+
+' Relationships
+Users ||--o| Customers
+Customers ||--o{ Orders
+Users ||--o{ Orders : "assignedTailor"
+Orders ||--|| Bills
+Customers ||--o{ Appointments
+Customers ||--o{ MeasurementHistory
+Orders }o--|| Fabrics
+Users ||--o{ Fabrics : "createdBy"
+Users ||--o{ Notifications : "recipientId"
+Orders ||--o{ Notifications
+
+@enduml
+
+

@@ -1,0 +1,66 @@
+@startuml Activity_Complete_System
+
+skinparam activity {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Complete System Workflow Activity Diagram
+
+start
+
+partition "Customer Registration" {
+  :Customer registers;
+  :Create user account;
+  :Create customer profile;
+}
+
+partition "Order Placement" {
+  :Customer browses fabrics;
+  :Select fabric;
+  :Enter measurements;
+  :Place order;
+  :Create order record;
+  :Check fabric stock;
+  :Update fabric stock;
+  :Create bill;
+}
+
+partition "Order Assignment" {
+  :Admin views orders;
+  :Admin assigns order to tailor;
+  :Send notification to tailor;
+}
+
+partition "Order Processing" {
+  :Tailor accepts order;
+  :Tailor starts work;
+  :Tailor cuts fabric;
+  :Tailor stitches garment;
+  :Tailor marks order ready;
+  :Send notification to customer;
+}
+
+partition "Payment" {
+  :Customer views bill;
+  :Customer makes payment;
+  :Update bill status;
+  :Send payment confirmation;
+}
+
+partition "Order Delivery" {
+  :Customer collects order;
+  :Update order status to "Delivered";
+  :Order completed;
+}
+
+stop
+
+@enduml
+
+

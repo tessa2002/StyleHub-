@@ -1,0 +1,91 @@
+@startuml Sequence_Tailor_Workflow
+
+actor Tailor
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+actor Customer
+actor Admin
+
+== Tailor Accepts and Works on Order ==
+
+Tailor -> Frontend: View Assigned Order
+Frontend -> API: GET /api/orders/:id
+API -> DB: Fetch order
+DB --> API: Order details
+API --> Frontend: Order data
+Frontend --> Tailor: Order details\n(measurements, fabric, notes)
+
+Tailor -> Frontend: Accept Order
+Frontend -> API: PUT /api/orders/:id/accept
+API -> DB: Update order\n(acceptedByTailor = true,\nstatus = "Cutting")
+DB --> API: Order updated
+
+API -> DB: Create notification for admin
+DB --> API: Notification created
+
+API --> Frontend: Order accepted
+Frontend --> Tailor: Confirmation
+
+== Tailor Starts Work ==
+
+Tailor -> Frontend: Start Work on Order
+Frontend -> API: PUT /api/orders/:id/start-work
+API -> DB: Update order\n(workStartedAt = now,\nstatus = "Cutting")
+DB --> API: Order updated
+
+API -> DB: Create notifications\n(for Admin & Customer)
+DB --> API: Notifications created
+
+API --> Frontend: Work started
+Frontend --> Tailor: Confirmation
+
+DB -> Admin: Notification: "Tailor started work"
+DB -> Customer: Notification: "Order being worked on"
+
+== Tailor Updates Order Stage ==
+
+Tailor -> Frontend: Update to Next Stage
+Frontend -> API: PUT /api/orders/:id/next-stage
+API -> DB: Fetch current order
+DB --> API: Order (status = "Cutting")
+
+API -> DB: Update order\n(status = "Stitching")
+DB --> API: Order updated
+
+API --> Frontend: Stage updated
+Frontend --> Tailor: Status: "Stitching"
+
+== Tailor Marks Order Ready ==
+
+Tailor -> Frontend: Mark Order as Ready
+Frontend -> API: PUT /api/orders/:id/mark-ready
+API -> DB: Update order\n(status = "Ready",\ncompletedAt = now)
+DB --> API: Order updated
+
+API -> DB: Create notifications\n(for Admin & Customer)
+DB --> API: Notifications created
+
+API --> Frontend: Order marked ready
+Frontend --> Tailor: Confirmation
+
+DB -> Admin: Notification: "Order ready for delivery"
+DB -> Customer: Notification: "Order ready for collection"
+
+== Customer Views Ready Order ==
+
+Customer -> Frontend: View Orders
+Frontend -> API: GET /api/orders
+API -> DB: Fetch customer orders
+DB --> API: Orders (status = "Ready")
+API --> Frontend: Orders list
+Frontend --> Customer: Display ready orders
+
+note right of DB
+  Order Status Flow:
+  Pending → Cutting → Stitching → Ready
+end note
+
+@enduml
+
+

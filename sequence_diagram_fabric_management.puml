@@ -1,0 +1,107 @@
+@startuml Sequence_Fabric_Management
+
+actor Admin
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+actor Customer
+
+== Admin Adds Fabric ==
+
+Admin -> Frontend: Access Fabric Management
+Frontend -> API: GET /api/fabrics
+API -> DB: Fetch all fabrics
+DB --> API: Fabrics list
+API --> Frontend: Fabrics data
+Frontend --> Admin: Display fabrics
+
+Admin -> Frontend: Add New Fabric
+Frontend --> Admin: Display fabric form
+
+Admin -> Frontend: Fill Fabric Details\n(name, material, color, price, stock, category)
+Frontend -> Frontend: Validate form
+
+Admin -> Frontend: Submit Fabric
+Frontend -> API: POST /api/fabrics\n(fabric details, createdBy)
+API -> DB: Create fabric
+DB --> API: Fabric created
+
+API --> Frontend: Fabric created
+Frontend --> Admin: Success message\n+ Fabric list updated
+
+== Admin Updates Fabric Stock ==
+
+Admin -> Frontend: Select Fabric
+Frontend -> API: GET /api/fabrics/:id
+API -> DB: Fetch fabric
+DB --> API: Fabric details
+API --> Frontend: Fabric data
+Frontend --> Admin: Display fabric details
+
+Admin -> Frontend: Update Stock\n(new stock quantity)
+Frontend -> API: PUT /api/fabrics/:id\n(stock = newQuantity)
+API -> DB: Update fabric stock
+DB --> API: Fabric updated
+
+API --> Frontend: Stock updated
+Frontend --> Admin: Success message
+
+== Customer Browses Fabrics ==
+
+Customer -> Frontend: Browse Fabrics
+Frontend -> API: GET /api/fabrics?isActive=true
+API -> DB: Fetch active fabrics
+DB --> API: Active fabrics list
+API --> Frontend: Fabrics data
+Frontend --> Customer: Display fabric catalog
+
+Customer -> Frontend: View Fabric Details
+Frontend -> API: GET /api/fabrics/:id
+API -> DB: Fetch fabric details
+DB --> API: Fabric details
+API --> Frontend: Fabric data
+Frontend --> Customer: Display fabric details\n(images, price, stock, description)
+
+== Fabric Stock Check During Order ==
+
+Customer -> Frontend: Place Order with Fabric
+Frontend -> API: POST /api/orders\n(fabricId, quantity)
+API -> DB: Check fabric stock
+DB --> API: Fabric (stock = currentStock)
+
+alt Sufficient Stock
+  API -> DB: Update fabric\n(stock = stock - quantity)
+  DB --> API: Stock reduced
+  
+  API -> DB: Create order
+  DB --> API: Order created
+  
+  API --> Frontend: Order created
+  Frontend --> Customer: Order confirmation
+  
+else Insufficient Stock
+  API --> Frontend: Error: Insufficient stock
+  Frontend --> Customer: Error message\n"Stock not available"
+end
+
+== Low Stock Alert ==
+
+DB -> API: Check low stock fabrics
+API -> DB: Query fabrics\n(stock <= lowStockThreshold)
+DB --> API: Low stock fabrics
+
+API -> DB: Create notification for admin
+DB --> API: Notification created
+
+DB -> Admin: Notification: "Low stock alert"
+
+note right of DB
+  Fabric Fields:
+  - name, material, color
+  - price, stock, category
+  - isActive, lowStockThreshold
+end note
+
+@enduml
+
+

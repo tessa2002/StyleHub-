@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import DashboardLayout from '../../components/DashboardLayout';
 import { 
   FaShoppingBag, FaPlus, FaSearch, FaEdit, FaTrash, FaEye,
   FaUser, FaCalendarAlt, FaClock, FaCheckCircle, FaExclamationTriangle,
-  FaFilter, FaDownload, FaPrint, FaUserTie
+  FaFilter, FaDownload, FaPrint, FaUserTie, FaBell, FaArrowUp, FaArrowDown,
+  FaEllipsisH, FaChevronLeft, FaChevronRight
 } from 'react-icons/fa';
 import './Orders.css';
 
@@ -14,9 +14,19 @@ const Orders = () => {
   const [tailors, setTailors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterGarment, setFilterGarment] = useState('all');
-  
+  const [activeTab, setActiveTab] = useState('All Orders');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [stats, setStats] = useState({
+    totalOrders: 0,
+    inProduction: 0,
+    readyForPickup: 0,
+    monthlyRevenue: 0,
+    totalOrdersChange: 0,
+    inProductionChange: 0,
+    readyForPickupChange: 0,
+    monthlyRevenueChange: 0
+  });
+
   // Assignment modal state
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -30,19 +40,42 @@ const Orders = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      console.log('Fetching orders from /api/orders...');
-      const response = await axios.get('/api/orders');
-      console.log('Orders response:', response.data);
       
-      // Handle the API response format: { success: true, orders: [...] }
+      // Get auth token
+      const token = localStorage.getItem('token');
+      const headers = token ? {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      } : {};
+      
+      const response = await axios.get('/api/orders', { headers });
       const ordersData = response.data.orders || response.data || [];
-      console.log('Orders data:', ordersData);
-      console.log('Number of orders:', Array.isArray(ordersData) ? ordersData.length : 0);
-      
+      console.log('✅ Fetched orders:', ordersData.length);
       setOrders(Array.isArray(ordersData) ? ordersData : []);
+      
+      // Calculate stats
+      const totalOrders = ordersData.length;
+      const inProduction = ordersData.filter(order => 
+        ['Cutting', 'Stitching', 'Trial'].includes(order.status)
+      ).length;
+      const readyForPickup = ordersData.filter(order => 
+        order.status === 'Ready'
+      ).length;
+      const monthlyRevenue = ordersData.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+      setStats({
+        totalOrders,
+        inProduction,
+        readyForPickup,
+        monthlyRevenue,
+        totalOrdersChange: 12, // Mock data
+        inProductionChange: 5,
+        readyForPickupChange: -3,
+        monthlyRevenueChange: 8
+      });
     } catch (error) {
-      console.error('Error fetching orders:', error);
-      console.error('Error response:', error.response?.data);
+      console.error('❌ Error fetching orders:', error);
+      console.error('❌ Error response:', error.response?.data);
       setOrders([]);
     } finally {
       setLoading(false);
@@ -51,17 +84,20 @@ const Orders = () => {
 
   const fetchTailors = async () => {
     try {
-      console.log('Fetching tailors from /api/tailors...');
-      const response = await axios.get('/api/tailors');
-      console.log('Tailors response:', response.data);
+      // Get auth token
+      const token = localStorage.getItem('token');
+      const headers = token ? {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      } : {};
       
-      // Handle both response formats: direct array or { success: true, users: [...] }
+      const response = await axios.get('/api/staff/tailors', { headers });
       const tailorsList = response.data.users || (Array.isArray(response.data) ? response.data : []);
-      console.log('Tailors found:', tailorsList.length, tailorsList);
-      
+      console.log('✅ Fetched tailors for assignment:', tailorsList.length);
       setTailors(tailorsList);
     } catch (error) {
-      console.error('Error fetching tailors:', error.response?.data || error.message);
+      console.error('❌ Error fetching tailors:', error.response?.data || error.message);
+      console.error('❌ Full error:', error);
       setTailors([]);
     }
   };
@@ -73,484 +109,433 @@ const Orders = () => {
     }
 
     try {
-      console.log('🎯 Assigning order:', {
-        orderId: selectedOrder._id,
-        tailorId: selectedTailorId,
-        tailorName: tailors.find(t => t._id === selectedTailorId)?.name
-      });
-
-      // Use the new assign-tailor endpoint with better logging
-      const response = await axios.post(`/api/orders/${selectedOrder._id}/assign-tailor`, {
+      console.log('🔧 Assigning order:', selectedOrder._id, 'to tailor:', selectedTailorId);
+      
+      // Get auth token
+      const token = localStorage.getItem('token');
+      const headers = token ? {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      } : {};
+      
+      // Use the correct endpoint: PUT /api/orders/:id/assign
+      const response = await axios.put(`/api/orders/${selectedOrder._id}/assign`, {
         tailorId: selectedTailorId
-      });
+      }, { headers });
 
       console.log('✅ Assignment response:', response.data);
 
-      // Update local state with the returned order data
-      if (response.data.success && response.data.order) {
+      // Update the order in the local state
+      if (response.data.order) {
         setOrders(orders.map(order => 
           order._id === selectedOrder._id ? response.data.order : order
-        ));
-      } else {
-        // Fallback to manual update
-        setOrders(orders.map(order => 
-          order._id === selectedOrder._id
-            ? { 
-                ...order, 
-                assignedTailor: { 
-                  _id: selectedTailorId, 
-                  name: tailors.find(t => t._id === selectedTailorId)?.name 
-                } 
-              }
-            : order
         ));
       }
 
       const assignedTailorName = tailors.find(t => t._id === selectedTailorId)?.name || 'Tailor';
-      alert(`✅ Order assigned to ${assignedTailorName} successfully!\n\nThe tailor can now see this order in their dashboard.`);
+      alert(`✅ Order assigned to ${assignedTailorName} successfully!`);
       setShowAssignModal(false);
       setSelectedOrder(null);
       setSelectedTailorId('');
       
-      // Refresh orders to ensure we have latest data
+      // Refresh orders to get updated data
       await fetchOrders();
     } catch (error) {
       console.error('❌ Error assigning tailor:', error);
-      console.error('Error details:', error.response?.data);
+      console.error('❌ Error response:', error.response?.data);
       alert('Failed to assign tailor: ' + (error.response?.data?.message || error.message));
     }
   };
 
-  const handleStatusUpdate = async (orderId, newStatus) => {
-    try {
-      await axios.put(`/api/orders/${orderId}/status`, { status: newStatus });
-      setOrders(orders.map(order => {
-        const id = order._id || order.id;
-        return id === orderId ? { ...order, status: newStatus } : order;
-      }));
-      fetchOrders(); // Refresh orders
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      alert('Error updating order status');
-    }
+  const handleOpenAssignModal = (order) => {
+    console.log('🎯 Opening assign modal for order:', order._id);
+    setSelectedOrder(order);
+    setSelectedTailorId('');
+    setShowAssignModal(true);
   };
 
-  const handleDelete = async (orderId) => {
-    if (window.confirm('Are you sure you want to delete this order?')) {
-      try {
-        await axios.delete(`/api/orders/${orderId}`);
-        setOrders(orders.filter(order => {
-          const id = order._id || order.id;
-          return id !== orderId;
-        }));
-        fetchOrders(); // Refresh orders
-      } catch (error) {
-        console.error('Error deleting order:', error);
-        alert('Error deleting order: ' + (error.response?.data?.message || error.message));
-      }
-    }
-  };
+  const getFilteredOrders = () => {
+    let filtered = orders.filter(order => {
+      const customerName = order.customer?.name || order.customerName || '';
+      const garmentType = order.itemType || order.garmentType || order.items?.[0]?.name || 'Custom Order';
+      const orderId = order._id || order.id || '';
+      
+      const matchesSearch = customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           garmentType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           orderId.toString().includes(searchTerm);
+      return matchesSearch;
+    });
 
-  const filteredOrders = Array.isArray(orders) ? orders.filter(order => {
-    const customerName = order.customer?.name || order.customerName || '';
-    const garmentType = order.itemType || order.garmentType || order.items?.[0]?.name || 'Custom Order';
-    const orderId = order._id || order.id || '';
-    
-    const matchesSearch = customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         garmentType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         orderId.toString().includes(searchTerm);
-    const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
-    const matchesGarment = filterGarment === 'all' || garmentType.toLowerCase().includes(filterGarment.toLowerCase());
-    return matchesSearch && matchesStatus && matchesGarment;
-  }) : [];
+    // Filter by tab
+    switch (activeTab) {
+      case 'Cutting':
+        filtered = filtered.filter(order => order.status === 'Cutting');
+        break;
+      case 'Sewing':
+        filtered = filtered.filter(order => order.status === 'Stitching');
+        break;
+      case 'Quality Check':
+        filtered = filtered.filter(order => order.status === 'Trial');
+        break;
+      case 'Ready':
+        filtered = filtered.filter(order => order.status === 'Ready');
+        break;
+      default:
+        // All Orders - no additional filtering
+        break;
+    }
+
+    return filtered;
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Order Placed': return '#3b82f6'; // Blue
-      case 'Cutting': return '#8b5cf6'; // Purple
-      case 'Stitching': return '#f59e0b'; // Orange
-      case 'Trial': return '#06b6d4'; // Cyan
-      case 'Ready': return '#10b981'; // Green
-      case 'Delivered': return '#059669'; // Dark Green
-      case 'Cancelled': return '#ef4444'; // Red
-      case 'Pending': return '#6b7280'; // Gray
-      case 'New': return '#3b82f6';
-      case 'In Progress': return '#f59e0b';
+      case 'Cutting': return '#8b5cf6';
+      case 'Stitching': case 'SEWING': return '#e91e63';
+      case 'Trial': case 'QC': return '#f59e0b';
+      case 'Ready': case 'READY': return '#10b981';
+      case 'Delivered': return '#059669';
+      case 'Order Placed': return '#3b82f6';
       default: return '#6b7280';
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'Delivered': return <FaCheckCircle />;
-      case 'Ready': return <FaCheckCircle />;
-      case 'Cancelled': return <FaTrash />;
-      case 'Order Placed': return <FaClock />;
-      case 'Cutting': return <FaClock />;
-      case 'Stitching': return <FaClock />;
-      case 'Trial': return <FaClock />;
-      case 'New': return <FaClock />;
-      case 'In Progress': return <FaExclamationTriangle />;
-      default: return <FaClock />;
-    }
+  const getStatusBadge = (status) => {
+    const color = getStatusColor(status);
+    let displayStatus = status;
+    
+    // Map status for display
+    if (status === 'Stitching') displayStatus = 'SEWING';
+    if (status === 'Trial') displayStatus = 'QC';
+    if (status === 'Ready') displayStatus = 'READY';
+    
+    return (
+      <span 
+        className="status-badge"
+        style={{ 
+          backgroundColor: `${color}20`,
+          color: color,
+          padding: '4px 8px',
+          borderRadius: '12px',
+          fontSize: '10px',
+          fontWeight: '600',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px'
+        }}
+      >
+        {displayStatus}
+      </span>
+    );
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount);
+  const getPriorityBadge = (priority = 'Standard') => {
+    const isHigh = priority === 'High' || priority === 'Urgent';
+    return (
+      <span 
+        className="priority-badge"
+        style={{ 
+          backgroundColor: isHigh ? '#fef2f2' : '#f3f4f6',
+          color: isHigh ? '#dc2626' : '#6b7280',
+          padding: '2px 6px',
+          borderRadius: '8px',
+          fontSize: '9px',
+          fontWeight: '500',
+          textTransform: 'uppercase',
+          letterSpacing: '0.3px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '2px'
+        }}
+      >
+        {isHigh && '!'}
+        {priority}
+      </span>
+    );
   };
+
+  const getClientInitials = (name) => {
+    if (!name) return 'U';
+    const names = name.split(' ');
+    return names.length > 1 ? `${names[0][0]}${names[1][0]}` : names[0][0];
+  };
+
+  const filteredOrders = getFilteredOrders();
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, startIndex + itemsPerPage);
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="orders-page">
-          <div className="loading-state">
-            <div className="loading-spinner"></div>
-            <p>Loading orders...</p>
-          </div>
-        </div>
-      </DashboardLayout>
+      <div className="stitchmaster-orders loading">
+        <div className="loading-spinner"></div>
+        <p>Loading orders...</p>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="orders-page">
+    <div className="stitchmaster-orders">
+      {/* Sidebar */}
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <div className="logo">
+            <div className="logo-icon">SM</div>
+            <div className="logo-text">
+              <h3>StitchMaster</h3>
+              <p>Tailoring Admin</p>
+            </div>
+          </div>
+        </div>
+
+        <nav className="sidebar-nav">
+          <Link to="/admin/dashboard" className="nav-item">
+            <div className="nav-icon-wrapper">
+              <FaShoppingBag className="nav-icon" />
+            </div>
+            <span>Dashboard</span>
+          </Link>
+          <Link to="/admin/orders" className="nav-item active">
+            <div className="nav-icon-wrapper">
+              <FaShoppingBag className="nav-icon" />
+            </div>
+            <span>Orders</span>
+          </Link>
+          <Link to="/admin/customers" className="nav-item">
+            <div className="nav-icon-wrapper">
+              <FaUser className="nav-icon" />
+            </div>
+            <span>Clients</span>
+          </Link>
+          <Link to="/admin/fabrics" className="nav-item">
+            <div className="nav-icon-wrapper">
+              <FaShoppingBag className="nav-icon" />
+            </div>
+            <span>Inventory</span>
+          </Link>
+          <Link to="/admin/reports" className="nav-item">
+            <div className="nav-icon-wrapper">
+              <FaShoppingBag className="nav-icon" />
+            </div>
+            <span>Reports</span>
+          </Link>
+        </nav>
+
+        <div className="sidebar-footer">
+          <button className="support-btn">
+            <FaBell />
+            Support Center
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="main-content">
         {/* Header */}
-        <div className="page-header">
-          <div className="header-content">
-            <h1>Orders Management</h1>
-            <p>Manage all customer orders and track their progress</p>
+        <header className="page-header">
+          <div className="header-left">
+            <h1>Order Management</h1>
           </div>
-          <div className="header-actions">
-            <Link to="/admin/orders/new" className="btn btn-primary">
-              <FaPlus /> Create Order
-            </Link>
+          <div className="header-right">
+            <div className="search-bar">
+              <FaSearch className="search-icon" />
+              <input 
+                type="text" 
+                placeholder="Search orders, clients or garments..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <button className="notification-btn">
+              <FaBell />
+            </button>
+            <div className="user-profile">
+              <div className="user-avatar">A</div>
+            </div>
+            <button className="new-order-btn">
+              <FaPlus />
+              New Order
+            </button>
+          </div>
+        </header>
+
+        {/* Stats Cards */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-content">
+              <div className="stat-label">TOTAL ORDERS</div>
+              <div className="stat-value">{stats.totalOrders.toLocaleString()}</div>
+              <div className="stat-change positive">
+                +{stats.totalOrdersChange}% <FaArrowUp />
+              </div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-content">
+              <div className="stat-label">IN PRODUCTION</div>
+              <div className="stat-value">{stats.inProduction}</div>
+              <div className="stat-change positive">
+                +{stats.inProductionChange}% <FaArrowUp />
+              </div>
+            </div>
+          </div>
+
+          <div className="stat-card highlighted">
+            <div className="stat-content">
+              <div className="stat-label">READY FOR PICKUP</div>
+              <div className="stat-value">{stats.readyForPickup}</div>
+              <div className="stat-change negative">
+                {stats.readyForPickupChange}% <FaArrowDown />
+              </div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-content">
+              <div className="stat-label">MONTHLY REVENUE</div>
+              <div className="stat-value">${stats.monthlyRevenue.toLocaleString()}</div>
+              <div className="stat-change positive">
+                +{stats.monthlyRevenueChange}% <FaArrowUp />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="filters-section">
-          <div className="search-box">
-            <FaSearch className="search-icon" />
-            <input
-              type="text"
-              placeholder="Search orders..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        {/* Recent Workflow Section */}
+        <div className="workflow-section">
+          <div className="section-header">
+            <h2>Recent Workflow</h2>
           </div>
-          <div className="filter-group">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="Order Placed">Order Placed</option>
-              <option value="Cutting">Cutting</option>
-              <option value="Stitching">Stitching</option>
-              <option value="Trial">Trial</option>
-              <option value="Ready">Ready</option>
-              <option value="Delivered">Delivered</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
-          </div>
-          <div className="filter-group">
-            <select
-              value={filterGarment}
-              onChange={(e) => setFilterGarment(e.target.value)}
-            >
-              <option value="all">All Garments</option>
-              <option value="Shirt">Shirt</option>
-              <option value="Pant">Pant</option>
-              <option value="Suit">Suit</option>
-              <option value="Dress">Dress</option>
-              <option value="Blouse">Blouse</option>
-            </select>
-          </div>
-        </div>
 
-        {/* Orders Table */}
-        <div className="orders-table-container">
-          <table className="orders-table">
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Garment</th>
-                <th>Status</th>
-                <th>Assigned To</th>
-                <th>Delivery Date</th>
-                <th>Amount</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.length === 0 ? (
-                <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
-                    <div className="empty-state">
-                      <FaShoppingBag style={{ fontSize: '48px', color: '#cbd5e0', marginBottom: '16px' }} />
-                      <p>No orders found</p>
-                      <p style={{ fontSize: '14px', color: '#718096' }}>Try adjusting your search or filter criteria</p>
+          {/* Workflow Tabs */}
+          <div className="workflow-tabs">
+            {['All Orders', 'Cutting', 'Sewing', 'Quality Check', 'Ready'].map(tab => (
+              <button
+                key={tab}
+                className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab(tab);
+                  setCurrentPage(1);
+                }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {/* Orders Table */}
+          <div className="orders-table">
+            <div className="table-header">
+              <span>ORDER ID</span>
+              <span>CUSTOMER</span>
+              <span>GARMENT TYPE</span>
+              <span>STATUS</span>
+              <span>PRIORITY</span>
+              <span>ACTION</span>
+            </div>
+
+            {paginatedOrders.map(order => {
+              const orderId = order._id?.toString() || order.id;
+              const customerName = order.customer?.name || order.customerName || 'Unknown Customer';
+              const garmentType = order.itemType || order.garmentType || order.items?.[0]?.name || 'Custom Order';
+              
+              return (
+                <div key={orderId} className="table-row">
+                  <div className="order-id">
+                    <span className="id-text">#{orderId.slice(-4).toUpperCase()}</span>
+                  </div>
+                  <div className="customer-info">
+                    <div className="customer-avatar">
+                      {getClientInitials(customerName)}
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredOrders.map(order => {
-                  const orderId = order._id?.toString() || order.id;
-                  const customerName = order.customer?.name || order.customerName || 'Unknown Customer';
-                  const customerId = order.customer?._id || order.customerId || '';
-                  const garmentType = order.itemType || order.garmentType || order.items?.[0]?.name || 'Custom Order';
-                  const assignedName = order.assignedTailor?.name || order.assignedTo || null;
-                  const deliveryDate = order.expectedDelivery || order.deliveryDate;
-                  
-                  return (
-                    <tr key={orderId}>
-                      <td>
-                        <div className="order-id">
-                          <span className="id-number">#{orderId.slice(-6)}</span>
-                          <span className="created-date">{new Date(order.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="customer-info">
-                          <div className="customer-name">{customerName}</div>
-                          <div className="customer-phone">{order.customer?.phone || ''}</div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="garment-info">
-                          <div style={{ marginBottom: '4px' }}>
-                            <span className="garment-type">{garmentType || 'Custom Order'}</span>
-                          </div>
-                          {order.fabric?.source === 'shop' && order.fabric?.name && (
-                            <span 
-                              className="fabric-badge"
-                              style={{
-                                display: 'inline-block',
-                                padding: '4px 8px',
-                                backgroundColor: '#E0E7FF',
-                                color: '#4F46E5',
-                                borderRadius: '4px',
-                                fontSize: '11px',
-                                fontWeight: '500',
-                                marginTop: '4px'
-                              }}
-                            >
-                              🧵 {order.fabric.name}
-                            </span>
-                          )}
-                          {order.fabric?.source === 'customer' && (
-                            <span 
-                              className="fabric-badge"
-                              style={{
-                                display: 'inline-block',
-                                padding: '4px 8px',
-                                backgroundColor: '#FEF3C7',
-                                color: '#D97706',
-                                borderRadius: '4px',
-                                fontSize: '11px',
-                                fontWeight: '500',
-                                marginTop: '4px'
-                              }}
-                            >
-                              👔 Customer Fabric
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="status-container">
-                          <span 
-                            className="status-badge" 
-                            style={{ backgroundColor: getStatusColor(order.status) }}
-                          >
-                            {getStatusIcon(order.status)}
-                            {order.status}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="assigned-info">
-                          {assignedName ? (
-                            <div className="assigned-staff">
-                              <FaUserTie className="staff-icon" />
-                              <span>{assignedName}</span>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setSelectedOrder(order);
-                                setShowAssignModal(true);
-                              }}
-                              style={{
-                                background: '#667eea',
-                                color: 'white',
-                                border: 'none',
-                                padding: '6px 12px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                            >
-                              <FaUserTie /> Assign
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="delivery-info">
-                          <FaCalendarAlt className="date-icon" />
-                          <span>{deliveryDate ? new Date(deliveryDate).toLocaleDateString() : 'Not set'}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="amount-info">
-                          <span className="amount">{formatCurrency(order.totalAmount || 0)}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="action-buttons" style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                          <button 
-                            onClick={() => window.location.href = `/admin/orders/${orderId}`}
-                            className="btn-icon view"
-                            title="View Details"
-                            style={{ 
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '8px',
-                              borderRadius: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            <FaEye style={{ fontSize: '16px', color: '#4F46E5' }} />
-                          </button>
-                          <button 
-                            onClick={() => window.location.href = `/admin/orders/${orderId}/edit`}
-                            className="btn-icon edit"
-                            title="Edit Order"
-                            style={{ 
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '8px',
-                              borderRadius: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            <FaEdit style={{ fontSize: '16px', color: '#059669' }} />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(orderId)}
-                            className="btn-icon delete"
-                            title="Delete Order"
-                            style={{ 
-                              background: '#EF4444',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '8px 16px',
-                              borderRadius: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'white'
-                            }}
-                          >
-                            <FaTrash style={{ fontSize: '14px' }} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                    <span className="customer-name">{customerName}</span>
+                  </div>
+                  <div className="garment-type">{garmentType}</div>
+                  <div className="status">
+                    {getStatusBadge(order.status)}
+                  </div>
+                  <div className="priority">
+                    {getPriorityBadge(order.priority)}
+                  </div>
+                  <div className="actions">
+                    {/* Show assign button for unassigned orders with status "Order Placed" */}
+                    {(!order.assignedTailor || order.assignedTailor === null) && 
+                     ['Order Placed', 'Pending'].includes(order.status) ? (
+                      <button 
+                        className="assign-btn"
+                        onClick={() => handleOpenAssignModal(order)}
+                        title="Assign to Tailor"
+                      >
+                        <FaUserTie />
+                        Assign
+                      </button>
+                    ) : order.assignedTailor ? (
+                      <span className="assigned-status" title={`Assigned to: ${order.assignedTailor?.name || 'Tailor'}`}>
+                        <FaCheckCircle />
+                        Assigned
+                      </span>
+                    ) : (
+                      <button className="action-btn" title="More actions">
+                        <FaEllipsisH />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          <div className="pagination">
+            <span className="pagination-info">
+              Showing {startIndex + 1} of {filteredOrders.length} results
+            </span>
+            <div className="pagination-controls">
+              <button 
+                className="pagination-btn"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+              >
+                <FaChevronLeft />
+              </button>
+              <span className="page-number active">{currentPage}</span>
+              {currentPage < totalPages && (
+                <span className="page-number">{currentPage + 1}</span>
               )}
-            </tbody>
-          </table>
+              <button 
+                className="pagination-btn"
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <FaChevronRight />
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
 
-        {/* Assignment Modal */}
-        {showAssignModal && (
-          <div 
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000
-            }}
-            onClick={() => setShowAssignModal(false)}
-          >
-            <div 
-              style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                maxWidth: '500px',
-                width: '90%',
-                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ margin: 0, fontSize: '20px', color: '#1f2937' }}>Assign Tailor to Order</h2>
-                <button 
-                  onClick={() => setShowAssignModal(false)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '24px',
-                    cursor: 'pointer',
-                    color: '#6b7280'
-                  }}
-                >
-                  ×
-                </button>
+      {/* Assignment Modal */}
+      {showAssignModal && (
+        <div className="modal-overlay" onClick={() => setShowAssignModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Assign Tailor to Order</h2>
+              <button onClick={() => setShowAssignModal(false)}>×</button>
+            </div>
+
+            <div className="modal-body">
+              <div className="order-info">
+                <p><strong>Order ID:</strong> #{selectedOrder?._id?.toString().slice(-6)}</p>
+                <p><strong>Customer:</strong> {selectedOrder?.customer?.name || 'N/A'}</p>
+                <p><strong>Amount:</strong> ₹{(selectedOrder?.totalAmount || 0).toLocaleString()}</p>
               </div>
 
-              <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
-                <p style={{ margin: '4px 0', fontSize: '14px' }}>
-                  <strong>Order ID:</strong> #{selectedOrder?._id?.toString().slice(-6)}
-                </p>
-                <p style={{ margin: '4px 0', fontSize: '14px' }}>
-                  <strong>Customer:</strong> {selectedOrder?.customer?.name || 'N/A'}
-                </p>
-                <p style={{ margin: '4px 0', fontSize: '14px' }}>
-                  <strong>Amount:</strong> ₹{(selectedOrder?.totalAmount || 0).toLocaleString()}
-                </p>
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                  Select Tailor:
-                </label>
+              <div className="form-group">
+                <label>Select Tailor:</label>
                 <select
                   value={selectedTailorId}
                   onChange={(e) => setSelectedTailorId(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
                 >
                   <option value="">-- Select a Tailor --</option>
                   {tailors.map(tailor => (
@@ -559,83 +544,19 @@ const Orders = () => {
                     </option>
                   ))}
                 </select>
-                {tailors.length === 0 && (
-                  <p style={{ marginTop: '8px', fontSize: '12px', color: '#ef4444' }}>
-                    No tailors available. Please add tailors in Staff Management.
-                  </p>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => setShowAssignModal(false)}
-                  style={{
-                    padding: '10px 20px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    background: 'white',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAssignOrder}
-                  disabled={!selectedTailorId}
-                  style={{
-                    padding: '10px 20px',
-                    border: 'none',
-                    borderRadius: '6px',
-                    background: selectedTailorId ? '#667eea' : '#d1d5db',
-                    color: 'white',
-                    cursor: selectedTailorId ? 'pointer' : 'not-allowed',
-                    fontSize: '14px',
-                    fontWeight: '500'
-                  }}
-                >
-                  Assign Tailor
-                </button>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Status Update Actions */}
-        <div className="bulk-actions">
-          <h3>Quick Status Updates</h3>
-          <div className="status-actions">
-            <button 
-              className="btn btn-outline"
-              onClick={() => handleStatusUpdate(1, 'In Progress')}
-            >
-              Mark as In Progress
-            </button>
-            <button 
-              className="btn btn-outline"
-              onClick={() => handleStatusUpdate(2, 'Ready')}
-            >
-              Mark as Ready
-            </button>
-            <button 
-              className="btn btn-outline"
-              onClick={() => handleStatusUpdate(3, 'Delivered')}
-            >
-              Mark as Delivered
-            </button>
+            <div className="modal-footer">
+              <button onClick={() => setShowAssignModal(false)}>Cancel</button>
+              <button onClick={handleAssignOrder} disabled={!selectedTailorId}>
+                Assign Tailor
+              </button>
+            </div>
           </div>
         </div>
-
-        {filteredOrders.length === 0 && (
-          <div className="empty-state">
-            <FaShoppingBag className="empty-icon" />
-            <h3>No orders found</h3>
-            <p>Try adjusting your search or filter criteria</p>
-          </div>
-        )}
-      </div>
-    </DashboardLayout>
+      )}
+    </div>
   );
 };
 

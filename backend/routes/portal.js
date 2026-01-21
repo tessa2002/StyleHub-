@@ -6,6 +6,7 @@ const Order = require('../models/Order');
 const Appointment = require('../models/Appointment');
 const MeasurementHistory = require('../models/MeasurementHistory');
 const Fabric = require('../models/Fabric');
+const Notification = require('../models/Notification');
 
 const router = express.Router();
 
@@ -56,7 +57,7 @@ router.get('/dashboard', auth, allowRoles('Customer'), async (req, res) => {
     const upcomingAppointments = await Appointment.find({
       customer: customer._id,
       scheduledAt: { $gte: new Date() },
-      status: { $in: ['Scheduled'] }
+      status: { $in: ['Scheduled', 'Pending'] }
     }).sort({ scheduledAt: 1 });
 
     const notifications = [];
@@ -508,22 +509,20 @@ router.post('/orders', auth, allowRoles('Customer'), async (req, res) => {
       });
     }
 
-    // Calculate base price based on garment type
+    // Calculate base price based on garment type (Sync with frontend NewOrder.js)
     const basePrices = {
-      'shirt': 800,
-      'pants': 600,
-      'suit': 2000,
-      'dress': 1200,
-      'kurta': 1000,
-      'blouse': 800,
-      'lehenga': 2500,
-      'jacket': 1500,
-      'other': 1000
+      'Saree': 2500,
+      'Kurthi': 1500,
+      'Short Kurthi': 1200,
+      'Lehenga': 5000,
+      'Salwar Kameez': 2200,
+      'Gown': 4500
     };
-    const basePrice = basePrices[garmentType?.toLowerCase()] || 1000;
-    console.log('💰 Base price for', garmentType, ':', basePrice);
+    const basePrice = basePrices[garmentType] || 2000;
+    const customizationFee = 350;
+    console.log('💰 Base price for', garmentType, ':', basePrice, '+ customization:', customizationFee);
 
-    // Handle fabric selection and stock decrement when shop fabric is used
+    // Handle fabric selection and stock decrement
     let fabricInfo = { source: 'none' };
     let fabricCost = 0;
     
@@ -560,50 +559,59 @@ router.post('/orders', auth, allowRoles('Customer'), async (req, res) => {
         source: 'customer',
         name: '',
         code: '',
-        color: '',
-        quantity: Number(fabric.quantity || 0) || 0,
+        type: fabric.type || '',
+        color: fabric.color || '',
+        meters: Number(fabric.meters || 0) || 0,
+        quantity: Number(fabric.meters || fabric.quantity || 0) || 0,
         unit: 'm',
         unitPrice: 0,
         cost: 0,
         notes: fabric.notes || ''
       };
     }
-
-    // Calculate embroidery cost
+    
+    // Calculate embroidery cost (Sync with frontend NewOrder.js)
     let embroideryPricing = { total: 0 };
     let embroideryCost = 0;
     const embData = embroidery || customizations?.embroidery;
     
     if (embData?.enabled) {
-      const embTypes = { machine: 300, hand: 800, zardosi: 1200, aari: 1000, bead: 900, thread: 500 };
-      const embPlacements = { collar: 150, sleeves: 200, neckline: 250, hem: 300, full: 1200, custom: 300 };
-      const perExtraColor = 50;
+      const typeMultipliers = {
+        'zardosi': 1.5,
+        'resham': 1.2,
+        'mirror': 1.1,
+        'bead': 1.4,
+        'chikankari': 1.3
+      };
       
-      const typeCharge = embTypes[embData.type] || 0;
-      const placementCharge = (embData.placements || []).reduce((sum, pl) => sum + (embPlacements[pl] || 0), 0);
-      const extraColors = Math.max(0, (embData.colors?.length || 0) - 1);
-      const colorCharge = extraColors * perExtraColor;
+      const methodBase = embData.method === 'Hand' ? 1500 : 600;
+      const multiplier = typeMultipliers[embData.type?.toLowerCase()] || 1.0;
+      embroideryCost = Math.round(methodBase * multiplier);
       
-      embroideryCost = typeCharge + placementCharge + colorCharge;
       embroideryPricing = {
         type: embData.type,
-        typeCharge,
-        placements: embData.placements,
-        placementCharge,
-        colors: embData.colors,
-        colorCharge,
+        method: embData.method,
         total: embroideryCost
       };
       console.log('✨ Embroidery cost:', embroideryCost);
     }
 
-    // Calculate urgency charge
-    const urgencyCharge = urgency === 'urgent' ? 500 : 0;
-    console.log('⚡ Urgency charge:', urgencyCharge);
+    // Lining cost (Sync with frontend)
+    const liningCost = customizations?.hasLining ? 500 : 0;
+
+    // Calculate subtotal before priority
+    const subtotal = basePrice + customizationFee + fabricCost + embroideryCost + liningCost;
+
+    // Calculate urgency charge (Sync with frontend NewOrder.js)
+    let urgencyCharge = 0;
+    if (urgency === 'express') urgencyCharge = Math.round(subtotal * 0.2);
+    if (urgency === 'urgent') urgencyCharge = Math.round(subtotal * 0.4);
+    
+    console.log('⚡ Urgency charge:', urgencyCharge, 'for', urgency);
 
     // Calculate total amount
-    const totalAmount = basePrice + fabricCost + embroideryCost + urgencyCharge;
-    console.log('💵 Total amount:', totalAmount, '= base:', basePrice, '+ fabric:', fabricCost, '+ embroidery:', embroideryCost, '+ urgency:', urgencyCharge);
+    const totalAmount = subtotal + urgencyCharge;
+    console.log('💵 Total amount:', totalAmount, '= subtotal:', subtotal, '+ urgency:', urgencyCharge);
 
     // Create order item from garment details
     const orderItems = [{
@@ -650,8 +658,10 @@ router.post('/orders', auth, allowRoles('Customer'), async (req, res) => {
       await MeasurementHistory.create({ customer: customer._id, measurements: measurementData, source: 'order' });
     }
 
-    // Auto-generate bill for the order
+    // Auto-generate bill for all orders (including own fabric orders)
     let billId = null;
+    const isOwnFabricOrder = fabric && fabric.source === 'customer';
+    
     try {
       const Bill = require('../models/Bill');
       const bill = await Bill.create({
@@ -665,6 +675,13 @@ router.post('/orders', auth, allowRoles('Customer'), async (req, res) => {
       });
       billId = bill._id;
       console.log('💳 Bill generated:', billId, 'Amount:', totalAmount);
+      
+      // Add note to order if it's own fabric (appointment needed later)
+      if (isOwnFabricOrder) {
+        console.log('📦 Own fabric order detected - bill created, customer can pay now');
+        order.notes = (order.notes ? order.notes + '\n\n' : '') + '📦 Customer bringing own fabric - Appointment required for fabric verification';
+        await order.save();
+      }
     } catch (billError) {
       console.warn('⚠️ Failed to generate bill:', billError.message);
       // Continue even if bill generation fails
@@ -698,7 +715,7 @@ router.post('/appointments', auth, allowRoles('Customer'), async (req, res) => {
     
     console.log('👥 Customer found:', customer._id);
     
-    const { service, scheduledAt, notes } = req.body;
+    const { service, scheduledAt, notes, relatedOrder } = req.body;
     
     // Validate required fields
     if (!service) {
@@ -730,8 +747,11 @@ router.post('/appointments', auth, allowRoles('Customer'), async (req, res) => {
       customer: customer._id,
       service: service.trim(),
       scheduledAt: appointmentDate,
+      requestedTime: appointmentDate,
       notes: notes ? notes.trim() : '',
-      status: 'Scheduled'
+      status: 'Pending', // Start as Pending until admin approves
+      approved: false,
+      relatedOrder: relatedOrder || null
     };
     
     console.log('📝 Appointment data:', JSON.stringify(appointmentData, null, 2));
@@ -739,8 +759,43 @@ router.post('/appointments', auth, allowRoles('Customer'), async (req, res) => {
     const appt = await Appointment.create(appointmentData);
     console.log('✅ Appointment created successfully:', appt._id);
     
+    // Create notification for customer (happy confirmation)
+    try {
+      await Notification.createNotification({
+        recipientId: customer.user,
+        message: `🎉 Appointment request submitted successfully! We'll confirm your ${service} appointment shortly.`,
+        type: 'success',
+        priority: 'medium',
+        relatedAppointment: appt._id,
+        actionUrl: '/portal/appointments'
+      });
+      console.log('✅ Customer notification created');
+    } catch (notifError) {
+      console.error('⚠️ Failed to create customer notification:', notifError);
+    }
+    
+    // Create notification for all admins
+    try {
+      const adminUsers = await User.find({ role: 'Admin' });
+      const customerName = customer.name || 'A customer';
+      
+      for (const admin of adminUsers) {
+        await Notification.createNotification({
+          recipientId: admin._id,
+          message: `📅 New appointment request from ${customerName} for ${service} on ${appointmentDate.toLocaleDateString()}`,
+          type: 'info',
+          priority: 'high',
+          relatedAppointment: appt._id,
+          actionUrl: '/admin/appointments'
+        });
+      }
+      console.log(`✅ Admin notifications created for ${adminUsers.length} admins`);
+    } catch (notifError) {
+      console.error('⚠️ Failed to create admin notifications:', notifError);
+    }
+    
     res.status(201).json({ 
-      message: 'Appointment booked successfully!',
+      message: 'Appointment booked successfully! Admin will confirm your time shortly.',
       appointment: appt 
     });
   } catch (error) {

@@ -1,0 +1,57 @@
+@startuml Activity_Order_Placement
+
+skinparam activity {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Order Placement Activity Diagram
+
+start
+
+:Customer logs in;
+:Customer browses fabrics;
+:Select fabric and enter details;
+
+if (Fabric available?) then (yes)
+  :Enter measurements;
+  :Select customization options;
+  :Review order details;
+  
+  if (Payment required?) then (yes)
+    :Create payment session;
+    :Process payment;
+    
+    if (Payment successful?) then (yes)
+      :Create order;
+      :Update fabric stock;
+      :Save measurement snapshot;
+      :Create bill;
+      :Send confirmation notification;
+      stop
+    else (no)
+      :Payment failed;
+      :Show error message;
+      stop
+    endif
+  else (no)
+    :Create order;
+    :Update fabric stock;
+    :Save measurement snapshot;
+    :Create bill (pending);
+    :Send confirmation notification;
+    stop
+  endif
+else (no)
+  :Show "Out of stock" message;
+  stop
+endif
+
+@enduml
+
+

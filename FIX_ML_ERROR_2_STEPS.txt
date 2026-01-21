@@ -1,0 +1,55 @@
+===============================================
+   FIX: "Failed to fetch ML models status"
+===============================================
+
+YOUR ERROR:
+-----------
+Failed to fetch ML models status. Make sure you are logged in.
+[Try Again]
+
+
+THE FIX (2 STEPS):
+------------------
+
+STEP 1: Start Python ML API
+----------------------------
+Double-click this file:
+   START_PYTHON_ML_API.bat
+
+OR open PowerShell and run:
+   cd C:\Users\HP\style_hub\backend\ml\python
+   python api.py
+
+You should see:
+   "Starting server on http://localhost:5001"
+
+KEEP THAT WINDOW OPEN!
+
+
+STEP 2: Refresh Your Browser
+-----------------------------
+Go to: http://localhost:3000/admin/ml
+Click: "Try Again" button
+
+DONE! ML Dashboard should now work!
+
+
+WHAT HAPPENED:
+--------------
+- ML Dashboard needs Python API on port 5001
+- That API wasn't running
+- Now it is!
+
+
+NEED HELP?
+----------
+See these files:
+   SOLUTION_ML_DASHBOARD.md     (complete solution)
+   FIX_ML_DASHBOARD_NOW.md      (quick guide)
+   QUICK_FIX_ML_ERROR.md        (troubleshooting)
+
+
+===============================================
+   Models are trained and ready to use!
+===============================================
+

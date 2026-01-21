@@ -1,0 +1,133 @@
+@startuml State_Unified_System
+
+skinparam state {
+  BackgroundColor #F0F8FF
+  BorderColor #4169E1
+  ArrowColor #4169E1
+  FontSize 11
+}
+
+skinparam note {
+  BackgroundColor #FFFACD
+  BorderColor #FFD700
+}
+
+title Unified State Diagram\nTailoring Management System - All Entities
+
+' Main system states
+state System {
+  
+  ' ============================================
+  ' ORDER STATES
+  ' ============================================
+  state Order {
+    [*] --> OrderPlaced
+    OrderPlaced --> Pending
+    Pending --> PendingAppointment : needs appointment
+    PendingAppointment --> Pending : appointment done
+    Pending --> Cutting : assigned to tailor
+    Cutting --> Stitching
+    Stitching --> Trial : if trial needed
+    Trial --> Stitching : changes needed
+    Trial --> Ready : approved
+    Stitching --> Ready : direct
+    Ready --> Delivered
+    OrderPlaced --> Cancelled : cancelled
+    Pending --> Cancelled : cancelled
+    Cutting --> Cancelled : cancelled
+    Stitching --> Cancelled : cancelled
+    Ready --> Cancelled : cancelled
+    Delivered --> [*]
+    Cancelled --> [*]
+  }
+  
+  ' ============================================
+  ' APPOINTMENT STATES
+  ' ============================================
+  state Appointment {
+    [*] --> AppPending
+    AppPending --> AppScheduled : approved
+    AppPending --> AppCancelled : rejected
+    AppScheduled --> AppCompleted : done
+    AppScheduled --> AppCancelled : cancelled
+    AppCompleted --> [*]
+    AppCancelled --> [*]
+  }
+  
+  ' ============================================
+  ' BILL STATES
+  ' ============================================
+  state Bill {
+    [*] --> BillUnpaid
+    BillUnpaid --> BillPartial : partial payment
+    BillUnpaid --> BillPaid : full payment
+    BillPartial --> BillPaid : remaining paid
+    BillPaid --> [*]
+  }
+  
+  ' ============================================
+  ' USER ACCOUNT STATES
+  ' ============================================
+  state UserAccount {
+    [*] --> UserPending
+    UserPending --> UserActive : activated
+    UserActive --> UserSuspended : suspended
+    UserSuspended --> UserActive : reactivated
+    UserActive --> [*] : deleted
+    UserSuspended --> [*] : deleted
+  }
+  
+  ' ============================================
+  ' FABRIC STOCK STATES
+  ' ============================================
+  state FabricStock {
+    [*] --> FabricInStock
+    FabricInStock --> FabricLowStock : stock low
+    FabricLowStock --> FabricInStock : replenished
+    FabricLowStock --> FabricOutOfStock : depleted
+    FabricOutOfStock --> FabricInStock : replenished
+    FabricInStock --> FabricInactive : deactivated
+    FabricLowStock --> FabricInactive : deactivated
+    FabricOutOfStock --> FabricInactive : deactivated
+    FabricInactive --> FabricInStock : reactivated
+    FabricInactive --> [*] : deleted
+  }
+}
+
+' Cross-system relationships
+Order::OrderPlaced ..> Bill::BillUnpaid : "creates"
+Order::PendingAppointment ..> Appointment::AppPending : "requires"
+Order::Cutting ..> UserAccount::UserActive : "needs active tailor"
+Order::Ready ..> Bill::BillPaid : "payment required"
+Appointment::AppScheduled ..> Order::OrderPlaced : "can create order"
+Order::OrderPlaced ..> FabricStock::FabricInStock : "checks availability"
+
+note top of Order
+  **Order Lifecycle**
+  Placed → Pending → Cutting → 
+  Stitching → (Trial) → Ready → Delivered
+end note
+
+note bottom of Appointment
+  **Appointment Flow**
+  Pending → Scheduled → Completed
+end note
+
+note right of Bill
+  **Payment States**
+  Unpaid → Partial → Paid
+end note
+
+note left of UserAccount
+  **Account Status**
+  Pending → Active ↔ Suspended
+end note
+
+note right of FabricStock
+  **Stock Management**
+  InStock → LowStock → OutOfStock
+  Can be Inactive at any time
+end note
+
+@enduml
+

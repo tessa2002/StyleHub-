@@ -1,0 +1,104 @@
+@startuml Sequence_Payment_Processing
+
+actor Customer
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+participant "Razorpay" as Payment
+actor Admin
+
+== Bill Creation ==
+
+Admin -> Frontend: View Order
+Frontend -> API: GET /api/orders/:id
+API -> DB: Fetch order
+DB --> API: Order details
+API --> Frontend: Order data
+
+Admin -> Frontend: Create Bill
+Frontend -> API: POST /api/orders/:id/create-bill
+API -> DB: Check if bill exists
+DB --> API: No existing bill
+
+API -> DB: Create Bill\n(amount = order.totalAmount,\nstatus = "Pending")
+DB --> API: Bill created
+
+API -> DB: Update order status\n(status = "Order Placed")
+DB --> API: Order updated
+
+API --> Frontend: Bill created
+Frontend --> Admin: Bill details
+
+== Customer Makes Payment ==
+
+Customer -> Frontend: View Bills
+Frontend -> API: GET /api/bills
+API -> DB: Fetch customer bills
+DB --> API: Bills list
+API --> Frontend: Bills data
+Frontend --> Customer: Display bills
+
+Customer -> Frontend: Pay Bill
+Frontend -> API: POST /api/payments/create\n(billId, amount)
+API -> DB: Fetch bill details
+DB --> API: Bill data
+
+API -> Payment: Create payment order
+Payment --> API: Payment order ID
+
+API -> DB: Update bill\n(paymentMethod = "Razorpay")
+DB --> API: Bill updated
+
+API --> Frontend: Payment link
+Frontend --> Customer: Redirect to payment page
+
+== Payment Gateway Processing ==
+
+Customer -> Payment: Enter payment details
+Payment -> Payment: Validate payment
+Payment -> Payment: Process payment
+
+alt Payment Success
+  Payment --> API: Payment webhook (success)
+  API -> DB: Update bill\n(amountPaid = amount,\nstatus = "Paid",\npaidAt = now)
+  DB --> API: Bill updated
+  
+  API -> DB: Add payment record
+  DB --> API: Payment saved
+  
+  API -> DB: Update order status
+  DB --> API: Order updated
+  
+  API -> DB: Create notification
+  DB --> API: Notification created
+  
+  API --> Frontend: Payment success
+  Frontend --> Customer: Payment confirmation
+  
+else Payment Failed
+  Payment --> API: Payment webhook (failed)
+  API -> DB: Update bill\n(status = "Pending")
+  DB --> API: Bill updated
+  
+  API --> Frontend: Payment failed
+  Frontend --> Customer: Error message
+end
+
+== Payment History ==
+
+Customer -> Frontend: View Payment History
+Frontend -> API: GET /api/bills/:id/payments
+API -> DB: Fetch payment records
+DB --> API: Payments list
+API --> Frontend: Payment history
+Frontend --> Customer: Display payments
+
+note right of DB
+  Bill Status Flow:
+  Pending → Paid
+  Payment Methods: Razorpay, Cash, Card, UPI
+end note
+
+@enduml
+
+

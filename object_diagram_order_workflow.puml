@@ -1,0 +1,79 @@
+@startuml Object_Order_Workflow
+
+skinparam object {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Object Diagram - Order Workflow Instance
+
+object "Order #ORD-001\nStatus: Pending" as ord_pending {
+  status = "Pending"
+  assignedTailor = null
+}
+
+object "Order #ORD-001\nStatus: Cutting" as ord_cutting {
+  status = "Cutting"
+  assignedTailor = "Mike Smith"
+  workStartedAt = "2024-01-16 09:00"
+}
+
+object "Order #ORD-001\nStatus: Stitching" as ord_stitching {
+  status = "Stitching"
+  stage = "Stitching"
+}
+
+object "Order #ORD-001\nStatus: Ready" as ord_ready {
+  status = "Ready"
+  completedAt = "2024-01-20 15:00"
+}
+
+object "Order #ORD-001\nStatus: Delivered" as ord_delivered {
+  status = "Delivered"
+  deliveryDate = "2024-01-22 14:00"
+}
+
+object "Customer: John Doe" as cust1 {
+  name = "John Doe"
+  phone = "+1234567890"
+}
+
+object "Tailor: Mike Smith" as tailor1 {
+  name = "Mike Smith"
+  role = "Tailor"
+}
+
+object "Bill #BILL-000101" as bill1 {
+  status = "Paid"
+  amount = 5000.00
+}
+
+ord_pending --> ord_cutting : Admin assigns\nTailor accepts
+ord_cutting --> ord_stitching : Cutting completed
+ord_stitching --> ord_ready : Stitching completed
+ord_ready --> ord_delivered : Customer collects
+
+ord_pending --> cust1 : belongs to
+ord_cutting --> cust1 : belongs to
+ord_stitching --> cust1 : belongs to
+ord_ready --> cust1 : belongs to
+ord_delivered --> cust1 : belongs to
+
+ord_cutting --> tailor1 : assigned to
+ord_stitching --> tailor1 : assigned to
+
+ord_ready --> bill1 : payment required
+
+note right of ord_pending
+  Order lifecycle shown
+  through different states
+end note
+
+@enduml
+
+

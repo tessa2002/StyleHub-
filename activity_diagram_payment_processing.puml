@@ -1,0 +1,65 @@
+@startuml Activity_Payment_Processing
+
+skinparam activity {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Payment Processing Activity Diagram
+
+start
+
+:Customer views bills;
+:Customer selects bill to pay;
+:View bill details\n(amount, amountPaid, status);
+
+if (Bill status?) then (Unpaid)
+  :Click "Make Payment";
+  :Redirect to payment gateway;
+  :Enter payment details;
+  :Submit payment;
+  
+  :Payment gateway processes payment;
+  
+  if (Payment successful?) then (yes)
+    :Receive payment webhook;
+    :Update bill amountPaid;
+    
+    if (Full payment?) then (yes)
+      :Update bill status to "Paid";
+      :Set paidAt timestamp;
+      :Add payment record;
+      :Update order status;
+      :Send payment confirmation notification;
+      stop
+    else (no)
+      :Update bill status to "Partial";
+      :Add payment record;
+      :Send partial payment notification;
+      stop
+    endif
+  else (no)
+    :Payment failed;
+    :Keep bill status as "Unpaid";
+    :Show error message to customer;
+    stop
+  endif
+else (Partial)
+  :Click "Pay Remaining";
+  :Process remaining amount;
+  :Update bill status to "Paid";
+  stop
+else (Paid)
+  :Bill already paid;
+  :Show payment history;
+  stop
+endif
+
+@enduml
+
+

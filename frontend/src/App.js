@@ -21,7 +21,8 @@ import NewOrder from './pages/tailor/Orders/NewOrder';
 import AllOrders from './pages/tailor/Orders/AllOrders';
 import CustomerList from './pages/tailor/Customers/CustomerList';
 import StaffDashboard from './pages/staff/StaffDashboard';
-import CustomerDashboard from './pages/dashboards/CustomerDashboard';
+// Import customer dashboard robustly to avoid default-import issues
+import * as CustomerDashboardModule from './pages/dashboards/CustomerDashboard';
 import TailorDashboard from './pages/dashboards/TailorDashboard';
 import MyOrders from './pages/tailor/MyOrders';
 import InProgress from './pages/tailor/InProgress';
@@ -35,21 +36,30 @@ import AdminMeasurements from './pages/admin/Measurements';
 import AdminStaff from './pages/admin/Staff';
 import AdminBilling from './pages/admin/Billing';
 import AdminSettings from './pages/admin/Settings';
-import AdminFabrics from './pages/admin/Fabrics';
+import AdminInventory from './pages/admin/Inventory';
 import AdminOffers from './pages/admin/Offers';
 import AdminNotifications from './pages/admin/Notifications';
+import AdminAppointments from './pages/admin/Appointments';
 import AdminTest from './pages/admin/AdminTest';
 import SimpleAdminDashboard from './pages/admin/SimpleAdminDashboard';
+import MLDashboard from './components/MLDashboard';
 // PortalDashboard removed - using CustomerDashboard instead
 import ProfilePage from './pages/portal/Profile';
 import OrdersPage from './pages/portal/Orders';
 import MeasurementsPage from './pages/portal/Measurements';
 import AppointmentsPage from './pages/portal/Appointments';
 import PortalNewOrder from './pages/portal/NewOrder';
+import FabricCatalog from './pages/portal/FabricCatalog';
 import ManageUsers from './pages/ManageUsers';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
+
+// Resolve customer dashboard component robustly (handles default or named export)
+const CustomerDashboard =
+  CustomerDashboardModule.default ||
+  CustomerDashboardModule.CustomerDashboard ||
+  Object.values(CustomerDashboardModule).find((v) => typeof v === 'function');
 
 // Lazy load portal components for better performance
 const BillsPage = React.lazy(() => import('./pages/portal/Bills'));
@@ -340,10 +350,10 @@ function App() {
             }
           />
           <Route
-            path="/admin/fabrics"
+            path="/admin/inventory"
             element={
               <ProtectedRoute allowedRoles={["Admin"]}>
-                <AdminFabrics />
+                <AdminInventory />
               </ProtectedRoute>
             }
           />
@@ -363,6 +373,22 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+          <Route
+            path="/admin/appointments"
+            element={
+              <ProtectedRoute allowedRoles={["Admin", "Staff"]}>
+                <AdminAppointments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/ml"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <MLDashboard />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Customer Portal (protected) */}
           <Route
@@ -410,6 +436,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["Customer"]}>
                 <AppointmentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/portal/fabrics"
+            element={
+              <ProtectedRoute allowedRoles={["Customer"]}>
+                <FabricCatalog />
               </ProtectedRoute>
             }
           />

@@ -92,8 +92,8 @@ export default function Fabrics(){
     setLoading(true);
     try {
       const { data } = await axios.get('/api/fabrics', { params: { q, page, limit, inStock: onlyInStock ? 1 : undefined } });
-      setItems(data.items || []);
-      setTotal(data.total || 0);
+      setItems(data.fabrics || []);
+      setTotal(data.pagination?.total || data.fabrics?.length || 0);
     } finally { setLoading(false); }
   };
 

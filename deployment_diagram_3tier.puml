@@ -1,0 +1,89 @@
+@startuml Deployment_3Tier
+
+skinparam node {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam component {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Three-Tier Architecture Deployment
+
+package "Presentation Tier" {
+  node "Client Layer" {
+    [Web Browser] as browser
+    [Mobile Browser] as mobile
+  }
+  
+  node "Frontend Server" {
+    [React Application] as react
+    [Build Files] as build
+  }
+}
+
+package "Application Tier" {
+  node "API Server" {
+    [Express.js] as express
+    [REST Endpoints] as endpoints
+    [Middleware] as middleware
+  }
+  
+  node "ML Service" {
+    [Python Flask] as flask
+    [ML Models] as models
+  }
+}
+
+package "Data Tier" {
+  node "Database Server" {
+    database [MongoDB] as mongodb
+  }
+  
+  node "File Storage" {
+    [Cloud Storage] as storage
+  }
+}
+
+package "External Services" {
+  [Razorpay] as razorpay
+  [Email Service] as email
+}
+
+' Connections
+browser --> react : HTTP/HTTPS
+mobile --> react : HTTP/HTTPS
+react --> express : API Calls
+express --> mongodb : Database Queries
+express --> flask : ML Predictions
+express --> razorpay : Payment Processing
+express --> storage : File Operations
+express --> email : Notifications
+
+note right of express
+  Application Tier:
+  - Business Logic
+  - Authentication
+  - Authorization
+  - Data Validation
+end note
+
+note right of mongodb
+  Data Tier:
+  - User Data
+  - Order Data
+  - Customer Data
+  - Fabric Inventory
+end note
+
+@enduml
+
+

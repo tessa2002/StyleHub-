@@ -1,0 +1,137 @@
+@startuml State_Combined_System
+
+skinparam state {
+  BackgroundColor #E1F5FF
+  BorderColor #0066CC
+  ArrowColor #0066CC
+}
+
+title Combined State Diagram\nTailoring Management System
+
+' ============================================
+' ORDER STATES
+' ============================================
+state "Order States" as OrderStates {
+  [*] --> OrderPlaced : Customer places order
+  OrderPlaced --> Pending : Order created
+  Pending --> PendingAppointment : Appointment required
+  PendingAppointment --> Pending : Appointment completed
+  Pending --> Cutting : Assigned to tailor
+  Cutting --> Stitching : Cutting completed
+  Stitching --> Trial : Trial required
+  Trial --> Stitching : Changes needed
+  Trial --> Ready : Approved
+  Stitching --> Ready : Direct completion
+  Ready --> Delivered : Customer collects
+  Pending --> Cancelled : Cancelled
+  Cutting --> Cancelled : Cancelled
+  Stitching --> Cancelled : Cancelled
+  Ready --> Cancelled : Cancelled
+  Delivered --> [*]
+  Cancelled --> [*]
+}
+
+' ============================================
+' APPOINTMENT STATES
+' ============================================
+state "Appointment States" as AppointmentStates {
+  [*] --> AppPending : Customer requests
+  AppPending --> AppScheduled : Admin approves
+  AppScheduled --> AppCompleted : Appointment done
+  AppPending --> AppCancelled : Rejected
+  AppScheduled --> AppCancelled : Cancelled
+  AppCompleted --> [*]
+  AppCancelled --> [*]
+}
+
+' ============================================
+' BILL/PAYMENT STATES
+' ============================================
+state "Bill/Payment States" as BillStates {
+  [*] --> BillUnpaid : Bill created
+  BillUnpaid --> BillPartial : Partial payment
+  BillUnpaid --> BillPaid : Full payment
+  BillPartial --> BillPaid : Remaining paid
+  BillPaid --> [*]
+}
+
+' ============================================
+' USER ACCOUNT STATES
+' ============================================
+state "User Account States" as UserStates {
+  [*] --> UserPending : Registration
+  UserPending --> UserActive : Activated
+  UserActive --> UserSuspended : Admin action
+  UserSuspended --> UserActive : Reactivated
+  UserActive --> [*] : Account deleted
+  UserSuspended --> [*] : Account deleted
+}
+
+' ============================================
+' FABRIC STOCK STATES
+' ============================================
+state "Fabric Stock States" as FabricStates {
+  [*] --> FabricInStock : Fabric added
+  FabricInStock --> FabricLowStock : Stock <= threshold
+  FabricLowStock --> FabricOutOfStock : Stock depleted
+  FabricLowStock --> FabricInStock : Replenished
+  FabricOutOfStock --> FabricInStock : Replenished
+  FabricInStock --> FabricInactive : Deactivated
+  FabricLowStock --> FabricInactive : Deactivated
+  FabricOutOfStock --> FabricInactive : Deactivated
+  FabricInactive --> FabricInStock : Reactivated
+  FabricInactive --> [*] : Deleted
+}
+
+' ============================================
+' NOTES WITH RELATIONSHIPS
+' ============================================
+note right of OrderStates
+  **Order Lifecycle:**
+  Placed → Pending → Cutting → 
+  Stitching → Ready → Delivered
+  
+  **Relationships:**
+  • Creates Bill when placed
+  • Requires Appointment if needed
+  • Needs Active Tailor for work
+  • Checks Payment before ready
+end note
+
+note right of AppointmentStates
+  **Appointment Flow:**
+  Pending → Scheduled → Completed
+  
+  **Relationships:**
+  • Can create Order when completed
+end note
+
+note right of BillStates
+  **Payment Flow:**
+  Unpaid → Partial/Paid
+  
+  **Relationships:**
+  • Created by Order
+  • Checked before Order Ready
+end note
+
+note right of UserStates
+  **Account Status:**
+  Pending → Active ↔ Suspended
+  
+  **Relationships:**
+  • Active Tailor needed for Order work
+end note
+
+note right of FabricStates
+  **Stock Management:**
+  InStock → LowStock → OutOfStock
+  
+  **Relationships:**
+  • Checked when Order placed
+  • Stock reduced when Order created
+end note
+
+@enduml
+
+

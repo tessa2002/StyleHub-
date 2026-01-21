@@ -7,6 +7,7 @@ const Feedback = require('../models/Feedback');
 const Bill = require('../models/Bill');
 const Fabric = require('../models/Fabric');
 const Appointment = require('../models/Appointment');
+const Notification = require('../models/Notification');
 
 const router = express.Router();
 
@@ -174,24 +175,55 @@ router.get('/dashboard', auth, allowRoles('Admin', 'Staff'), async (req, res) =>
 
 // POST /api/admin/users - create staff/tailor/admin
 router.post('/users', auth, allowRoles('Admin'), async (req, res) => {
+  console.log('🔍 POST /api/admin/users called');
+  console.log('👤 User making request:', req.user?.email, req.user?.role);
+  console.log('📋 Request body:', req.body);
+  
   try {
     const { name, email, password, role, phone } = req.body;
+    
+    console.log('📝 Extracted fields:', { name, email, role, phone, passwordLength: password?.length });
+    
     if (!name || !email || !password || !role) {
+      console.log('❌ Missing required fields');
       return res.status(400).json({ message: 'Missing fields' });
     }
     if (!['Admin', 'Tailor', 'Staff'].includes(role)) {
+      console.log('❌ Invalid role:', role);
       return res.status(400).json({ message: 'Invalid role' });
     }
+    
+    console.log('🔍 Checking if email already exists:', email);
     const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ message: 'Email already registered' });
+    if (existing) {
+      console.log('❌ Email already registered:', email);
+      return res.status(400).json({ message: 'Email already registered' });
+    }
 
+    console.log('🔐 Hashing password...');
     const bcrypt = require('bcryptjs');
     const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashed, role, phone: phone || '' });
+    
+    console.log('💾 Creating user in database...');
+    const user = await User.create({ 
+      name, 
+      email, 
+      password: hashed, 
+      role, 
+      phone: phone || '' 
+    });
+    
+    console.log('✅ User created successfully:', user._id, user.name, user.role);
 
-    res.status(201).json({ id: user._id, name: user.name, email: user.email, role: user.role });
+    res.status(201).json({ 
+      id: user._id, 
+      name: user.name, 
+      email: user.email, 
+      role: user.role 
+    });
   } catch (e) {
-    console.error('Create member error:', e.message);
+    console.error('❌ Create user error:', e.message);
+    console.error('❌ Full error:', e);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -600,6 +632,349 @@ router.get('/debug/fix-tailor-role', auth, allowRoles('Admin'), async (req, res)
     
   } catch (error) {
     console.error('❌ Error in fix-tailor-role endpoint:', error);
+    res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+  }
+});
+
+// GET /api/admin/appointments - Get all appointments for admin to manage
+router.get('/appointments', auth, allowRoles('Admin', 'Staff'), async (req, res) => {
+  try {
+    console.log('📅 Fetching all appointments for admin');
+    
+    const { status, date, sortBy = 'scheduledAt', sortOrder = 'asc' } = req.query;
+    
+    // Build query
+    const query = {};
+    if (status) {
+      query.status = status;
+    }
+    if (date) {
+      const startDate = new Date(date);
+      const endDate = new Date(date);
+      endDate.setDate(endDate.getDate() + 1);
+      query.scheduledAt = { $gte: startDate, $lt: endDate };
+    }
+    
+    // Sort
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    
+    const appointments = await Appointment.find(query)
+      .populate('customer', 'name email phone')
+      .populate('relatedOrder', 'itemType status totalAmount')
+      .sort(sortOptions);
+    
+    console.log(`✅ Found ${appointments.length} appointments`);
+    
+    res.json({ 
+      success: true,
+      appointments,
+      count: appointments.length
+    });
+  } catch (error) {
+    console.error('❌ Error fetching appointments:', error);
+    res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+  }
+});
+
+// PUT /api/admin/appointments/:id/approve - Approve and optionally modify appointment time
+router.put('/appointments/:id/approve', auth, allowRoles('Admin', 'Staff'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { scheduledAt, notes } = req.body;
+    
+    console.log(`📅 Approving appointment ${id}`);
+    
+    const appointment = await Appointment.findById(id).populate('customer', 'name email user');
+    if (!appointment) {
+      return res.status(404).json({ success: false, message: 'Appointment not found' });
+    }
+    
+    // Update appointment
+    appointment.approved = true;
+    appointment.approvedBy = req.user.id;
+    appointment.approvedAt = new Date();
+    appointment.status = 'Scheduled';
+    
+    // If admin modified the time
+    if (scheduledAt) {
+      const newTime = new Date(scheduledAt);
+      if (!isNaN(newTime.getTime())) {
+        appointment.scheduledAt = newTime;
+      }
+    }
+    
+    // Add admin notes if provided
+    if (notes) {
+      appointment.notes = appointment.notes 
+        ? `${appointment.notes}\n\nAdmin Note: ${notes}` 
+        : `Admin Note: ${notes}`;
+    }
+    
+    await appointment.save();
+    console.log(`✅ Appointment ${id} approved`);
+    
+    // Create notification for customer
+    try {
+      const customerUserId = appointment.customer.user;
+      const appointmentTime = new Date(appointment.scheduledAt).toLocaleString();
+      
+      await Notification.createNotification({
+        recipientId: customerUserId,
+        message: `✅ Your ${appointment.service} appointment has been confirmed for ${appointmentTime}!`,
+        type: 'success',
+        priority: 'high',
+        relatedAppointment: appointment._id,
+        actionUrl: '/portal/appointments'
+      });
+      console.log('✅ Customer notification sent');
+    } catch (notifError) {
+      console.error('⚠️ Failed to create customer notification:', notifError);
+    }
+    
+    res.json({
+      success: true,
+      message: 'Appointment approved successfully',
+      appointment
+    });
+  } catch (error) {
+    console.error('❌ Error approving appointment:', error);
+    res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+  }
+});
+
+// PUT /api/admin/appointments/:id/reject - Reject appointment
+router.put('/appointments/:id/reject', auth, allowRoles('Admin', 'Staff'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    
+    console.log(`📅 Rejecting appointment ${id}`);
+    
+    const appointment = await Appointment.findById(id).populate('customer', 'name email user');
+    if (!appointment) {
+      return res.status(404).json({ success: false, message: 'Appointment not found' });
+    }
+    
+    appointment.status = 'Cancelled';
+    if (reason) {
+      appointment.notes = appointment.notes 
+        ? `${appointment.notes}\n\nRejection Reason: ${reason}` 
+        : `Rejection Reason: ${reason}`;
+    }
+    
+    await appointment.save();
+    console.log(`✅ Appointment ${id} rejected`);
+    
+    // Create notification for customer
+    try {
+      const customerUserId = appointment.customer.user;
+      const message = reason 
+        ? `❌ Your ${appointment.service} appointment request was not approved. Reason: ${reason}` 
+        : `❌ Your ${appointment.service} appointment request was not approved. Please contact us for more information.`;
+      
+      await Notification.createNotification({
+        recipientId: customerUserId,
+        message,
+        type: 'error',
+        priority: 'high',
+        relatedAppointment: appointment._id,
+        actionUrl: '/portal/appointments'
+      });
+      console.log('✅ Customer notification sent');
+    } catch (notifError) {
+      console.error('⚠️ Failed to create customer notification:', notifError);
+    }
+    
+    res.json({
+      success: true,
+      message: 'Appointment rejected',
+      appointment
+    });
+  } catch (error) {
+    console.error('❌ Error rejecting appointment:', error);
+    res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+  }
+});
+
+// PUT /api/admin/appointments/:id - Update appointment time or details
+router.put('/appointments/:id', auth, allowRoles('Admin', 'Staff'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { scheduledAt, service, notes, status } = req.body;
+    
+    console.log(`📅 Updating appointment ${id}`);
+    
+    const appointment = await Appointment.findById(id);
+    if (!appointment) {
+      return res.status(404).json({ success: false, message: 'Appointment not found' });
+    }
+    
+    // Update fields if provided
+    if (scheduledAt) {
+      const newTime = new Date(scheduledAt);
+      if (!isNaN(newTime.getTime())) {
+        appointment.scheduledAt = newTime;
+      }
+    }
+    if (service) appointment.service = service;
+    if (notes !== undefined) appointment.notes = notes;
+    if (status) appointment.status = status;
+    
+    await appointment.save();
+    console.log(`✅ Appointment ${id} updated`);
+    
+    res.json({
+      success: true,
+      message: 'Appointment updated successfully',
+      appointment
+    });
+  } catch (error) {
+    console.error('❌ Error updating appointment:', error);
+    res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+  }
+});
+
+// POST /api/admin/orders/:id/create-bill - Create bill for order
+router.post('/orders/:id/create-bill', auth, allowRoles('Admin', 'Staff'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`💳 Creating bill for order ${id}`);
+    
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+    
+    // Check if bill already exists
+    const existingBill = await Bill.findOne({ order: order._id });
+    if (existingBill) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Bill already exists for this order',
+        bill: existingBill
+      });
+    }
+    
+    // Create bill
+    const bill = await Bill.create({
+      order: order._id,
+      customer: order.customer,
+      amount: order.totalAmount,
+      paymentMethod: 'Razorpay',
+      status: 'Pending',
+      amountPaid: 0,
+      payments: []
+    });
+    
+    console.log(`✅ Bill created: ${bill._id} for ₹${bill.amount}`);
+    
+    // Create notification for customer
+    try {
+      const customer = await Customer.findById(order.customer);
+      if (customer && customer.user) {
+        await Notification.createNotification({
+          recipientId: customer.user,
+          message: `💳 Bill created for your ${order.itemType} order. Amount: ₹${order.totalAmount}`,
+          type: 'info',
+          priority: 'medium',
+          relatedOrder: order._id,
+          actionUrl: '/portal/orders'
+        });
+      }
+    } catch (notifError) {
+      console.error('⚠️ Failed to create customer notification:', notifError);
+    }
+    
+    res.json({
+      success: true,
+      message: 'Bill created successfully',
+      bill
+    });
+  } catch (error) {
+    console.error('❌ Error creating bill:', error);
+    res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+  }
+});
+
+// PUT /api/admin/orders/:id/assign-tailor - Assign order to tailor
+router.put('/orders/:id/assign-tailor', auth, allowRoles('Admin', 'Staff'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tailorId } = req.body;
+    
+    console.log(`👔 Assigning order ${id} to tailor ${tailorId}`);
+    
+    if (!tailorId) {
+      return res.status(400).json({ success: false, message: 'Tailor ID is required' });
+    }
+    
+    // Verify tailor exists and has correct role
+    const tailor = await User.findById(tailorId);
+    if (!tailor) {
+      return res.status(404).json({ success: false, message: 'Tailor not found' });
+    }
+    if (tailor.role !== 'Tailor') {
+      return res.status(400).json({ success: false, message: 'User is not a tailor' });
+    }
+    
+    // Update order
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+    
+    order.assignedTailor = tailorId;
+    order.status = 'Cutting'; // Move to first work stage
+    await order.save();
+    
+    console.log(`✅ Order assigned to tailor: ${tailor.name}`);
+    
+    // Create notification for tailor
+    try {
+      await Notification.createNotification({
+        recipientId: tailorId,
+        message: `👔 New order assigned: ${order.itemType} - ₹${order.totalAmount}`,
+        type: 'info',
+        priority: 'high',
+        relatedOrder: order._id,
+        actionUrl: '/dashboard/tailor/orders'
+      });
+      console.log('✅ Tailor notification sent');
+    } catch (notifError) {
+      console.error('⚠️ Failed to create tailor notification:', notifError);
+    }
+    
+    // Also notify customer
+    try {
+      const customer = await Customer.findById(order.customer);
+      if (customer && customer.user) {
+        await Notification.createNotification({
+          recipientId: customer.user,
+          message: `👔 Your ${order.itemType} order has been assigned to our tailor and work has begun!`,
+          type: 'success',
+          priority: 'medium',
+          relatedOrder: order._id,
+          actionUrl: '/portal/orders'
+        });
+      }
+    } catch (notifError) {
+      console.error('⚠️ Failed to create customer notification:', notifError);
+    }
+    
+    res.json({
+      success: true,
+      message: 'Order assigned to tailor successfully',
+      order,
+      tailor: {
+        id: tailor._id,
+        name: tailor.name,
+        email: tailor.email
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error assigning tailor:', error);
     res.status(500).json({ success: false, message: 'Server error: ' + error.message });
   }
 });

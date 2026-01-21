@@ -1,0 +1,111 @@
+@startuml Sequence_Complete_System_Overview
+
+actor Customer
+actor Admin
+actor Staff
+actor Tailor
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+participant "Payment Gateway" as Payment
+
+== Complete System Workflow ==
+
+== 1. Customer Registration & Login ==
+Customer -> Frontend: Register/Login
+Frontend -> API: Auth endpoints
+API -> DB: User management
+DB --> API: User data
+API --> Frontend: Auth token
+Frontend --> Customer: Dashboard access
+
+== 2. Customer Places Order ==
+Customer -> Frontend: Browse & Select Fabric
+Frontend -> API: GET /api/fabrics
+API -> DB: Fetch fabrics
+DB --> API: Fabric data
+
+Customer -> Frontend: Place Order
+Frontend -> API: POST /api/orders
+API -> DB: Create order\nUpdate fabric stock
+DB --> API: Order created
+
+API -> Payment: Create payment
+Payment --> API: Payment link
+API --> Frontend: Order + Payment
+Frontend --> Customer: Order confirmation
+
+== 3. Admin Manages Order ==
+Admin -> Frontend: View Orders
+Frontend -> API: GET /api/orders
+API -> DB: Fetch orders
+DB --> API: Orders list
+
+Admin -> Frontend: Assign to Tailor
+Frontend -> API: POST /api/orders/:id/assign-tailor
+API -> DB: Update order\n(assignedTailor)
+DB --> API: Order updated
+
+API -> DB: Create notification
+DB --> Tailor: Notification
+
+== 4. Tailor Works on Order ==
+Tailor -> Frontend: View Assigned Orders
+Frontend -> API: GET /api/orders/assigned
+API -> DB: Fetch assigned orders
+DB --> API: Orders
+
+Tailor -> Frontend: Accept & Start Work
+Frontend -> API: PUT /api/orders/:id/accept
+API -> DB: Update status\n(status = "Cutting")
+DB --> API: Order updated
+
+Tailor -> Frontend: Update Stage
+Frontend -> API: PUT /api/orders/:id/next-stage
+API -> DB: Update status\n(status = "Stitching")
+DB --> API: Order updated
+
+Tailor -> Frontend: Mark Ready
+Frontend -> API: PUT /api/orders/:id/mark-ready
+API -> DB: Update status\n(status = "Ready")
+DB --> API: Order updated
+
+API -> DB: Create notifications
+DB --> Customer: "Order ready"
+DB --> Admin: "Order ready"
+
+== 5. Payment Processing ==
+Customer -> Frontend: View Bills
+Frontend -> API: GET /api/bills
+API -> DB: Fetch bills
+DB --> API: Bills
+
+Customer -> Payment: Make Payment
+Payment -> API: Payment webhook
+API -> DB: Update bill\n(status = "Paid")
+DB --> API: Bill updated
+
+== 6. Customer Collects Order ==
+Customer -> Frontend: View Ready Orders
+Frontend -> API: GET /api/orders?status=Ready
+API -> DB: Fetch orders
+DB --> API: Ready orders
+
+Admin -> Frontend: Mark Delivered
+Frontend -> API: PUT /api/orders/:id\n(status = "Delivered")
+API -> DB: Update order
+DB --> API: Order updated
+
+note over Customer,DB
+  Complete Order Lifecycle:
+  1. Registration
+  2. Order Placement
+  3. Order Assignment
+  4. Order Processing
+  5. Payment
+  6. Delivery
+end note
+
+@enduml
+
+

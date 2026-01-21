@@ -1,2007 +1,1622 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { 
+  FaCloudUploadAlt, 
+  FaClock, 
+  FaRobot, 
+  FaSearch,
+  FaPlus,
+  FaBell,
+  FaStore,
+  FaShoppingBag,
+  FaPaperPlane,
+  FaInfoCircle,
+  FaRegFileAlt,
+  FaTshirt,
+  FaChevronRight,
+  FaChevronLeft,
+  FaUndo,
+  FaSync,
+  FaMinus,
+  FaMagic,
+  FaCheck
+} from 'react-icons/fa';
 import DashboardLayout from '../../components/DashboardLayout';
+import { toast } from 'react-toastify';
 import './NewOrder.css';
+
+const shapeRecommendations = {
+  'Hourglass': {
+    text: "Your balanced proportions and defined waist are perfect for wrap dresses and belted styles.",
+    styles: ["V-necks", "Wrap Dresses", "High-waisted skirts"],
+    defaults: { silhouette: 'Sheath', neckline: 'V-Neck', sleeve: 'Sleeveless' }
+  },
+  'Pear': {
+    text: "Balance your hips by adding volume to your top half with statement sleeves or boat necks.",
+    styles: ["Boat necks", "Ruffled tops", "A-line skirts"],
+    defaults: { silhouette: 'A-Line', neckline: 'Boat', sleeve: 'Short Sleeve' }
+  },
+  'Apple': {
+    text: "Empire waists and V-necks will help elongate your torso and draw attention to your face.",
+    styles: ["Empire waist", "V-necks", "Structured jackets"],
+    defaults: { silhouette: 'Empire', neckline: 'V-Neck', sleeve: '3/4 Sleeve' }
+  },
+  'Rectangle': {
+    text: "Create the illusion of curves with sweetheart necklines and peplum tops.",
+    styles: ["Sweetheart neckline", "Peplum tops", "Flared skirts"],
+    defaults: { silhouette: 'Mermaid', neckline: 'Sweetheart', sleeve: 'Short Sleeve' }
+  },
+  'Inverted Triangle': {
+    text: "Softening your shoulder line with V-necks and adding volume to your lower half works best.",
+    styles: ["V-necks", "Full skirts", "Wide-leg pants"],
+    defaults: { silhouette: 'A-Line', neckline: 'V-Neck', sleeve: 'Full Sleeve' }
+  }
+};
 
 export default function PortalNewOrder() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Section 1: Customer info (auto-filled, read-only)
+  // State
   const [profile, setProfile] = useState({ user: null, customer: null });
-
-  // Section 2: Measurements
-  const [useSaved, setUseSaved] = useState(true);
-  const [measurements, setMeasurements] = useState({});
-  const [mhistory, setMhistory] = useState([]); // [{_id, measurements, createdAt}]
-  const [selectedHistoryId, setSelectedHistoryId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [activeStep, setActiveStep] = useState(1); // 1: Details, 2: Studio, 3: Timeline
   
-  // Reference images for tailor
-  const [referenceImages, setReferenceImages] = useState([]);
-  const [referenceImagePreviews, setReferenceImagePreviews] = useState([]);
-  const [uploadingImages, setUploadingImages] = useState(false);
+  // Customization Studio State
+  const [activeTab, setActiveTab] = useState('Design');
+  const [silhouette, setSilhouette] = useState('A-Line');
+  const [neckline, setNeckline] = useState('Sweetheart');
+  const [sleeve, setSleeve] = useState('Sleeveless');
 
-  // Section 3: Fabric details
-  const [ownFabric, setOwnFabric] = useState(false);
+  // Form fields (Moved up to avoid initialization error)
+  const [garmentType, setGarmentType] = useState('Saree');
+  const [occasion, setOccasion] = useState('Wedding Guest');
+  const [description, setDescription] = useState('');
+  const [materialSource, setMaterialSource] = useState('catalog'); // 'catalog' or 'own'
   const [fabricQuery, setFabricQuery] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [highlightedSuggestion, setHighlightedSuggestion] = useState(-1);
-  const [allFabrics, setAllFabrics] = useState([]); // All fabrics from API
-  const [fabrics, setFabrics] = useState([]); // Filtered fabrics for display
-  const [selectedFabricId, setSelectedFabricId] = useState('');
-  const [fabricQty, setFabricQty] = useState(1);
-  const [ownFabricNotes, setOwnFabricNotes] = useState('');
-  const [loadingFabrics, setLoadingFabrics] = useState(false);
+  const [selectedFabric, setSelectedFabric] = useState(null);
+  const [deliveryDate, setDeliveryDate] = useState('');
+  const [priority, setPriority] = useState('standard');
+  const [measurementMode, setMeasurementMode] = useState('saved'); // 'saved' or 'new'
+  const [measurements, setMeasurements] = useState({});
   
-  // Fabric type filtering
-  const [selectedFabricType, setSelectedFabricType] = useState('');
-  const [fabricTypes, setFabricTypes] = useState([]);
-  const [selectedFabricColor, setSelectedFabricColor] = useState('');
+  // Advanced Customization State
+  const [hasLining, setHasLining] = useState(false);
+  const [hasEmbroidery, setHasEmbroidery] = useState(false);
+  const [embroideryDetails, setEmbroideryDetails] = useState({
+    type: 'Zardosi',
+    method: 'Hand',
+    placement: 'Neckline',
+    pattern: 'Floral'
+  });
+  
+  // Dynamic Pricing Logic - Fixed percentages for each priority level
+  const priceDetails = useMemo(() => {
+    const basePrices = {
+      'Saree': 2500,
+      'Kurthi': 1500,
+      'Short Kurthi': 1200,
+      'Lehenga': 5000,
+      'Salwar Kameez': 2200,
+      'Gown': 4500,
+      'Anarkali': 3500,
+      'Palazzo Set': 2800,
+      'Sharara': 4000,
+      'Gharara': 4200,
+      'Indo-Western Dress': 3800,
+      'Crop Top & Skirt': 2500,
+      'Jacket': 2000,
+      'Blouse': 1200,
+      'Dupatta': 800,
+      'Pants': 1800,
+      'Skirt': 1500,
+      'Sherwani': 6000,
+      'Kurta (Men)': 2000,
+      'Nehru Jacket': 2500,
+      'Dhoti': 1000,
+      'Pajama': 1500
+    };
 
-  // Autocomplete suggestions for fabric search (types/materials)
-  const fabricTypeSuggestions = useMemo(() => {
-    if (!fabricQuery.trim()) return [];
-    const pool = Array.from(new Set([
-      ...(fabricTypes || []),
-      ...((allFabrics || []).map(f => f.material).filter(Boolean)),
-      ...((allFabrics || []).map(f => f.type).filter(Boolean)),
-    ]));
-    const q = fabricQuery.toLowerCase();
-    return pool
-      .filter(v => typeof v === 'string' && v.toLowerCase().startsWith(q))
-      .slice(0, 8);
-  }, [fabricQuery, fabricTypes, allFabrics]);
+    const base = basePrices[garmentType] || 2000;
+    const customization = 350;
+    let fabricCost = 0;
+    if (materialSource === 'catalog' && selectedFabric) {
+      fabricCost = (selectedFabric.price || 0) * 2.5; // Default 2.5m as used in backend
+    }
+    let lining = hasLining ? 500 : 0;
+    let embroidery = 0;
 
-  const handleSuggestionSelect = (value) => {
-    if (!value) return;
-    setSelectedFabricType(value);
-    setSelectedFabricColor('');
-    setFabricQuery('');
-    setShowSuggestions(false);
+    if (hasEmbroidery) {
+      const typeMultipliers = {
+        'Zardosi': 1.5,
+        'Resham': 1.2,
+        'Mirror': 1.1,
+        'Bead': 1.4,
+        'Chikankari': 1.3
+      };
+      
+      const methodBase = embroideryDetails.method === 'Hand' ? 1500 : 600;
+      const multiplier = typeMultipliers[embroideryDetails.type] || 1.0;
+      embroidery = Math.round(methodBase * multiplier);
+    }
+
+    let subtotal = base + customization + fabricCost + lining + embroidery;
+    let priorityFee = 0;
+    
+    // Fixed priority fees based on urgency level
+    if (priority === 'urgent') {
+      priorityFee = Math.round(subtotal * 0.4); // 40% for urgent (5-7 days)
+    } else if (priority === 'express') {
+      priorityFee = Math.round(subtotal * 0.2); // 20% for express (7-10 days)
+    }
+    // Standard priority (10-14 days) has no fee
+
+    return {
+      base,
+      customization,
+      fabricCost,
+      lining,
+      embroidery,
+      priorityFee,
+      total: subtotal + priorityFee,
+      daysFromNow: deliveryDate ? Math.ceil((new Date(deliveryDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0
+    };
+  }, [garmentType, materialSource, selectedFabric, hasLining, hasEmbroidery, embroideryDetails, priority, deliveryDate]);
+
+  // Preview mapping
+  const previewImages = {
+    'Saree': 'https://images.unsplash.com/photo-1610030469915-9a88e479c982?auto=format&fit=crop&q=80&w=800',
+    'Kurthi': 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
+    'Short Kurthi': 'https://images.unsplash.com/photo-1624313503195-2376ee308870?auto=format&fit=crop&q=80&w=800',
+    'Lehenga': 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&q=80&w=800',
+    'Salwar Kameez': 'https://images.unsplash.com/photo-1597505213323-28216c025816?auto=format&fit=crop&q=80&w=800',
+    'Gown': 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&q=80&w=800',
+    'Anarkali': 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&q=80&w=800',
+    'Palazzo Set': 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
+    'Sharara': 'https://images.unsplash.com/photo-1597505213323-28216c025816?auto=format&fit=crop&q=80&w=800',
+    'Gharara': 'https://images.unsplash.com/photo-1597505213323-28216c025816?auto=format&fit=crop&q=80&w=800',
+    'Indo-Western Dress': 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&q=80&w=800',
+    'Crop Top & Skirt': 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&q=80&w=800',
+    'Jacket': 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&q=80&w=800',
+    'Blouse': 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
+    'Dupatta': 'https://images.unsplash.com/photo-1610030469915-9a88e479c982?auto=format&fit=crop&q=80&w=800',
+    'Pants': 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&q=80&w=800',
+    'Skirt': 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&q=80&w=800',
+    'Sherwani': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800',
+    'Kurta (Men)': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800',
+    'Nehru Jacket': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800',
+    'Dhoti': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800',
+    'Pajama': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800'
   };
 
-  // Section 4: Order Details
-  const [details, setDetails] = useState({
-    garmentType: '',
-    urgency: 'normal', // normal or urgent
-    specialInstructions: '',
-    expectedDelivery: '', // date string
-  });
+  const getGarmentPreview = () => {
+    return previewImages[garmentType] || previewImages['Gown'];
+  };
 
-  // Customization options
-  const [customization, setCustomization] = useState({
-    collarType: '',
-    sleeveType: '',
-    hasButtons: false,
-    hasZippers: false,
-    garmentOptions: {}, // dynamic per garment type
-    embroidery: {
-      enabled: false,
-      type: 'machine',
-      placements: [],
-      pattern: 'floral',
-      colors: [],
-      notes: ''
+  // Body Shape Calculation Logic
+  const bodyShape = useMemo(() => {
+    const m = measurementMode === 'saved' ? profile.customer?.measurements : measurements;
+    if (!m) return null;
+
+    const chest = parseFloat(m.Chest || m.chest || 0);
+    const waist = parseFloat(m.Waist || m.waist || 0);
+    const hips = parseFloat(m.Hips || m.hips || 0);
+
+    if (!chest || !waist || !hips) return null;
+
+    const bustHipsRatio = chest / hips;
+    const waistBustRatio = waist / chest;
+    const waistHipsRatio = waist / hips;
+
+    if (bustHipsRatio >= 0.95 && bustHipsRatio <= 1.05) {
+      if (waistBustRatio < 0.8 && waistHipsRatio < 0.8) return 'Hourglass';
+      return 'Rectangle';
+    } else if (hips / chest > 1.05) {
+      return 'Pear';
+    } else if (chest / hips > 1.05) {
+      return 'Inverted Triangle';
+    } else if (waist / chest > 0.9) {
+      return 'Apple';
     }
-  });
+    
+    return 'Rectangle';
+  }, [measurements, profile.customer, measurementMode]);
 
-  // Embroidery customization state and options
-  const [emb] = useState({ enabled: false, type: 'machine', placements: [], pattern: 'floral', colors: [], notes: '' });
+  // AI Suggestion Logic
+  const aiSuggestion = useMemo(() => {
+    const suggestions = {
+      'Saree': "Silk fabrics enhance the drape. Consider a contrasting blouse color.",
+      'Kurthi': "Cotton-linen blends are perfect for everyday comfort and breathability.",
+      'Short Kurthi': "Pair with denim for a chic fusion look. Velvet adds a premium touch.",
+      'Lehenga': "Heavier fabrics like Velvet or Brocade silk are ideal for bridal wear.",
+      'Salwar Kameez': "Chiffon or Georgette dupattas provide a graceful, airy silhouette.",
+      'Gown': "Satin or Silk would create a stunning evening look with this silhouette.",
+      'Anarkali': "Flowing fabrics like Georgette or Chiffon enhance the Anarkali's graceful silhouette.",
+      'Palazzo Set': "Light, breathable fabrics like Cotton or Rayon work best for comfort and style.",
+      'Sharara': "Rich fabrics like Silk or Brocade add elegance to this traditional outfit.",
+      'Gharara': "Heavy fabrics like Silk or Velvet complement the Gharara's regal appearance.",
+      'Indo-Western Dress': "Experiment with modern fabrics like Crepe or Jersey for a contemporary look.",
+      'Crop Top & Skirt': "Mix textures - try a structured crop top with a flowing skirt.",
+      'Jacket': "Structured fabrics like Cotton or Linen provide the perfect fit and shape.",
+      'Blouse': "Silk or Satin blouses pair beautifully with traditional sarees.",
+      'Dupatta': "Lightweight fabrics like Chiffon or Net add elegance without weight.",
+      'Pants': "Tailored fabrics like Cotton or Polyester blends ensure comfort and style.",
+      'Skirt': "A-line cuts in flowing fabrics create a flattering silhouette.",
+      'Sherwani': "Rich fabrics like Silk or Brocade with intricate embroidery make a statement.",
+      'Kurta (Men)': "Cotton or Linen kurtas are perfect for comfort and traditional elegance.",
+      'Nehru Jacket': "Add sophistication with fabrics like Silk or Jacquard.",
+      'Dhoti': "Traditional Cotton or Silk dhotis offer comfort and cultural authenticity.",
+      'Pajama': "Comfortable fabrics like Cotton or Modal ensure all-day comfort."
+    };
 
-  // Section 5: Billing & Payment — removed from customer portal (handled by Admin)
-  const [charges] = useState({ stitching: 0, customization: 0 }); // deprecated in portal; kept for backward compatibility
+    let text = suggestions[garmentType] || "Our AI Stylist suggests choosing a breathable fabric for your body type.";
+    
+    if (bodyShape && shapeRecommendations[bodyShape]) {
+      const recs = shapeRecommendations[bodyShape];
+      text = `AI DETECTED: ${bodyShape} Shape. ${recs.text} To save you time, I've automatically selected a ${recs.defaults.silhouette} silhouette with a ${recs.defaults.neckline} neckline and ${recs.defaults.sleeve} which will suit you perfectly!`;
+    }
 
-  const [saving, setSaving] = useState(false);
-  
-  // Step navigation
-  const [currentStep, setCurrentStep] = useState(1);
+    if (selectedFabric) {
+      text += ` The ${selectedFabric.name} will look stunning as a ${silhouette} ${garmentType}.`;
+    }
 
-  // Derived values
-  const selectedFabric = useMemo(() => fabrics.find(f => f._id === selectedFabricId) || null, [fabrics, selectedFabricId]);
-  const fabricUnitPrice = selectedFabric?.price ? Number(selectedFabric.price) : 0;
-  const autoFabricCost = (!ownFabric && selectedFabric) ? Math.max(0, (fabricUnitPrice || 0) * Number(fabricQty || 0)) : 0;
+    return text;
+  }, [garmentType, selectedFabric, silhouette, bodyShape]);
 
-  // Auto pricing for embroidery (simple rules)
-  const embCost = useMemo(() => {
-    if (!emb.enabled) return 0;
-    const base = { machine: 300, hand: 800, zardosi: 1200, aari: 1000, bead: 900, thread: 500 };
-    const perPlacement = { collar: 150, sleeves: 200, neckline: 250, hem: 300, full: 1200, custom: 300 };
-    const perExtraColor = 50;
-    const t = base[emb.type] || 0;
-    const p = (emb.placements || []).reduce((sum, pl) => sum + (perPlacement[pl] || 0), 0);
-    const extraColors = Math.max(0, (emb.colors?.length || 0) - 1);
-    return t + p + (extraColors * perExtraColor);
-  }, [emb]);
+  const applyAISuggestions = () => {
+    if (bodyShape && shapeRecommendations[bodyShape]) {
+      const defaults = shapeRecommendations[bodyShape].defaults;
+      setSilhouette(defaults.silhouette);
+      setNeckline(defaults.neckline);
+      setSleeve(defaults.sleeve);
+      toast.info(`AI applied best design for ${bodyShape} body type`, {
+        icon: <FaRobot color="#e91e63" />,
+        position: "top-center"
+      });
+    }
+  };
 
-  const stockWarning = useMemo(() => {
-    if (!selectedFabric || !fabricQty || ownFabric) return '';
-    if (typeof selectedFabric.stock === 'number' && fabricQty > selectedFabric.stock) return 'Requested quantity exceeds available stock';
-    return '';
-  }, [selectedFabric, fabricQty, ownFabric]);
+  // Garment-specific customization options
+  const garmentCustomizations = {
+    'Saree': {
+      silhouettes: [
+        { id: 'Traditional', icon: '🥻', label: 'Traditional' },
+        { id: 'Designer', icon: '✨', label: 'Designer' },
+        { id: 'Contemporary', icon: '🎨', label: 'Contemporary' },
+        { id: 'Lehenga Style', icon: '👗', label: 'Lehenga Style' }
+      ],
+      necklines: [
+        { id: 'Round', icon: '○', label: 'Round' },
+        { id: 'V-Neck', icon: '∨', label: 'V-Neck' },
+        { id: 'Square', icon: '⊔', label: 'Square' },
+        { id: 'Boat', icon: '—', label: 'Boat' }
+      ],
+      sleeves: ['Sleeveless', 'Short Sleeve', '3/4 Sleeve', 'Full Sleeve', 'Bell Sleeve', 'Puff Sleeve']
+    },
+    'Kurthi': {
+      silhouettes: [
+        { id: 'Straight', icon: '▯', label: 'Straight' },
+        { id: 'A-Line', icon: '△', label: 'A-Line' },
+        { id: 'Asymmetric', icon: '◢', label: 'Asymmetric' },
+        { id: 'High-Low', icon: '⩘', label: 'High-Low' }
+      ],
+      necklines: [
+        { id: 'Round', icon: '○', label: 'Round' },
+        { id: 'V-Neck', icon: '∨', label: 'V-Neck' },
+        { id: 'Mandarin', icon: '⊓', label: 'Mandarin' },
+        { id: 'Keyhole', icon: '🔑', label: 'Keyhole' }
+      ],
+      sleeves: ['Sleeveless', 'Short Sleeve', '3/4 Sleeve', 'Full Sleeve', 'Bell Sleeve', 'Kimono Sleeve']
+    },
+    'Lehenga': {
+      silhouettes: [
+        { id: 'A-Line', icon: '△', label: 'A-Line' },
+        { id: 'Mermaid', icon: '🧜‍♀️', label: 'Mermaid' },
+        { id: 'Ball Gown', icon: '👗', label: 'Ball Gown' },
+        { id: 'Sharara Style', icon: '🎭', label: 'Sharara Style' }
+      ],
+      necklines: [
+        { id: 'Sweetheart', icon: '♡', label: 'Sweetheart' },
+        { id: 'Deep V', icon: '∨', label: 'Deep V' },
+        { id: 'Halter', icon: '⊥', label: 'Halter' },
+        { id: 'Off-Shoulder', icon: '⌒', label: 'Off-Shoulder' }
+      ],
+      sleeves: ['Sleeveless', 'Cap Sleeve', 'Short Sleeve', '3/4 Sleeve', 'Full Sleeve', 'Off-Shoulder']
+    },
+    'Gown': {
+      silhouettes: [
+        { id: 'A-Line', icon: '△', label: 'A-Line' },
+        { id: 'Mermaid', icon: '🧜‍♀️', label: 'Mermaid' },
+        { id: 'Sheath', icon: '▯', label: 'Sheath' },
+        { id: 'Empire', icon: '♙', label: 'Empire' }
+      ],
+      necklines: [
+        { id: 'Sweetheart', icon: '♡', label: 'Sweetheart' },
+        { id: 'V-Neck', icon: '∨', label: 'V-Neck' },
+        { id: 'Halter', icon: '⊥', label: 'Halter' },
+        { id: 'One-Shoulder', icon: '⟋', label: 'One-Shoulder' }
+      ],
+      sleeves: ['Sleeveless', 'Cap Sleeve', 'Short Sleeve', '3/4 Sleeve', 'Full Sleeve', 'Long Sleeve']
+    },
+    'Anarkali': {
+      silhouettes: [
+        { id: 'Floor Length', icon: '👗', label: 'Floor Length' },
+        { id: 'Knee Length', icon: '🩱', label: 'Knee Length' },
+        { id: 'Asymmetric', icon: '◢', label: 'Asymmetric' },
+        { id: 'Layered', icon: '🎂', label: 'Layered' }
+      ],
+      necklines: [
+        { id: 'Round', icon: '○', label: 'Round' },
+        { id: 'V-Neck', icon: '∨', label: 'V-Neck' },
+        { id: 'Boat', icon: '—', label: 'Boat' },
+        { id: 'High Neck', icon: '⊓', label: 'High Neck' }
+      ],
+      sleeves: ['Sleeveless', 'Short Sleeve', '3/4 Sleeve', 'Full Sleeve', 'Bell Sleeve', 'Flared Sleeve']
+    },
+    'Sherwani': {
+      silhouettes: [
+        { id: 'Classic', icon: '🤵', label: 'Classic' },
+        { id: 'Indo-Western', icon: '🎭', label: 'Indo-Western' },
+        { id: 'Achkan', icon: '👔', label: 'Achkan' },
+        { id: 'Jodhpuri', icon: '🏰', label: 'Jodhpuri' }
+      ],
+      necklines: [
+        { id: 'Band Collar', icon: '⊓', label: 'Band Collar' },
+        { id: 'Mandarin', icon: '⊔', label: 'Mandarin' },
+        { id: 'High Neck', icon: '⊤', label: 'High Neck' },
+        { id: 'V-Neck', icon: '∨', label: 'V-Neck' }
+      ],
+      sleeves: ['Full Sleeve', 'Short Sleeve', 'Sleeveless']
+    }
+  };
 
-  
+  // Garment-specific fabric recommendations
+  const fabricRecommendations = {
+    'Saree': {
+      recommended: ['Silk', 'Cotton Silk', 'Georgette', 'Chiffon', 'Crepe', 'Handloom Cotton'],
+      avoid: ['Denim', 'Leather', 'Heavy Wool'],
+      note: 'Choose fabrics that drape well and complement the blouse design'
+    },
+    'Kurthi': {
+      recommended: ['Cotton', 'Rayon', 'Linen', 'Cotton Blend', 'Viscose', 'Khadi'],
+      avoid: ['Heavy Silk', 'Stiff Brocade', 'Leather'],
+      note: 'Comfortable, breathable fabrics work best for daily wear'
+    },
+    'Lehenga': {
+      recommended: ['Silk', 'Velvet', 'Brocade', 'Net', 'Satin', 'Taffeta'],
+      avoid: ['Cotton', 'Linen', 'Jersey'],
+      note: 'Rich, structured fabrics enhance the grandeur of lehengas'
+    },
+    'Gown': {
+      recommended: ['Satin', 'Silk', 'Chiffon', 'Georgette', 'Crepe', 'Taffeta'],
+      avoid: ['Cotton', 'Denim', 'Heavy Wool'],
+      note: 'Elegant fabrics that flow beautifully for formal occasions'
+    },
+    'Anarkali': {
+      recommended: ['Georgette', 'Chiffon', 'Net', 'Silk', 'Crepe', 'Satin'],
+      avoid: ['Stiff Cotton', 'Denim', 'Heavy Brocade'],
+      note: 'Flowing fabrics enhance the Anarkali silhouette'
+    },
+    'Sherwani': {
+      recommended: ['Silk', 'Brocade', 'Jacquard', 'Raw Silk', 'Cotton Silk', 'Linen'],
+      avoid: ['Jersey', 'Stretch Fabrics', 'Chiffon'],
+      note: 'Structured fabrics maintain the formal appearance'
+    },
+    'Palazzo Set': {
+      recommended: ['Rayon', 'Cotton', 'Crepe', 'Georgette', 'Viscose', 'Modal'],
+      avoid: ['Heavy Silk', 'Stiff Fabrics', 'Denim'],
+      note: 'Comfortable, flowy fabrics for ease of movement'
+    }
+  };
+
+  // Get fabric recommendations for current garment
+  const getCurrentFabricRecs = () => {
+    return fabricRecommendations[garmentType] || {
+      recommended: ['Cotton', 'Silk', 'Linen', 'Rayon'],
+      avoid: ['Heavy fabrics'],
+      note: 'Choose fabrics suitable for your garment style'
+    };
+  };
+
+  // Get customization options for current garment type
+  const getCurrentCustomizations = () => {
+    return garmentCustomizations[garmentType] || {
+      silhouettes: [
+        { id: 'A-Line', icon: '△', label: 'A-Line' },
+        { id: 'Straight', icon: '▯', label: 'Straight' },
+        { id: 'Fitted', icon: '⧫', label: 'Fitted' },
+        { id: 'Loose', icon: '◯', label: 'Loose' }
+      ],
+      necklines: [
+        { id: 'Round', icon: '○', label: 'Round' },
+        { id: 'V-Neck', icon: '∨', label: 'V-Neck' },
+        { id: 'Square', icon: '⊔', label: 'Square' },
+        { id: 'Boat', icon: '—', label: 'Boat' }
+      ],
+      sleeves: ['Sleeveless', 'Short Sleeve', '3/4 Sleeve', 'Full Sleeve']
+    };
+  };
+
+  // Garment Types and their measurement fields
+  const garmentConfig = {
+    'Saree': ['Chest', 'Waist', 'Blouse Length', 'Sleeve Length', 'Shoulder'],
+    'Kurthi': ['Chest', 'Waist', 'Hips', 'Shoulder', 'Length', 'Sleeve Length'],
+    'Short Kurthi': ['Chest', 'Waist', 'Shoulder', 'Length', 'Sleeve Length'],
+    'Lehenga': ['Chest', 'Waist', 'Hips', 'Skirt Length', 'Blouse Length'],
+    'Salwar Kameez': ['Chest', 'Waist', 'Hips', 'Shoulder', 'Kameez Length', 'Salwar Length'],
+    'Gown': ['Chest', 'Waist', 'Hips', 'Full Length', 'Shoulder'],
+    'Anarkali': ['Chest', 'Waist', 'Hips', 'Shoulder', 'Full Length', 'Sleeve Length'],
+    'Palazzo Set': ['Chest', 'Waist', 'Hips', 'Shoulder', 'Top Length', 'Palazzo Length'],
+    'Sharara': ['Chest', 'Waist', 'Hips', 'Shoulder', 'Kameez Length', 'Sharara Length'],
+    'Gharara': ['Chest', 'Waist', 'Hips', 'Shoulder', 'Kameez Length', 'Gharara Length'],
+    'Indo-Western Dress': ['Chest', 'Waist', 'Hips', 'Shoulder', 'Full Length', 'Sleeve Length'],
+    'Crop Top & Skirt': ['Chest', 'Waist', 'Hips', 'Crop Top Length', 'Skirt Length'],
+    'Jacket': ['Chest', 'Waist', 'Shoulder', 'Jacket Length', 'Sleeve Length'],
+    'Blouse': ['Chest', 'Waist', 'Shoulder', 'Blouse Length', 'Sleeve Length'],
+    'Dupatta': ['Length', 'Width'],
+    'Pants': ['Waist', 'Hips', 'Thigh', 'Pant Length', 'Bottom Opening'],
+    'Skirt': ['Waist', 'Hips', 'Skirt Length'],
+    'Sherwani': ['Chest', 'Waist', 'Shoulder', 'Sherwani Length', 'Sleeve Length'],
+    'Kurta (Men)': ['Chest', 'Waist', 'Shoulder', 'Kurta Length', 'Sleeve Length'],
+    'Nehru Jacket': ['Chest', 'Waist', 'Shoulder', 'Jacket Length'],
+    'Dhoti': ['Waist', 'Dhoti Length'],
+    'Pajama': ['Waist', 'Hips', 'Pajama Length', 'Bottom Opening']
+  };
+
+  const garmentTypes = Object.keys(garmentConfig);
+  const occasions = ['Wedding Guest', 'Corporate Event', 'Cocktail Party', 'Casual Outing', 'Gala Dinner', 'Festive'];
+
+  // Priority-based date constraints - Updated with correct ranges
+  const dateConstraints = useMemo(() => {
+    const today = new Date();
+    const getFormatted = (days) => {
+      const d = new Date();
+      d.setDate(today.getDate() + days);
+      return d.toISOString().split('T')[0];
+    };
+
+    switch(priority) {
+      case 'urgent':
+        return { min: getFormatted(5), max: getFormatted(7) }; // 5-7 days for urgent
+      case 'express':
+        return { min: getFormatted(7), max: getFormatted(10) }; // 7-10 days for express
+      case 'standard':
+        return { min: getFormatted(10), max: getFormatted(14) }; // 10-14 days for standard
+      default:
+        return null; // No date range until priority is selected
+    }
+  }, [priority]);
+
+  // Reset customization options when garment type changes
+  useEffect(() => {
+    const customizations = getCurrentCustomizations();
+    setSilhouette(customizations.silhouettes[0]?.id || 'A-Line');
+    setNeckline(customizations.necklines[0]?.id || 'Round');
+    setSleeve(customizations.sleeves[0] || 'Sleeveless');
+  }, [garmentType]);
+
+  // Clear delivery date when priority changes and set to minimum of new range
+  useEffect(() => {
+    if (priority && dateConstraints) {
+      setDeliveryDate(dateConstraints.min);
+    } else {
+      setDeliveryDate(''); // Clear date if no priority selected
+    }
+  }, [priority, dateConstraints]);
+
+  // Handle returning from fabric catalog
+  useEffect(() => {
+    if (location.state?.previousForm) {
+      const pf = location.state.previousForm;
+      setGarmentType(pf.garmentType);
+      setOccasion(pf.occasion);
+      setDescription(pf.description);
+      setDeliveryDate(pf.deliveryDate);
+      setPriority(pf.priority);
+      setMeasurementMode(pf.measurementMode);
+      setMeasurements(pf.measurements);
+      setHasLining(pf.hasLining);
+      setHasEmbroidery(pf.hasEmbroidery);
+      setEmbroideryDetails(pf.embroideryDetails);
+      setActiveStep(pf.activeStep || 1);
+    }
+    
+    if (location.state?.selectedFabric) {
+      const fabric = location.state.selectedFabric;
+      setSelectedFabric(fabric);
+      setFabricQuery(fabric.name);
+      setMaterialSource('catalog');
+    }
+  }, [location.state]);
+
+  // Images
+  const [referenceImages, setReferenceImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
 
   useEffect(() => {
-    // Load profile + measurements
-    (async () => {
+    const fetchData = async () => {
       try {
-        const [pRes, mRes] = await Promise.all([
-        axios.get('/api/portal/profile'),
-        axios.get('/api/portal/measurements')
+        const [pRes] = await Promise.all([
+          axios.get('/api/portal/profile')
         ]);
         setProfile(pRes.data || { user: null, customer: null });
-        const hist = (mRes.data?.history || []).map(h => ({ _id: h._id, createdAt: h.createdAt, measurements: h.measurements || {} }));
-        setMhistory(hist);
-        setSelectedHistoryId(hist[0]?._id || '');
       } catch (e) {
-        console.error('Failed to load profile/measurements:', e);
+        console.error('Failed to load profile:', e);
+      } finally {
+        setLoading(false);
       }
-    })();
+    };
+    fetchData();
   }, []);
 
-  const searchFabrics = async () => {
-    // This function is now handled by the useEffect that filters fabrics
-    // based on fabricQuery state
-  };
-
-  // Load fabric types and all fabrics on component mount
-  useEffect(() => {
-    const loadFabricTypes = async () => {
-      try {
-        const res = await axios.get('/api/fabrics/types');
-        setFabricTypes(res.data.types || []);
-      } catch (e) {
-        console.error('Failed to load fabric types:', e);
-        // Fallback to common fabric types
-        setFabricTypes([
-          'Cotton', 'Silk', 'Linen', 'Wool', 'Polyester', 'Rayon', 
-          'Denim', 'Chiffon', 'Georgette', 'Crepe', 'Satin', 'Velvet'
-        ]);
-      }
-    };
-
-    const loadAllFabrics = async () => {
-      try {
-        console.log('Loading all fabrics...');
-        const res = await axios.get('/api/fabrics');
-        console.log('All fabrics response:', res.data);
-        setAllFabrics(res.data.fabrics || []);
-        // Don't show fabrics initially - user must search first
-        setFabrics([]); // Start with empty - only show after search
-      } catch (e) {
-        console.error('Failed to load fabrics:', e);
-        setAllFabrics([]);
-        setFabrics([]);
-      }
-    };
-
-    loadFabricTypes();
-    loadAllFabrics();
-  }, []);
-
-  // Filter fabrics based on search query ONLY
-  // Fabrics only visible when customer actually searches (types in search box)
-  useEffect(() => {
-    // ONLY show fabrics if customer has typed something in the search box
-    if (!fabricQuery.trim()) {
-      setFabrics([]);
-      return;
-    }
-    
-    let filtered = allFabrics;
-    
-    // Apply search query filter
-    filtered = filtered.filter(fabric => 
-      fabric.name?.toLowerCase().includes(fabricQuery.toLowerCase()) ||
-      fabric.material?.toLowerCase().includes(fabricQuery.toLowerCase()) ||
-      fabric.type?.toLowerCase().includes(fabricQuery.toLowerCase()) ||
-      fabric.color?.toLowerCase().includes(fabricQuery.toLowerCase()) ||
-      fabric.pattern?.toLowerCase().includes(fabricQuery.toLowerCase())
-    );
-    
-    // Apply type filter (if selected)
-    if (selectedFabricType) {
-      filtered = filtered.filter(fabric => 
-        fabric.material?.toLowerCase() === selectedFabricType.toLowerCase() ||
-        fabric.type?.toLowerCase() === selectedFabricType.toLowerCase()
-      );
-    }
-    
-    // Apply color filter (if selected)
-    if (selectedFabricColor) {
-      filtered = filtered.filter(fabric => 
-        fabric.color?.toLowerCase() === selectedFabricColor.toLowerCase()
-      );
-    }
-    
-    setFabrics(filtered);
-  }, [fabricQuery, selectedFabricType, selectedFabricColor, allFabrics]);
-
-
-  // Price calculation functions
-  const getBasePrice = () => {
-    const basePrices = {
-      'shirt': 800,
-      'pants': 600,
-      'suit': 2000,
-      'dress': 1200,
-      'kurta': 1000,
-      'blouse': 800,
-      'lehenga': 2500,
-      'jacket': 1500,
-      'other': 1000
-    };
-    return basePrices[details.garmentType] || 1000;
-  };
-
-  const getEmbroideryPrice = () => {
-    if (!customization.embroidery.enabled) return 0;
-    const base = { machine: 300, hand: 800, zardosi: 1200, aari: 1000, bead: 900, thread: 500 };
-    const perPlacement = { collar: 150, sleeves: 200, neckline: 250, hem: 300, full: 1200, custom: 300 };
-    const perExtraColor = 50;
-    const t = base[customization.embroidery.type] || 0;
-    const p = (customization.embroidery.placements || []).reduce((sum, pl) => sum + (perPlacement[pl] || 0), 0);
-    const extraColors = Math.max(0, (customization.embroidery.colors?.length || 0) - 1);
-    return t + p + (extraColors * perExtraColor);
-  };
-
-  const getTotalPrice = () => {
-    let total = getBasePrice();
-    if (details.urgency === 'urgent') total += 500;
-    if (!ownFabric && selectedFabric) total += autoFabricCost;
-    if (customization.embroidery.enabled) total += getEmbroideryPrice();
-    return total;
-  };
-
-  // Step validation functions
-  const isStep1Valid = () => {
-    return details.garmentType && details.expectedDelivery;
-  };
-
-  const isStep2Valid = () => {
-    if (useSaved) {
-      return selectedHistoryId || mhistory.length === 0;
-    } else {
-      // Check if required measurements are filled based on garment type
-      const requiredFields = getRequiredMeasurementFields();
-      return requiredFields.every(field => measurements[field] && measurements[field] !== '');
-    }
-  };
-
-  const isStep3Valid = () => {
-    if (ownFabric) {
-      return ownFabricNotes.trim() !== '';
-    } else {
-      return selectedFabricId && fabricQty > 0;
-    }
-  };
-
-  // Get measurement fields based on garment type - only show relevant measurements
-  const getMeasurementFields = () => {
-    const garmentType = details.garmentType?.toLowerCase();
-    
-    if (garmentType === 'shirt' || garmentType === 'blouse') {
-      return {
-        height: 'Height',
-        chest: 'Chest',
-        sleeve: 'Sleeve Length',
-        shoulder: 'Shoulder Width',
-        neck: 'Neck Size'
-      };
-    } else if (garmentType === 'pant' || garmentType === 'trouser' || garmentType === 'pants') {
-      return {
-        height: 'Height',
-        waist: 'Waist',
-        hips: 'Hip',
-        legLength: 'Leg Length',
-        thigh: 'Thigh'
-      };
-    } else if (garmentType === 'dress' || garmentType === 'gown') {
-      return {
-        height: 'Height',
-        chest: 'Bust',
-        waist: 'Waist',
-        hips: 'Hip',
-        sleeve: 'Sleeve Length',
-        shoulder: 'Shoulder Width'
-      };
-    } else if (garmentType === 'suit' || garmentType === 'blazer') {
-      return {
-        height: 'Height',
-        chest: 'Chest',
-        waist: 'Waist',
-        sleeve: 'Sleeve Length',
-        shoulder: 'Shoulder Width',
-        neck: 'Neck Size'
-      };
-    } else if (garmentType === 'kurta' || garmentType === 'kameez') {
-      return {
-        height: 'Height',
-        chest: 'Chest',
-        waist: 'Waist',
-        sleeve: 'Sleeve Length',
-        shoulder: 'Shoulder Width',
-        neck: 'Neck Size'
-      };
-    }
-    
-    // Default measurements - only show essential ones
-    return {
-      height: 'Height',
-      chest: 'Chest',
-      waist: 'Waist',
-      hips: 'Hip'
-    };
-  };
-
-  const getRequiredMeasurementFields = () => {
-    const commonFields = ['height'];
-    const garmentType = details.garmentType?.toLowerCase();
-    
-    if (garmentType === 'shirt' || garmentType === 'blouse') {
-      return [...commonFields, 'chest', 'sleeve', 'shoulder'];
-    } else if (garmentType === 'pant' || garmentType === 'trouser' || garmentType === 'pants') {
-      return [...commonFields, 'waist', 'hips', 'legLength'];
-    } else if (garmentType === 'dress' || garmentType === 'gown') {
-      return [...commonFields, 'chest', 'waist', 'hips'];
-    } else if (garmentType === 'suit' || garmentType === 'blazer') {
-      return [...commonFields, 'chest', 'waist', 'sleeve', 'shoulder'];
-    } else if (garmentType === 'kurta' || garmentType === 'kameez') {
-      return [...commonFields, 'chest', 'waist', 'sleeve', 'shoulder'];
-    }
-    
-    // Default required fields
-    return [...commonFields, 'chest', 'waist'];
-  };
-
-  // Get placeholder for measurement fields
-  const getPlaceholderForField = (field) => {
-    const placeholders = {
-      height: '170',
-      chest: '42',
-      waist: '34',
-      hips: '36',
-      sleeve: '24',
-      shoulder: '18',
-      neck: '16',
-      legLength: '32',
-      thigh: '24',
-      knee: '16',
-      bust: '36',
-      armhole: '18',
-      length: '26'
-    };
-    return placeholders[field] || '0';
-  };
-
-  // Step navigation functions
-  const nextStep = () => {
-    if (currentStep === 1 && !isStep1Valid()) {
-      alert('Please fill in all required fields (Garment Type and Expected Delivery Date)');
-      return;
-    }
-    if (currentStep === 2 && !isStep2Valid()) {
-      alert('Please complete the measurements section');
-      return;
-    }
-    if (currentStep === 3 && !isStep3Valid()) {
-      alert('Please select fabric or provide fabric description');
-      return;
-    }
-    if (currentStep < 4) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const goToStep = (step) => {
-    // Allow going back to previous steps
-    if (step <= currentStep) {
-      setCurrentStep(step);
-    }
-    // For forward steps, validate previous steps
-    else if (step === 2 && isStep1Valid()) {
-      setCurrentStep(step);
-    } else if (step === 3 && isStep1Valid() && isStep2Valid()) {
-      setCurrentStep(step);
-    } else if (step === 4 && isStep1Valid() && isStep2Valid() && isStep3Valid()) {
-      setCurrentStep(step);
-    } else {
-      alert('Please complete the previous steps first');
-    }
-  };
-
-  // Handle reference image selection
-  const handleReferenceImageChange = (e) => {
-    const files = Array.from(e.target.files || []);
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
     if (files.length === 0) return;
+
+    setReferenceImages(prev => [...prev, ...files]);
     
-    // Limit to 5 images
-    const limitedFiles = files.slice(0, 5);
-    setReferenceImages(limitedFiles);
-    
-    // Create previews
-    const previews = limitedFiles.map(file => URL.createObjectURL(file));
-    setReferenceImagePreviews(previews);
+    const newPreviews = files.map(file => URL.createObjectURL(file));
+    setImagePreviews(prev => [...prev, ...newPreviews]);
   };
 
-  // Remove a reference image
-  const removeReferenceImage = (index) => {
-    const newImages = referenceImages.filter((_, i) => i !== index);
-    const newPreviews = referenceImagePreviews.filter((_, i) => i !== index);
-    setReferenceImages(newImages);
-    setReferenceImagePreviews(newPreviews);
+  const removeImage = (index) => {
+    setReferenceImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Upload reference images to server
-  const uploadReferenceImages = async () => {
-    if (referenceImages.length === 0) return [];
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
     
-    try {
-      setUploadingImages(true);
-      const formData = new FormData();
-      referenceImages.forEach(file => {
-        formData.append('referenceImages', file);
-      });
+    if (!priority) {
+      toast.error('Please select a priority level');
+      return;
+    }
+    
+    if (!deliveryDate || !garmentType) {
+      toast.error('Please fill in required fields including delivery date');
+      return;
+    }
+
+    // Validate delivery date is within allowed range
+    if (dateConstraints) {
+      const selectedDate = new Date(deliveryDate);
+      const minDate = new Date(dateConstraints.min);
+      const maxDate = new Date(dateConstraints.max);
       
-      const response = await axios.post('/api/uploads/reference', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      
-      return response.data.attachments || [];
-    } catch (error) {
-      console.error('Error uploading reference images:', error);
-      throw new Error('Failed to upload reference images');
-    } finally {
-      setUploadingImages(false);
+      if (selectedDate < minDate || selectedDate > maxDate) {
+        const rangeDays = priority === 'urgent' ? '5-7 days' : 
+                         priority === 'express' ? '7-10 days' : '10-14 days';
+        toast.error(`Please select a delivery date within ${rangeDays} from today`);
+        return;
+      }
     }
-  };
 
-  const submit = async (e) => {
-    e.preventDefault();
-    console.log('🚀 Form submission started...');
-    
-    if (saving) {
-      console.log('⚠️ Already saving, ignoring submission');
-      return;
-    }
-    
-    setSaving(true);
-    
-    console.log('📝 Order data being submitted:', {
-      garmentType: details.garmentType,
-      expectedDelivery: details.expectedDelivery,
-      fabric: ownFabric ? 'own fabric' : 'shop fabric',
-      selectedFabricId,
-      totalPrice: getTotalPrice(),
-      measurements: useSaved ? 'using saved' : 'new measurements',
-      customization: customization
-    });
-    
-    // Check if required fields are filled
-    if (!details.garmentType) {
-      alert('Please select a garment type');
-      setSaving(false);
-      return;
-    }
-    if (!details.expectedDelivery) {
-      alert('Please select expected delivery date');
-      setSaving(false);
-      return;
-    }
-    
-    // ✅ VALIDATE MEASUREMENTS - CRITICAL FOR TAILORS!
-    const finalMeasurements = useSaved ? 
-      (mhistory.find(h => h._id === selectedHistoryId)?.measurements || {}) : 
-      measurements;
-    
-    if (!finalMeasurements || Object.keys(finalMeasurements).length === 0) {
-      alert('⚠️ MEASUREMENTS REQUIRED!\n\nPlease provide your measurements. The tailor needs measurements to stitch your garment.\n\nGo to Step 2: Measurements and fill in your measurements.');
-      setSaving(false);
-      setCurrentStep(2); // Navigate to measurements step
-      return;
-    }
-    
-    // Check if measurements have actual values (not all empty)
-    const hasValidMeasurements = Object.values(finalMeasurements).some(val => 
-      val && String(val).trim() !== '' && String(val).trim() !== '0'
-    );
-    
-    if (!hasValidMeasurements) {
-      alert('⚠️ INCOMPLETE MEASUREMENTS!\n\nYour measurements appear to be empty or incomplete.\n\nPlease fill in at least the basic measurements (chest, waist, length, etc.)');
-      setSaving(false);
-      setCurrentStep(2); // Navigate to measurements step
-      return;
-    }
-    
+    setSubmitting(true);
     try {
-      // Upload reference images first if any
-      let attachments = [];
+      // 1. Upload images if any
+      let uploadedAttachments = [];
       if (referenceImages.length > 0) {
-        console.log('📸 Uploading reference images...');
+        const uploadData = new FormData();
+        referenceImages.forEach(img => {
+          uploadData.append('referenceImages', img);
+        });
+        
         try {
-          attachments = await uploadReferenceImages();
-          console.log('✅ Reference images uploaded:', attachments.length);
-        } catch (uploadError) {
-          alert('Failed to upload reference images. Please try again.');
-          setSaving(false);
-          return;
+          const uploadRes = await axios.post('/api/uploads/reference', uploadData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          uploadedAttachments = uploadRes.data.attachments || [];
+        } catch (uploadErr) {
+          console.error('Failed to upload images:', uploadErr);
+          toast.warn('Could not upload some images, proceeding with order...');
         }
       }
+
+      // 2. Prepare order data as JSON
+      let rawMeasurements = measurementMode === 'saved' ? profile.customer?.measurements : measurements;
       
-      const payload = {
-        garmentType: details.garmentType,
-        sleeveType: customization.sleeveType,
-        collarType: customization.collarType,
-        hasButtons: customization.hasButtons,
-        hasZippers: customization.hasZippers,
-        requirements: customization.garmentOptions || {},
-        specialInstructions: details.specialInstructions,
-        expectedDelivery: details.expectedDelivery,
-        measurements: finalMeasurements,
-        fabric: ownFabric ? 
-          { source: 'customer', notes: ownFabricNotes } : 
-          { source: 'shop', fabricId: selectedFabricId, quantity: fabricQty },
-        embroidery: emb.enabled ? {
-          enabled: true,
-          type: emb.type,
-          placements: emb.placements,
-          pattern: emb.pattern,
-          colors: emb.colors,
-          notes: emb.notes,
-        } : { enabled: false },
-        attachments: attachments // Add uploaded reference images
+      // Normalize measurement keys for backend (Lowercase and mapping)
+      const orderMeasurements = {};
+      if (rawMeasurements) {
+        Object.keys(rawMeasurements).forEach(key => {
+          let k = key.toLowerCase().replace(/\s/g, '');
+          // Map frontend labels to backend schema fields
+          if (k === 'sleevelength') k = 'sleeve';
+          if (k === 'armlength') k = 'armLength';
+          if (k === 'leglength') k = 'legLength';
+          if (k === 'fulllength' || k === 'length' || k === 'skirtlength' || k === 'blouselength') k = 'height'; // Mapping various lengths to height or specific field if exists
+          
+          orderMeasurements[k] = rawMeasurements[key];
+        });
+      }
+      
+      const orderData = {
+        garmentType,
+        occasion,
+        notes: description,
+        specialInstructions: description,
+        materialSource,
+        expectedDelivery: deliveryDate,
+        urgency: priority, // Map priority to urgency for backend
+        measurements: orderMeasurements,
+        fabric: materialSource === 'catalog' && selectedFabric ? {
+          source: 'shop',
+          fabricId: selectedFabric._id,
+          name: selectedFabric.name,
+          quantity: 2.5 // Default quantity for the garment
+        } : {
+          source: materialSource === 'own' ? 'customer' : 'none',
+          meters: 3.0 // Default for own fabric
+        },
+        customizations: {
+          hasLining,
+          embroidery: hasEmbroidery ? {
+            enabled: true,
+            type: embroideryDetails.type.toLowerCase(),
+            method: embroideryDetails.method,
+            placements: [embroideryDetails.placement.toLowerCase()],
+            pattern: embroideryDetails.pattern.toLowerCase()
+          } : { enabled: false }
+        },
+        attachments: uploadedAttachments,
+        totalPrice: priceDetails.total
       };
 
-      console.log('📤 Sending order to API...');
-      const { data: orderRes } = await axios.post('/api/portal/orders', payload);
-      console.log('✅ Order created successfully:', orderRes);
+      // 3. API call to create order (Customer Portal route)
+      const response = await axios.post('/api/portal/orders', orderData);
+      const { order } = response.data;
+
+      toast.success('Request submitted successfully!');
       
-      // Bill is now auto-generated by backend
-      const billId = orderRes?.order?.bill || '';
-      const billAmount = orderRes?.order?.totalAmount || getTotalPrice();
-      
-      console.log('💳 Using bill from order response:', { billId, billAmount });
-      
-      // Redirect directly to payments page for immediate payment
-      const customerName = profile.customer?.name || profile.user?.name || '';
-      const params = new URLSearchParams();
-      if (customerName) params.set('customer', customerName);
-      params.set('open', '1'); // Auto-open payment modal
-      if (billId) params.set('bill', billId);
-      if (billAmount) params.set('amount', String(billAmount));
-      params.set('orderId', orderRes?.order?._id || '');
-      params.set('autoPayment', '1'); // Auto-trigger Razorpay payment
-      params.set('fromOrder', '1'); // Flag to show this came from order creation
-      
-      const paymentUrl = `/portal/payments?${params.toString()}`;
-      console.log('🔄 Redirecting to payments page:', paymentUrl);
-      navigate(paymentUrl);
-    } catch (e1) {
-      console.error('❌ Order creation failed:', e1);
-      console.error('❌ Error details:', e1.response?.data || e1.message);
-      alert(e1?.response?.data?.message || 'Failed to create order');
+      // Redirect to payments with bill info for better UX
+      const billId = order.bill;
+      const amount = order.totalAmount;
+      navigate(`/portal/payments?bill=${billId}&amount=${amount}&open=1&fromOrder=1&autoPayment=1`);
+    } catch (err) {
+      console.error('Failed to submit order:', err);
+      const errorMsg = err.response?.data?.message || 'Failed to submit request. Please try again.';
+      toast.error(errorMsg);
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 
-  return (
-    <DashboardLayout
-      title="New Order"
-      subtitle="Create a new stitching order with our streamlined process"
-      actions={<><button className="secondary" onClick={() => navigate(-1)}>Back</button></>}
-    >
-      <div className="new-order-container">
-        <form onSubmit={submit} className="order-form" id="new-order-form">
-        {/* Progress Steps */}
-        <div className="order-progress">
-          <div className="progress-steps">
-            <div 
-              className={`step ${currentStep === 1 ? 'active' : ''} ${isStep1Valid() ? 'completed' : ''}`}
-              onClick={() => goToStep(1)}
-            >
-              <div className="step-number">1</div>
-              <div className="step-label">Order Details</div>
-            </div>
-            <div 
-              className={`step ${currentStep === 2 ? 'active' : ''} ${isStep2Valid() ? 'completed' : ''}`}
-              onClick={() => goToStep(2)}
-            >
-              <div className="step-number">2</div>
-              <div className="step-label">Measurements</div>
-            </div>
-            <div 
-              className={`step ${currentStep === 3 ? 'active' : ''} ${isStep3Valid() ? 'completed' : ''}`}
-              onClick={() => goToStep(3)}
-            >
-              <div className="step-number">3</div>
-              <div className="step-label">Fabric & Customization</div>
-            </div>
-            <div 
-              className={`step ${currentStep === 4 ? 'active' : ''}`}
-              onClick={() => goToStep(4)}
-            >
-              <div className="step-number">4</div>
-              <div className="step-label">Review & Submit</div>
-            </div>
-          </div>
-        </div>
+  const today = new Date();
+  const formattedDate = today.toLocaleDateString('en-US', { 
+    month: 'long', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
 
-        {/* Step 1: Order Details */}
-        <div className={`order-step ${currentStep === 1 ? 'active' : ''}`}>
-          <div className="step-header">
-            <h3>Order Details</h3>
-            <p>Tell us what you'd like to get stitched</p>
-          </div>
-          {/* High-priority: Large description just under the intro */}
-          <div className="form-grid">
-            <div className="form-group full-width">
-              <label>Design Description</label>
-              <textarea 
-                className="desc-textarea"
-                placeholder="Describe your garment design, fabric preferences, style details, etc."
-                value={details.specialInstructions}
-                onChange={(e) => setDetails(prev => ({ ...prev, specialInstructions: e.target.value }))}
-                rows="4"
-              />
-            </div>
-            <div className="form-group">
-              <label>Garment Type *</label>
-              <select 
-                value={details.garmentType} 
-                onChange={(e) => setDetails(prev => ({ ...prev, garmentType: e.target.value }))}
-                required
-              >
-                <option value="">Select garment type</option>
-                <option value="shirt">Shirt</option>
-                <option value="pants">Pants</option>
-                <option value="suit">Suit</option>
-                <option value="dress">Dress</option>
-                <option value="kurta">Kurta</option>
-                <option value="blouse">Blouse</option>
-                <option value="lehenga">Lehenga</option>
-                <option value="jacket">Jacket</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
+  // Navigation helper for Fabric Catalog
+  const goToFabrics = () => {
+    navigate('/portal/fabrics', { 
+      state: { 
+        previousForm: {
+          garmentType,
+          occasion,
+          description,
+          deliveryDate,
+          priority,
+          measurementMode,
+          measurements,
+          hasLining,
+          hasEmbroidery,
+          embroideryDetails,
+          activeStep
+        }
+      } 
+    });
+  };
 
-            <div className="form-group">
-              <label>Expected Delivery Date *</label>
-              <input 
-                type="date" 
-                value={details.expectedDelivery} 
-                onChange={(e) => setDetails(prev => ({ ...prev, expectedDelivery: e.target.value }))}
-                min={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-              />
-              <small style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '4px' }}>
-                Minimum 7 days from today
-              </small>
+  // Materials & Measurements Card
+  const renderMaterialsCard = () => (
+    <section className="order-card">
+      <div className="card-header">
+        <FaRegFileAlt className="card-icon" style={{ transform: 'rotate(-10deg)' }} />
+        <h2>Materials & Measurements</h2>
+      </div>
+
+      <div className="form-group">
+        <label>Material Source</label>
+        <div className="material-source-grid">
+          <div 
+            className={`source-option ${materialSource === 'catalog' ? 'active' : ''}`}
+            onClick={goToFabrics}
+          >
+            <div className="radio-circle">
+              {materialSource === 'catalog' && <div className="radio-circle-inner" />}
             </div>
-            <div className="form-group full-width">
-              <label>Urgency Level</label>
-              <div className="urgency-simple">
-                <label className="urgency-line">
-                  <input
-                    type="radio"
-                    name="urgency"
-                    value="normal"
-                    checked={details.urgency === 'normal'}
-                    onChange={(e) => setDetails(prev => ({ ...prev, urgency: e.target.value }))}
-                  />
-                  <span>Normal (Standard Delivery Time)</span>
-                </label>
-                <label className="urgency-line">
-                  <input
-                    type="radio"
-                    name="urgency"
-                    value="urgent"
-                    checked={details.urgency === 'urgent'}
-                    onChange={(e) => setDetails(prev => ({ ...prev, urgency: e.target.value }))}
-                  />
-                  <span>Urgent - Faster Delivery (+₹500 extra)</span>
-                </label>
-              </div>
+            <div className="source-content">
+              <span className="source-title">Select from Catalog</span>
+              <span className="source-desc">Browse our premium fabrics</span>
             </div>
+            <FaStore className="source-icon" />
           </div>
           
-          <div className="step-actions">
+          <div 
+            className={`source-option ${materialSource === 'own' ? 'active' : ''}`}
+            onClick={() => setMaterialSource('own')}
+          >
+            <div className="radio-circle">
+              {materialSource === 'own' && <div className="radio-circle-inner" />}
+            </div>
+            <div className="source-content">
+              <span className="source-title">I will provide material</span>
+              <span className="source-desc">Bring fabric to fitting</span>
+            </div>
+            <FaShoppingBag className="source-icon" />
+          </div>
+        </div>
+      </div>
+
+      {materialSource === 'catalog' && (
+        <div className="form-group">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label>Preferred Fabric (Optional)</label>
             <button 
-              type="button" 
-              className={`btn-primary ${isStep1Valid() ? 'completed' : ''}`}
-              onClick={nextStep}
+              onClick={goToFabrics} 
+              style={{ background: 'none', border: 'none', fontSize: '12px', color: '#e91e63', cursor: 'pointer', padding: 0 }}
             >
-              {isStep1Valid() ? '✓ Order Details Complete' : 'Next: Measurements →'}
+              Browse Catalog
             </button>
           </div>
+          <div className="search-wrapper">
+            <FaSearch className="search-icon-left" />
+            <input 
+              type="text" 
+              placeholder="Search silk, cotton, velvet..."
+              className="fabric-search-input"
+              value={fabricQuery}
+              onChange={(e) => setFabricQuery(e.target.value)}
+            />
+          </div>
         </div>
+      )}
+    </section>
+  );
 
-        {/* Step 2: Measurements */}
-        <div className={`order-step ${currentStep === 2 ? 'active' : ''}`}>
-          <div className="step-header">
-            <h3>Measurements</h3>
-            <p>Choose your measurement method</p>
-          </div>
-          
-          <div className="measurement-options">
-            <div className="option-card">
-              <input 
-                type="radio" 
-                id="use-saved" 
-                name="measurement-method" 
-                checked={useSaved} 
-                onChange={() => setUseSaved(true)}
-              />
-              <label htmlFor="use-saved" className="option-label">
-                <div className="option-icon">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="option-content">
-                  <h4>Use Saved Measurements</h4>
-                  <p>Use your previously saved measurements</p>
-                  {mhistory.length > 0 && (
-                    <select 
-                      value={selectedHistoryId} 
-                      onChange={(e) => setSelectedHistoryId(e.target.value)}
-                      className="history-select"
-                    >
-                      {mhistory.map(h => (
-                        <option key={h._id} value={h._id}>
-                          {new Date(h.createdAt).toLocaleDateString()} - {Object.keys(h.measurements || {}).length} measurements
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              </label>
+  return (
+    <DashboardLayout>
+      <div className="new-order-portal">
+        {/* Header Section */}
+        <header className="portal-header">
+          <div>
+            <div className="breadcrumbs">
+              <Link to="/portal">Home</Link> <span>›</span> 
+              <Link to="#" onClick={() => setActiveStep(1)}>New Request</Link>
+              {activeStep > 1 && (
+                <>
+                  <span>›</span> 
+                  <span className="active-breadcrumb">Dress Customization</span>
+                </>
+              )}
             </div>
-
-            <div className="option-card">
-              <input 
-                type="radio" 
-                id="enter-new" 
-                name="measurement-method" 
-                checked={!useSaved} 
-                onChange={() => setUseSaved(false)}
-              />
-              <label htmlFor="enter-new" className="option-label">
-                <div className="option-icon">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                </div>
-                <div className="option-content">
-                  <h4>Enter New Measurements</h4>
-                  <p>Provide fresh measurements for this order</p>
-                </div>
-              </label>
-            </div>
+            <h1 className="page-title">
+              {activeStep === 2 ? 'Dress Customization Studio' : 'Create New Order'}
+            </h1>
           </div>
+          <div className="header-right">
+            <div className="today-date">
+              Today is
+              <strong>{formattedDate}</strong>
+            </div>
+            <button className="notif-btn">
+              <FaBell />
+            </button>
+          </div>
+        </header>
 
-          {!useSaved && (
-            <div className="measurements-form">
-              <div className="measurement-note">
-                <p><strong>Note:</strong> Required measurements vary by garment type. Please provide the measurements marked with *</p>
-                {details.garmentType && (
-                  <p className="garment-specific-note">
-                    <strong>{details.garmentType.charAt(0).toUpperCase() + details.garmentType.slice(1)}</strong> requires: {getRequiredMeasurementFields().join(', ')}
-                  </p>
-                )}
-              </div>
+        <div className={`order-grid ${activeStep === 2 ? 'studio-layout' : ''}`}>
+          {activeStep === 1 && (
+            /* Left Column: Form Details (Step 1) */
+            <div className="form-main-col">
               
-              <div className="form-grid">
-                {/* Dynamic measurements based on garment type */}
-                {Object.entries(getMeasurementFields()).map(([field, label]) => (
-                  <div key={field} className="form-group">
-                    <label>{label} (inches) {getRequiredMeasurementFields().includes(field) ? '*' : ''}</label>
+              {/* Garment Details Card */}
+              <section className="order-card">
+                <div className="card-header">
+                  <FaTshirt className="card-icon" />
+                  <h2>Garment Details</h2>
+                </div>
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Garment Type</label>
+                    <select 
+                      value={garmentType} 
+                      onChange={(e) => setGarmentType(e.target.value)}
+                    >
+                      {garmentTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Occasion</label>
+                    <select 
+                      value={occasion} 
+                      onChange={(e) => setOccasion(e.target.value)}
+                    >
+                      {occasions.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Design Reference / Description</label>
+                  <textarea 
+                    placeholder="Describe the style, cut, and fit you're looking for..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
+
+                <div className="upload-section">
+                  <label className="upload-label">Upload Inspiration Photo</label>
+                  <div className="upload-dropzone" onClick={() => document.getElementById('fileInput').click()}>
+                    <FaCloudUploadAlt className="upload-icon" />
+                    <div className="upload-text">
+                      <span>Upload a file</span> or drag and drop
+                    </div>
+                    <div className="upload-hint">PNG, JPG up to 10MB</div>
                     <input 
-                      type="number" 
-                      value={measurements[field] || ''} 
-                      onChange={(e) => setMeasurements(prev => ({ ...prev, [field]: e.target.value }))}
-                      placeholder={getPlaceholderForField(field)}
-                      required={getRequiredMeasurementFields().includes(field)}
+                      type="file" 
+                      id="fileInput" 
+                      hidden 
+                      multiple 
+                      onChange={handleImageUpload}
                     />
                   </div>
-                ))}
+                  
+                  {imagePreviews.length > 0 && (
+                    <div className="image-previews">
+                      {imagePreviews.map((src, i) => (
+                        <div key={i} className="preview-item">
+                          <img src={src} alt="Preview" />
+                          <button className="remove-img" onClick={() => removeImage(i)}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Delivery Date & Urgency Section */}
+              <section className="order-card">
+                <div className="card-header">
+                  <FaClock className="card-icon" />
+                  <h2>Delivery Date & Urgency</h2>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>When do you need this? *</label>
+                    <input 
+                      type="date" 
+                      value={deliveryDate}
+                      min={dateConstraints?.min || ''}
+                      max={dateConstraints?.max || ''}
+                      onChange={(e) => setDeliveryDate(e.target.value)}
+                      disabled={!priority}
+                      required
+                    />
+                    <div className="date-helper-text">
+                      {!priority ? (
+                        '⚠️ Please select a priority level first'
+                      ) : (
+                        `📅 ${priority === 'urgent' ? 'Urgent: 5-7 days from today' : 
+                             priority === 'express' ? 'Express: 7-10 days from today' : 
+                             'Standard: 10-14 days from today'}`
+                      )}
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Order Priority</label>
+                    <select 
+                      value={priority}
+                      onChange={(e) => setPriority(e.target.value)}
+                    >
+                      <option value="standard">Standard - No extra charge</option>
+                      <option value="express">Express - +20% fee</option>
+                      <option value="urgent">Urgent - +40% fee</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="urgency-visual-selector">
+                  <div 
+                    className={`urgency-card ${priority === 'standard' ? 'active' : ''}`}
+                    onClick={() => setPriority('standard')}
+                  >
+                    <div className="urgency-icon">📦</div>
+                    <span className="urgency-title">Standard</span>
+                    <span className="urgency-desc">10-14 days</span>
+                    <span className="urgency-price">FREE</span>
+                  </div>
+                  <div 
+                    className={`urgency-card ${priority === 'express' ? 'active' : ''}`}
+                    onClick={() => setPriority('express')}
+                  >
+                    <div className="urgency-icon">⚡</div>
+                    <span className="urgency-title">Express</span>
+                    <span className="urgency-desc">7-10 days</span>
+                    <span className="urgency-price">+20%</span>
+                  </div>
+                  <div 
+                    className={`urgency-card ${priority === 'urgent' ? 'active' : ''}`}
+                    onClick={() => setPriority('urgent')}
+                  >
+                    <div className="urgency-icon">🚀</div>
+                    <span className="urgency-title">Urgent</span>
+                    <span className="urgency-desc">5-7 days</span>
+                    <span className="urgency-price">+40%</span>
+                  </div>
+                </div>
+
+                <div className="delivery-info-box">
+                  {!priority ? (
+                    <div className="no-priority-message">
+                      <span className="info-label">👆 Please select a priority level above to choose your delivery date</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="info-row">
+                        <span className="info-label">Available Date Range:</span>
+                        <span className="info-value">
+                          {priority === 'urgent' ? '5-7 days from today' : 
+                           priority === 'express' ? '7-10 days from today' : 
+                           '10-14 days from today'}
+                        </span>
+                      </div>
+                      {deliveryDate && (
+                        <>
+                          <div className="info-row">
+                            <span className="info-label">Selected Date:</span>
+                            <span className="info-value">
+                              {new Date(deliveryDate).toLocaleDateString('en-US', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                              })}
+                            </span>
+                          </div>
+                          <div className="info-row">
+                            <span className="info-label">Days from now:</span>
+                            <span className="info-value">
+                              {priceDetails.daysFromNow} days
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      <div className="info-row">
+                        <span className="info-label">Priority Level:</span>
+                        <span className={`info-value priority-badge priority-${priority}`}>
+                          {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                        </span>
+                      </div>
+                      {priceDetails.priorityFee > 0 && (
+                        <div className="info-row">
+                          <span className="info-label">Priority Fee:</span>
+                          <span className="info-value priority-fee">
+                            +₹{priceDetails.priorityFee.toLocaleString()} 
+                            ({Math.round((priceDetails.priorityFee / (priceDetails.total - priceDetails.priorityFee)) * 100)}%)
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+              </section>
+
+              {renderMaterialsCard()}
+              
+              <section className="order-card">
+                <div className="measurement-section-header">
+                  <h3>Measurement Details</h3>
+                  <Link to="#" className="size-guide-link">
+                    <FaInfoCircle /> Size Guide
+                  </Link>
+                </div>
+                
+                <div className="measurement-mode-selector">
+                  <div 
+                    className={`mode-option ${measurementMode === 'saved' ? 'active' : ''}`}
+                    onClick={() => setMeasurementMode('saved')}
+                  >
+                    <div className="radio-circle">
+                      {measurementMode === 'saved' && <div className="radio-circle-inner" />}
+                    </div>
+                    <span>Use Saved Measurements</span>
+                  </div>
+                  <div 
+                    className={`mode-option ${measurementMode === 'new' ? 'active' : ''}`}
+                    onClick={() => setMeasurementMode('new')}
+                  >
+                    <div className="radio-circle">
+                      {measurementMode === 'new' && <div className="radio-circle-inner" />}
+                    </div>
+                    <span>Enter New Measurements</span>
+                  </div>
+                </div>
+
+                {measurementMode === 'saved' ? (
+                  <div className="saved-measurements-preview">
+                    {profile.customer?.measurements ? (
+                      <div className="measurements-grid-mini">
+                        {Object.entries(profile.customer.measurements).map(([key, val]) => (
+                          <div key={key} className="meas-item">
+                            <span className="meas-label">{key}</span>
+                            <span className="meas-val">{val} in</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="no-measurements">
+                        <p>No saved measurements found.</p>
+                        <button className="btn-small" onClick={() => setMeasurementMode('new')}>Add New</button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="new-measurements-form">
+                    <p className="form-hint">Enter measurements for {garmentType}:</p>
+                    <div className="measurements-input-grid">
+                      {garmentConfig[garmentType]?.map(field => (
+                        <div key={field} className="meas-input-group">
+                          <label>{field} (in)</label>
+                          <input 
+                            type="number" 
+                            placeholder="0.0" 
+                            value={measurements[field] || ''}
+                            onChange={(e) => setMeasurements({...measurements, [field]: e.target.value})}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
+
+          {activeStep === 2 && (
+            /* Customization Studio (Step 2) */
+            <div className="studio-container">
+              {/* Preview Area (Left) */}
+              <div className="studio-preview-col">
+                <div className="studio-canvas">
+                  <div className="canvas-header-ai">
+                    <div className="canvas-title-group">
+                      <span className="ai-3d-badge">AI 3D RENDER</span>
+                      <span className="garment-type-badge">{garmentType}</span>
+                    </div>
+                    {bodyShape && <span className="shape-tag">Tailored for: <strong>{bodyShape}</strong></span>}
+                  </div>
+                  <div className="garment-render 3d-effect">
+                    <img 
+                      src={getGarmentPreview()} 
+                      alt="Garment Preview" 
+                      className="preview-image 3d-model"
+                    />
+                    {selectedFabric && (
+                      <div className="fabric-swatch-overlay">
+                        <img src={selectedFabric.images?.[0]?.url || 'https://images.unsplash.com/photo-1601662528567-526cd06f6582?w=100'} alt="Fabric Swatch" />
+                        <span>Applying {selectedFabric.name}</span>
+                      </div>
+                    )}
+                    <div className="preview-dot dot-neckline" style={{ top: '35%', left: '46%' }}></div>
+                    <div className="preview-dot dot-waist" style={{ top: '56%', left: '43%' }}></div>
+                  </div>
+                  
+                  <div className="canvas-controls">
+                    <button className="canvas-btn" title="Rotate"><FaUndo /></button>
+                    <button className="canvas-btn" title="Zoom In"><FaPlus /></button>
+                    <button className="canvas-btn" title="Zoom Out"><FaMinus /></button>
+                    <button className="canvas-btn" title="Reset View"><FaSync /></button>
+                  </div>
+                  
+                  <div className="canvas-footer-info">
+                    <p>Based on your {measurementMode === 'saved' ? 'saved' : 'provided'} measurements</p>
+                  </div>
+                </div>
               </div>
 
-              <div className="measurement-notes">
-                <div className="form-group">
-                  <label>Additional Notes</label>
-                  <textarea 
-                    value={measurements.notes} 
-                    onChange={(e) => setMeasurements(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Any special fitting requirements or notes..."
-                    rows="3"
-                  />
+              {/* Controls Area (Right) */}
+              <div className="studio-controls-col">
+                {/* AI Suggestion Card */}
+                <div className="ai-suggestion-box">
+                  <div className="ai-suggestion-header">
+                    <FaMagic className="ai-spark-icon" />
+                    <div className="ai-title-group">
+                      <span className="ai-main-title">AI STYLE ASSISTANT</span>
+                      {bodyShape && <span className="ai-shape-detected">{bodyShape} Shape Detected</span>}
+                    </div>
+                  </div>
+                  <div className="ai-suggestion-content">
+                    <p>{aiSuggestion}</p>
+                    <div className="ai-recommendations">
+                      {bodyShape && shapeRecommendations[bodyShape].styles.map(s => (
+                        <span key={s} className="recommendation-pill">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabs & Options */}
+                <div className="studio-tabs-card">
+                  <div className="studio-tabs-header">
+                    <button 
+                      className={`studio-tab ${activeTab === 'Design' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('Design')}
+                    >
+                      Design
+                    </button>
+                    <button 
+                      className={`studio-tab ${activeTab === 'Fabric' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('Fabric')}
+                    >
+                      Fabric
+                    </button>
+                    <button 
+                      className={`studio-tab ${activeTab === 'Size' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('Size')}
+                    >
+                      Size
+                    </button>
+                  </div>
+
+                  <div className="studio-tab-content">
+                    {activeTab === 'Design' && (
+                      <div className="design-options">
+                        <div className="option-section">
+                          <div className="section-title-row">
+                            <h3>{garmentType} Style</h3>
+                            <span className="guide-link">Guide</span>
+                          </div>
+                          <div className="visual-options-grid">
+                            {getCurrentCustomizations().silhouettes.map(opt => (
+                              <div 
+                                key={opt.id}
+                                className={`visual-option ${silhouette === opt.id ? 'active' : ''}`}
+                                onClick={() => setSilhouette(opt.id)}
+                              >
+                                <div className="option-icon-box">{opt.icon}</div>
+                                <span>{opt.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="option-section">
+                          <h3>Neckline Style</h3>
+                          <div className="visual-options-grid">
+                            {getCurrentCustomizations().necklines.map(opt => (
+                              <div 
+                                key={opt.id}
+                                className={`visual-option ${neckline === opt.id ? 'active' : ''}`}
+                                onClick={() => setNeckline(opt.id)}
+                              >
+                                <div className="option-icon-box">{opt.icon}</div>
+                                <span>{opt.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="option-section">
+                          <h3>Sleeve Style</h3>
+                          <select 
+                            className="studio-select"
+                            value={sleeve}
+                            onChange={(e) => setSleeve(e.target.value)}
+                          >
+                            {getCurrentCustomizations().sleeves.map(sleeveOption => (
+                              <option key={sleeveOption} value={sleeveOption}>
+                                {sleeveOption}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                    {activeTab === 'Fabric' && (
+                      <div className="fabric-recommendations">
+                        <div className="fabric-section">
+                          <h3>Recommended for {garmentType}</h3>
+                          <div className="fabric-tags">
+                            {getCurrentFabricRecs().recommended.map(fabric => (
+                              <span key={fabric} className="fabric-tag recommended">
+                                {fabric}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="fabric-section">
+                          <h3>Avoid for {garmentType}</h3>
+                          <div className="fabric-tags">
+                            {getCurrentFabricRecs().avoid.map(fabric => (
+                              <span key={fabric} className="fabric-tag avoid">
+                                {fabric}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="fabric-note">
+                          <p><strong>Tip:</strong> {getCurrentFabricRecs().note}</p>
+                        </div>
+
+                        <button 
+                          className="btn-outline-studio" 
+                          onClick={() => navigate('/portal/fabrics')}
+                        >
+                          Browse Fabric Catalog
+                        </button>
+                      </div>
+                    )}
+                    {activeTab === 'Size' && (
+                      <div className="size-tab-placeholder">
+                        <p>Confirm size and adjustments...</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           )}
-          
-          <div className="step-actions">
-            <button type="button" className="btn-secondary" onClick={prevStep}>
-              ← Back: Order Details
-            </button>
-            <button 
-              type="button" 
-              className={`btn-primary ${isStep2Valid() ? 'completed' : ''}`}
-              onClick={nextStep}
-            >
-              {isStep2Valid() ? '✓ Measurements Complete' : 'Next: Fabric & Customization →'}
-            </button>
-          </div>
-        </div>
 
-        {/* Step 3: Fabric & Customization */}
-        <div className={`order-step ${currentStep === 3 ? 'active' : ''}`}>
-          <div className="step-header">
-            <h3>Fabric & Customization</h3>
-            <p>Choose your fabric and any customizations</p>
-          </div>
-          
-          <div className="fabric-section">
-            <div className="fabric-options">
-              <div className="option-card">
-                <input 
-                  type="radio" 
-                  id="shop-fabric" 
-                  name="fabric-source" 
-                  checked={!ownFabric} 
-                  onChange={() => setOwnFabric(false)}
-                />
-                <label htmlFor="shop-fabric" className="option-label">
-                  <div className="option-icon">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                  </div>
-                  <div className="option-content">
-                    <h4>Choose from Shop</h4>
-                    <p>Select from our curated fabric collection</p>
-                  </div>
-                </label>
-              </div>
-
-              <div className="option-card">
-                <input 
-                  type="radio" 
-                  id="own-fabric" 
-                  name="fabric-source" 
-                  checked={ownFabric} 
-                  onChange={() => setOwnFabric(true)}
-                />
-                <label htmlFor="own-fabric" className="option-label">
-                  <div className="option-icon">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                  </div>
-                  <div className="option-content">
-                    <h4>Bring Your Own Fabric</h4>
-                    <p>Use fabric you already have</p>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            {!ownFabric && (
-              <div className="fabric-selection">
-                <div className="fabric-search-section">
-                  <h4>Search & Filter Fabrics</h4>
-                  
-                  <div className="search-filters">
-                    <div className="form-group">
-                      <label>Search Fabrics</label>
-                      <div className="search-input">
-                        <input 
-                          type="text" 
-                          value={fabricQuery} 
-                          onChange={(e) => {
-                            setFabricQuery(e.target.value);
-                            // Real-time filtering is handled by useEffect
-                            setShowSuggestions(true);
-                            setHighlightedSuggestion(-1);
-                          }}
-                          placeholder="Type fabric name (e.g., cotton, silk, linen)..."
-                          onKeyDown={(e) => {
-                            if (!showSuggestions || fabricTypeSuggestions.length === 0) return;
-                            if (e.key === 'ArrowDown') {
-                              e.preventDefault();
-                              setHighlightedSuggestion(prev => Math.min(prev + 1, fabricTypeSuggestions.length - 1));
-                            } else if (e.key === 'ArrowUp') {
-                              e.preventDefault();
-                              setHighlightedSuggestion(prev => Math.max(prev - 1, 0));
-                            } else if (e.key === 'Enter') {
-                              if (highlightedSuggestion >= 0) {
-                                e.preventDefault();
-                                handleSuggestionSelect(fabricTypeSuggestions[highlightedSuggestion]);
-                              }
-                            } else if (e.key === 'Escape') {
-                              setShowSuggestions(false);
-                            }
-                          }}
-                        />
-                        {showSuggestions && fabricTypeSuggestions.length > 0 && (
-                          <ul className="suggestions-list">
-                            {fabricTypeSuggestions.map((s, idx) => (
-                              <li
-                                key={s}
-                                className={`suggestion-item ${idx === highlightedSuggestion ? 'highlighted' : ''}`}
-                                onMouseDown={() => handleSuggestionSelect(s)}
-                              >
-                                {s}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        <button type="button" onClick={searchFabrics} disabled={loadingFabrics || !fabricQuery.trim()}>
-                          {loadingFabrics ? 'Searching...' : 'Search'}
-                        </button>
-                      </div>
-                      {fabricQuery && (
-                        <p className="search-hint">Searching for: "{fabricQuery}"</p>
-                      )}
-                    </div>
-
-                    {/* Type and Color filters removed as requested; autocomplete covers this */}
-                  </div>
+          {activeStep === 3 && (
+            /* Left Column: Timeline & Finalization (Step 3) */
+            <div className="form-main-col">
+              <section className="order-card">
+                <div className="card-header">
+                  <FaClock className="card-icon" />
+                  <h2>Timeline & Urgency</h2>
                 </div>
 
-                {loadingFabrics ? (
-                  <div className="loading-fabrics">
-                    <p>Loading fabrics...</p>
-                  </div>
-                ) : fabrics.length > 0 ? (
-                  <div className="fabric-results">
-                    {Object.entries(
-                      fabrics.reduce((groups, fabric) => {
-                        const key = fabric.material || fabric.type || 'Other';
-                        if (!groups[key]) groups[key] = [];
-                        groups[key].push(fabric);
-                        return groups;
-                      }, {})
-                    ).map(([materialType, fabricList]) => (
-                      <div key={materialType} className="fabric-type-group">
-                        <h4 className="fabric-type-header">{materialType} Fabrics</h4>
-                        <div className="fabric-grid">
-                          {fabricList.map(fabric => (
-                            <div 
-                              key={fabric._id} 
-                              className={`fabric-card ${selectedFabricId === fabric._id ? 'selected' : ''}`}
-                              onClick={() => setSelectedFabricId(fabric._id)}
-                            >
-                              {/* Show actual fabric image if available, otherwise show fabric pattern based on material */}
-                              {fabric.images && fabric.images.length > 0 && fabric.images[0]?.url ? (
-                                <div className="fabric-image-container" style={{
-                                  width: '100%',
-                                  height: '150px',
-                                  overflow: 'hidden',
-                                  borderBottom: '2px solid #d1d5db',
-                                  background: '#f8f9fa',
-                                  position: 'relative'
-                                }}>
-                                  <img 
-                                    src={fabric.images[0].url} 
-                                    alt={fabric.images[0].alt || fabric.name}
-                                    style={{
-                                      width: '100%',
-                                      height: '100%',
-                                      objectFit: 'cover'
-                                    }}
-                                    onError={(e) => {
-                                      // Fallback to fabric texture if image fails to load
-                                      e.target.style.display = 'none';
-                                      const parent = e.target.parentElement;
-                                      parent.style.background = `linear-gradient(45deg, ${fabric.color?.toLowerCase() || '#e5e7eb'} 25%, transparent 25%, transparent 75%, ${fabric.color?.toLowerCase() || '#e5e7eb'} 75%), linear-gradient(45deg, ${fabric.color?.toLowerCase() || '#e5e7eb'} 25%, transparent 25%, transparent 75%, ${fabric.color?.toLowerCase() || '#e5e7eb'} 75%)`;
-                                      parent.style.backgroundSize = '20px 20px';
-                                      parent.style.backgroundPosition = '0 0, 10px 10px';
-                                    }}
-                                  />
-                                  <div style={{
-                                    position: 'absolute',
-                                    top: '8px',
-                                    right: '8px',
-                                    background: 'rgba(0,0,0,0.6)',
-                                    color: 'white',
-                                    padding: '4px 8px',
-                                    borderRadius: '4px',
-                                    fontSize: '0.7rem',
-                                    fontWeight: '600'
-                                  }}>
-                                    📷 Original
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="fabric-texture-preview" style={{ 
-                                  width: '100%',
-                                  height: '150px',
-                                  border: '2px solid #d1d5db',
-                                  position: 'relative',
-                                  // Create fabric-like texture based on material type
-                                  background: (() => {
-                                    const baseColor = fabric.color?.toLowerCase() || '#e5e7eb';
-                                    const material = fabric.material?.toLowerCase() || '';
-                                    const pattern = fabric.pattern?.toLowerCase() || 'solid';
-                                    
-                                    // Different textures for different materials
-                                    if (pattern !== 'solid' && pattern !== '') {
-                                      // For patterned fabrics - show a pattern
-                                      if (pattern.includes('stripe')) {
-                                        return `repeating-linear-gradient(90deg, ${baseColor}, ${baseColor} 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px)`;
-                                      } else if (pattern.includes('check') || pattern.includes('plaid')) {
-                                        return `repeating-linear-gradient(0deg, ${baseColor}, ${baseColor} 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 11px), repeating-linear-gradient(90deg, ${baseColor}, ${baseColor} 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 11px)`;
-                                      } else if (pattern.includes('dot') || pattern.includes('polka')) {
-                                        return `radial-gradient(circle at 10px 10px, rgba(0,0,0,0.15) 2px, transparent 2px), ${baseColor}`;
-                                      }
-                                    }
-                                    
-                                    // Material-specific textures
-                                    if (material.includes('cotton')) {
-                                      return `repeating-linear-gradient(45deg, ${baseColor}, ${baseColor} 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px)`;
-                                    } else if (material.includes('silk')) {
-                                      return `linear-gradient(135deg, ${baseColor} 0%, rgba(255,255,255,0.3) 50%, ${baseColor} 100%)`;
-                                    } else if (material.includes('denim')) {
-                                      return `repeating-linear-gradient(90deg, ${baseColor}, ${baseColor} 1px, rgba(255,255,255,0.05) 1px, rgba(255,255,255,0.05) 2px)`;
-                                    } else if (material.includes('linen')) {
-                                      return `repeating-linear-gradient(0deg, ${baseColor}, ${baseColor} 3px, rgba(255,255,255,0.1) 3px, rgba(255,255,255,0.1) 4px), repeating-linear-gradient(90deg, ${baseColor}, ${baseColor} 3px, rgba(0,0,0,0.05) 3px, rgba(0,0,0,0.05) 4px)`;
-                                    } else if (material.includes('wool')) {
-                                      return `radial-gradient(ellipse at center, rgba(255,255,255,0.1) 0%, transparent 50%), ${baseColor}`;
-                                    }
-                                    
-                                    // Default: subtle weave pattern
-                                    return `repeating-linear-gradient(45deg, ${baseColor}, ${baseColor} 3px, rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 6px), repeating-linear-gradient(-45deg, ${baseColor}, ${baseColor} 3px, rgba(255,255,255,0.03) 3px, rgba(255,255,255,0.03) 6px)`;
-                                  })(),
-                                  backgroundSize: (fabric.pattern?.toLowerCase() || '').includes('dot') ? '20px 20px' : 'auto'
-                                }} title={`${fabric.material || 'Fabric'} - ${fabric.color || 'Color'}`}>
-                                  <div style={{
-                                    position: 'absolute',
-                                    top: '8px',
-                                    left: '8px',
-                                    background: 'rgba(0,0,0,0.7)',
-                                    color: 'white',
-                                    padding: '4px 8px',
-                                    borderRadius: '4px',
-                                    fontSize: '0.7rem',
-                                    fontWeight: '600'
-                                  }}>
-                                    {fabric.material || 'Fabric'} Preview
-                                  </div>
-                                  <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    height: '100%',
-                                    color: 'rgba(255,255,255,0.9)',
-                                    textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
-                                    fontSize: '1.2rem',
-                                    fontWeight: '700',
-                                    letterSpacing: '0.5px'
-                                  }}>
-                                    {fabric.color}
-                                  </div>
-                                </div>
-                              )}
-                              
-                              <div className="fabric-info">
-                                <h5>{fabric.name}</h5>
-                                
-                                {/* Material & Pattern */}
-                                <div style={{ marginBottom: '8px' }}>
-                                  <p className="fabric-detail" style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px' }}>
-                                    <strong>Material:</strong> {fabric.material || 'N/A'}
-                                  </p>
-                                  {fabric.pattern && fabric.pattern !== 'solid' && (
-                                    <p className="fabric-detail" style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px' }}>
-                                      <strong>Pattern:</strong> {fabric.pattern}
-                                    </p>
-                                  )}
-                                </div>
-                                
-                                {/* Color with dot */}
-                                <p className="fabric-color" style={{ marginBottom: '6px' }}>
-                                  <span className="color-dot" style={{ 
-                                    backgroundColor: fabric.color?.toLowerCase() || '#999',
-                                    display: 'inline-block',
-                                    width: '14px',
-                                    height: '14px',
-                                    borderRadius: '50%',
-                                    marginRight: '6px',
-                                    border: '2px solid #fff',
-                                    boxShadow: '0 0 0 1px #ccc',
-                                    verticalAlign: 'middle'
-                                  }}></span>
-                                  <strong>Color:</strong> {fabric.color || 'Not specified'}
-                                </p>
-                                
-                                {/* Price */}
-                                <p className="fabric-price" style={{ 
-                                  fontSize: '1.1rem', 
-                                  fontWeight: '700', 
-                                  color: '#059669',
-                                  marginBottom: '6px'
-                                }}>
-                                  ₹{fabric.price}/{fabric.unit || 'meter'}
-                                </p>
-                                
-                                {/* Stock with status badge */}
-                                <p className="stock-info" style={{
-                                  fontSize: '0.85rem',
-                                  marginBottom: '6px'
-                                }}>
-                                  <strong>Stock:</strong> {fabric.stock} {fabric.unit || 'meters'}
-                                  {fabric.stock === 0 && <span style={{ color: '#dc2626', marginLeft: '6px' }}>● Out of Stock</span>}
-                                  {fabric.stock > 0 && fabric.stock <= 5 && <span style={{ color: '#f59e0b', marginLeft: '6px' }}>● Low Stock</span>}
-                                  {fabric.stock > 5 && <span style={{ color: '#059669', marginLeft: '6px' }}>● In Stock</span>}
-                                </p>
-                                
-                                {/* Description if available */}
-                                {fabric.description && (
-                                  <p className="fabric-description" style={{
-                                    fontSize: '0.75rem',
-                                    color: '#888',
-                                    marginTop: '8px',
-                                    fontStyle: 'italic',
-                                    lineHeight: '1.4'
-                                  }}>
-                                    {fabric.description.length > 80 
-                                      ? fabric.description.substring(0, 80) + '...' 
-                                      : fabric.description}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="no-fabrics">
-                    {!fabricQuery.trim() ? (
-                      <p>🔍 Start typing in the search box above to find fabrics...</p>
-                    ) : (
-                      <p>No fabrics match your search. Try different keywords.</p>
-                    )}
-                  </div>
-                )}
-
-                {selectedFabricId && (
-                  <div className="fabric-quantity">
-                    <label>Quantity (meters)</label>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Desired Delivery Date</label>
                     <input 
-                      type="number" 
-                      value={fabricQty} 
-                      onChange={(e) => setFabricQty(e.target.value)}
-                      min="1"
-                      max={selectedFabric?.stock || 999}
+                      type="date" 
+                      value={deliveryDate}
+                      min={dateConstraints.min}
+                      max={dateConstraints.max}
+                      onChange={(e) => setDeliveryDate(e.target.value)}
                     />
-                    {stockWarning && <p className="warning">{stockWarning}</p>}
                   </div>
-                )}
-              </div>
-            )}
-
-            {ownFabric && (
-              <div className="own-fabric-form">
-                <div className="form-group">
-                  <label>Fabric Description</label>
-                  <textarea 
-                    value={ownFabricNotes} 
-                    onChange={(e) => setOwnFabricNotes(e.target.value)}
-                    placeholder="Describe your fabric: material, color, pattern, etc."
-                    rows="3"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Customization Options */}
-            <div className="customization-section">
-              <h4>Customization Options</h4>
-              {details.garmentType && (
-                <div className="garment-note" style={{ marginBottom: 12, color: '#64748b' }}>
-                  Options below are tailored for: <strong>{details.garmentType.charAt(0).toUpperCase() + details.garmentType.slice(1)}</strong>
-                </div>
-              )}
-              
-              {/* Collar Type (hidden for pants) */}
-              {!(details.garmentType?.toLowerCase() === 'pant' || details.garmentType?.toLowerCase() === 'pants' || details.garmentType?.toLowerCase() === 'trouser') && (
-                <div className="customization-group">
-                  <label>Collar Type</label>
-                  <div className="option-grid">
-                    <label className="customization-option">
-                      <input 
-                        type="radio" 
-                        name="collarType" 
-                        value="normal" 
-                        checked={customization.collarType === 'normal'}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, collarType: e.target.value }))}
-                      />
-                      <span className="radio-custom"></span>
-                      <span>Normal</span>
-                    </label>
-                    <label className="customization-option">
-                      <input 
-                        type="radio" 
-                        name="collarType" 
-                        value="mandarin" 
-                        checked={customization.collarType === 'mandarin'}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, collarType: e.target.value }))}
-                      />
-                      <span className="radio-custom"></span>
-                      <span>Mandarin</span>
-                    </label>
-                    <label className="customization-option">
-                      <input 
-                        type="radio" 
-                        name="collarType" 
-                        value="designer" 
-                        checked={customization.collarType === 'designer'}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, collarType: e.target.value }))}
-                      />
-                      <span className="radio-custom"></span>
-                      <span>Designer</span>
-                    </label>
+                  <div className="form-group">
+                    <label>Order Priority</label>
+                    <select 
+                      value={priority}
+                      onChange={(e) => setPriority(e.target.value)}
+                    >
+                      <option value="standard">Standard (14-21 Days) - Free</option>
+                      <option value="express">Express (7-10 Days) - +20%</option>
+                      <option value="urgent">Urgent (3-5 Days) - +40%</option>
+                    </select>
                   </div>
                 </div>
-              )}
 
-              {/* Sleeve Type (hidden for pants) */}
-              {!(details.garmentType?.toLowerCase() === 'pant' || details.garmentType?.toLowerCase() === 'pants' || details.garmentType?.toLowerCase() === 'trouser') && (
-                <div className="customization-group">
-                  <label>Sleeve Type</label>
-                  <div className="option-grid">
-                    <label className="customization-option">
-                      <input 
-                        type="radio" 
-                        name="sleeveType" 
-                        value="full" 
-                        checked={customization.sleeveType === 'full'}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, sleeveType: e.target.value }))}
-                      />
-                      <span className="radio-custom"></span>
-                      <span>Full Sleeve</span>
-                    </label>
-                    <label className="customization-option">
-                      <input 
-                        type="radio" 
-                        name="sleeveType" 
-                        value="half" 
-                        checked={customization.sleeveType === 'half'}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, sleeveType: e.target.value }))}
-                      />
-                      <span className="radio-custom"></span>
-                      <span>Half Sleeve</span>
-                    </label>
-                    <label className="customization-option">
-                      <input 
-                        type="radio" 
-                        name="sleeveType" 
-                        value="sleeveless" 
-                        checked={customization.sleeveType === 'sleeveless'}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, sleeveType: e.target.value }))}
-                      />
-                      <span className="radio-custom"></span>
-                      <span>Sleeveless</span>
-                    </label>
+                <div className="urgency-visual-selector">
+                  <div 
+                    className={`urgency-card ${priority === 'standard' ? 'active' : ''}`}
+                    onClick={() => setPriority('standard')}
+                  >
+                    <span className="urgency-title">Standard</span>
+                    <span className="urgency-time">14-21 Days</span>
+                    <span className="urgency-price">FREE</span>
+                  </div>
+                  <div 
+                    className={`urgency-card ${priority === 'express' ? 'active' : ''}`}
+                    onClick={() => setPriority('express')}
+                  >
+                    <span className="urgency-title">Express</span>
+                    <span className="urgency-time">7-10 Days</span>
+                    <span className="urgency-price">+20%</span>
+                  </div>
+                  <div 
+                    className={`urgency-card ${priority === 'urgent' ? 'active' : ''}`}
+                    onClick={() => setPriority('urgent')}
+                  >
+                    <span className="urgency-title">Urgent</span>
+                    <span className="urgency-time">3-5 Days</span>
+                    <span className="urgency-price">+40%</span>
                   </div>
                 </div>
-              )}
+              </section>
 
-              {/* Buttons & Zippers (hidden for pants to avoid duplication with fly type) */}
-              {!(details.garmentType?.toLowerCase() === 'pant' || details.garmentType?.toLowerCase() === 'pants' || details.garmentType?.toLowerCase() === 'trouser') && (
-                <div className="customization-group">
-                  <label>Additional Features</label>
-                  <div className="checkbox-group">
-                    <label className="checkbox-option">
-                      <input 
-                        type="checkbox" 
-                        checked={customization.hasButtons}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, hasButtons: e.target.checked }))}
-                      />
-                      <span className="checkbox-custom"></span>
-                      <span>Buttons</span>
-                    </label>
-                    <label className="checkbox-option">
-                      <input 
-                        type="checkbox" 
-                        checked={customization.hasZippers}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, hasZippers: e.target.checked }))}
-                      />
-                      <span className="checkbox-custom"></span>
-                      <span>Zippers</span>
-                    </label>
-                  </div>
+              <section className="order-card">
+                <div className="card-header">
+                  <FaRobot className="card-icon" />
+                  <h2>Advanced Customization</h2>
                 </div>
-              )}
+                <div className="advanced-custom-grid">
+                  <div 
+                    className={`custom-toggle-card ${hasLining ? 'active' : ''}`}
+                    onClick={() => setHasLining(!hasLining)}
+                  >
+                    <div className="toggle-header">
+                      <div className="toggle-info">
+                        <span className="toggle-title">Add Premium Lining</span>
+                        <span className="toggle-desc">High-quality silk or cotton lining for comfort</span>
+                      </div>
+                      <div className={`toggle-switch ${hasLining ? 'on' : ''}`}>
+                        <div className="switch-knob"></div>
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Garment-specific requirements: Pants */}
-              {(details.garmentType?.toLowerCase() === 'pant' || details.garmentType?.toLowerCase() === 'pants' || details.garmentType?.toLowerCase() === 'trouser') && (
-                <div className="customization-group">
-                  <label>Pants Requirements</label>
-                  <div className="option-grid">
-                    <div className="form-group">
-                      <label>Waistband</label>
-                      <select
-                        value={customization.garmentOptions.waistband || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, waistband: e.target.value } }))}
-                      >
-                        <option value="">Select</option>
-                        <option value="regular">Regular</option>
-                        <option value="elastic">Elastic</option>
-                        <option value="adjustable">Adjustable</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Hem Style</label>
-                      <select
-                        value={customization.garmentOptions.hemStyle || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, hemStyle: e.target.value } }))}
-                      >
-                        <option value="">Select</option>
-                        <option value="plain">Plain</option>
-                        <option value="cuffed">Cuffed</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Fit</label>
-                      <select
-                        value={customization.garmentOptions.fit || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, fit: e.target.value } }))}
-                      >
-                        <option value="">Select</option>
-                        <option value="slim">Slim</option>
-                        <option value="regular">Regular</option>
-                        <option value="relaxed">Relaxed</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Pleats</label>
-                      <select
-                        value={customization.garmentOptions.pleats || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, pleats: e.target.value } }))}
-                      >
-                        <option value="none">None</option>
-                        <option value="single">Single</option>
-                        <option value="double">Double</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Fly Type</label>
-                      <select
-                        value={customization.garmentOptions.flyType || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, flyType: e.target.value } }))}
-                      >
-                        <option value="">Select</option>
-                        <option value="zipper">Zipper</option>
-                        <option value="button">Button</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Belt Loops</label>
-                      <select
-                        value={customization.garmentOptions.beltLoops || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, beltLoops: e.target.value } }))}
-                      >
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Pockets</label>
-                      <div className="checkbox-group">
-                        {['side','back','coin'].map(pk => (
-                          <label key={pk} className="checkbox-option">
-                            <input
-                              type="checkbox"
-                              checked={(customization.garmentOptions.pockets || []).includes(pk)}
-                              onChange={(e) => {
-                                const current = customization.garmentOptions.pockets || [];
-                                const next = e.target.checked ? [...current, pk] : current.filter(x => x !== pk);
-                                setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, pockets: next } }));
-                              }}
-                            />
-                            <span className="checkbox-custom"></span>
-                            <span>{pk.charAt(0).toUpperCase() + pk.slice(1)} Pocket</span>
-                          </label>
-                        ))}
+                  <div 
+                    className={`custom-toggle-card ${hasEmbroidery ? 'active' : ''}`}
+                    onClick={() => setHasEmbroidery(!hasEmbroidery)}
+                  >
+                    <div className="toggle-header">
+                      <div className="toggle-info">
+                        <span className="toggle-title">Add Custom Embroidery</span>
+                        <span className="toggle-desc">Hand-crafted intricate patterns and designs</span>
+                      </div>
+                      <div className={`toggle-switch ${hasEmbroidery ? 'on' : ''}`}>
+                        <div className="switch-knob"></div>
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* Garment-specific requirements: Shirt */}
-              {details.garmentType?.toLowerCase() === 'shirt' && (
-                <div className="customization-group">
-                  <label>Shirt Requirements</label>
-                  <div className="option-grid">
-                    <div className="form-group">
-                      <label>Pocket</label>
-                      <select
-                        value={customization.garmentOptions.pocket || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, pocket: e.target.value } }))}
-                      >
-                        <option value="none">None</option>
-                        <option value="one">One</option>
-                        <option value="two">Two</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Cuff Style</label>
-                      <select
-                        value={customization.garmentOptions.cuff || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, cuff: e.target.value } }))}
-                      >
-                        <option value="button">Button</option>
-                        <option value="french">French</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Placket</label>
-                      <select
-                        value={customization.garmentOptions.placket || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, placket: e.target.value } }))}
-                      >
-                        <option value="standard">Standard</option>
-                        <option value="concealed">Concealed</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Fit</label>
-                      <select
-                        value={customization.garmentOptions.fit || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, fit: e.target.value } }))}
-                      >
-                        <option value="slim">Slim</option>
-                        <option value="regular">Regular</option>
-                        <option value="relaxed">Relaxed</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Garment-specific requirements: Blouse */}
-              {details.garmentType?.toLowerCase() === 'blouse' && (
-                <div className="customization-group">
-                  <label>Blouse Requirements (Optional)</label>
-                  <div className="option-grid">
-                    <div className="form-group">
-                      <label>Blouse Style</label>
-                      <select
-                        value={customization.garmentOptions.blouseStyle || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, blouseStyle: e.target.value } }))}
-                      >
-                        <option value="">Select Style</option>
-                        <option value="regular">Regular</option>
-                        <option value="crop">Crop Top</option>
-                        <option value="peplum">Peplum</option>
-                        <option value="wrap">Wrap Style</option>
-                        <option value="tie-up">Tie-up Back</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Back Style</label>
-                      <select
-                        value={customization.garmentOptions.backStyle || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, backStyle: e.target.value } }))}
-                      >
-                        <option value="">Select Back</option>
-                        <option value="regular">Regular</option>
-                        <option value="tie-up">Tie-up</option>
-                        <option value="button">Button Back</option>
-                        <option value="zip">Zipper Back</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Fit</label>
-                      <select
-                        value={customization.garmentOptions.fit || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, fit: e.target.value } }))}
-                      >
-                        <option value="">Select Fit</option>
-                        <option value="loose">Loose</option>
-                        <option value="regular">Regular</option>
-                        <option value="fitted">Fitted</option>
-                        <option value="tight">Tight</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Length</label>
-                      <select
-                        value={customization.garmentOptions.length || ''}
-                        onChange={(e) => setCustomization(prev => ({ ...prev, garmentOptions: { ...prev.garmentOptions, length: e.target.value } }))}
-                      >
-                        <option value="">Select Length</option>
-                        <option value="short">Short</option>
-                        <option value="regular">Regular</option>
-                        <option value="long">Long</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Embroidery Options */}
-              <div className="customization-group">
-                <label>Embroidery/Patterns</label>
-                <div className="embroidery-options">
-                  <label className="checkbox-option">
-                    <input 
-                      type="checkbox" 
-                      checked={customization.embroidery.enabled}
-                      onChange={(e) => setCustomization(prev => ({ 
-                        ...prev, 
-                        embroidery: { ...prev.embroidery, enabled: e.target.checked }
-                      }))}
-                    />
-                    <span className="checkbox-custom"></span>
-                    <span>Add Embroidery</span>
-                  </label>
-
-                  {customization.embroidery.enabled && (
-                    <div className="embroidery-details">
-                      <div className="form-group">
+                {hasEmbroidery && (
+                  <div className="embroidery-details-panel">
+                    <div className="panel-header-mini">Embroidery Configuration</div>
+                    <div className="embroidery-form-grid">
+                      <div className="form-group-mini">
                         <label>Embroidery Type</label>
                         <select 
-                          value={customization.embroidery.type}
-                          onChange={(e) => setCustomization(prev => ({ 
-                            ...prev, 
-                            embroidery: { ...prev.embroidery, type: e.target.value }
-                          }))}
+                          value={embroideryDetails.type}
+                          onChange={(e) => setEmbroideryDetails({...embroideryDetails, type: e.target.value})}
                         >
-                          <option value="machine">Machine Embroidery</option>
-                          <option value="hand">Hand Embroidery</option>
-                          <option value="zardosi">Zardosi Work</option>
-                          <option value="aari">Aari Work</option>
-                          <option value="bead">Bead Work</option>
-                          <option value="thread">Thread Work</option>
+                          <option value="Zardosi">Zardosi (Gold/Silver thread)</option>
+                          <option value="Resham">Resham (Silk thread)</option>
+                          <option value="Mirror">Mirror Work</option>
+                          <option value="Bead">Bead & Sequin</option>
+                          <option value="Chikankari">Chikankari</option>
                         </select>
                       </div>
-
-                      <div className="form-group">
-                        <label>Placement</label>
-                        <div className="placement-grid">
-                          {['collar', 'sleeves', 'neckline', 'hem', 'full', 'custom'].map(placement => (
-                            <label key={placement} className="placement-option">
-                              <input 
-                                type="checkbox" 
-                                checked={customization.embroidery.placements.includes(placement)}
-                                onChange={(e) => {
-                                  const newPlacements = e.target.checked 
-                                    ? [...customization.embroidery.placements, placement]
-                                    : customization.embroidery.placements.filter(p => p !== placement);
-                                  setCustomization(prev => ({ 
-                                    ...prev, 
-                                    embroidery: { ...prev.embroidery, placements: newPlacements }
-                                  }));
-                                }}
-                              />
-                              <span className="checkbox-custom"></span>
-                              <span>{placement.charAt(0).toUpperCase() + placement.slice(1)}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="form-group">
-                        <label>Pattern</label>
+                      <div className="form-group-mini">
+                        <label>Embroidery Method</label>
                         <select 
-                          value={customization.embroidery.pattern}
-                          onChange={(e) => setCustomization(prev => ({ 
-                            ...prev, 
-                            embroidery: { ...prev.embroidery, pattern: e.target.value }
-                          }))}
+                          value={embroideryDetails.method}
+                          onChange={(e) => setEmbroideryDetails({...embroideryDetails, method: e.target.value})}
                         >
-                          <option value="floral">Floral</option>
-                          <option value="geometric">Geometric</option>
-                          <option value="custom">Custom Design</option>
+                          <option value="Hand">Hand Embroidery (Premium)</option>
+                          <option value="Machine">Machine Embroidery (Fast)</option>
                         </select>
                       </div>
-
-                      <div className="form-group">
-                        <label>Colors</label>
-                        <div className="color-grid">
-                          {['gold', 'silver', 'red', 'blue', 'green', 'black', 'white'].map(color => (
-                            <label key={color} className="color-option">
-                              <input 
-                                type="checkbox" 
-                                checked={customization.embroidery.colors.includes(color)}
-                                onChange={(e) => {
-                                  const newColors = e.target.checked 
-                                    ? [...customization.embroidery.colors, color]
-                                    : customization.embroidery.colors.filter(c => c !== color);
-                                  setCustomization(prev => ({ 
-                                    ...prev, 
-                                    embroidery: { ...prev.embroidery, colors: newColors }
-                                  }));
-                                }}
-                              />
-                              <span className="color-swatch" style={{ backgroundColor: color }}></span>
-                              <span>{color.charAt(0).toUpperCase() + color.slice(1)}</span>
-                            </label>
-                          ))}
-                        </div>
+                      <div className="form-group-mini">
+                        <label>Placement</label>
+                        <select 
+                          value={embroideryDetails.placement}
+                          onChange={(e) => setEmbroideryDetails({...embroideryDetails, placement: e.target.value})}
+                        >
+                          <option value="Neckline">Neckline</option>
+                          <option value="Sleeves">Sleeves</option>
+                          <option value="Border">Border / Hemline</option>
+                          <option value="Back">Back Center</option>
+                          <option value="All-over">All-over Bootis</option>
+                        </select>
                       </div>
-
-                      <div className="form-group">
-                        <label>Embroidery Notes</label>
-                        <textarea 
-                          value={customization.embroidery.notes}
-                          onChange={(e) => setCustomization(prev => ({ 
-                            ...prev, 
-                            embroidery: { ...prev.embroidery, notes: e.target.value }
-                          }))}
-                          placeholder="Any specific embroidery requirements..."
-                          rows="2"
-                        />
+                      <div className="form-group-mini">
+                        <label>Pattern Style</label>
+                        <select 
+                          value={embroideryDetails.pattern}
+                          onChange={(e) => setEmbroideryDetails({...embroideryDetails, pattern: e.target.value})}
+                        >
+                          <option value="Floral">Floral / Nature</option>
+                          <option value="Geometric">Geometric / Linear</option>
+                          <option value="Paisley">Traditional Paisley</option>
+                          <option value="Abstract">Modern Abstract</option>
+                        </select>
                       </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              <div className="section-actions">
+                <button 
+                  className="btn-back-step"
+                  onClick={() => setActiveStep(2)}
+                >
+                  <FaChevronLeft style={{ fontSize: '10px' }} /> Back to Customization
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Right Column: Order Summary & Actions */}
+          <div className="side-col">
+              <section className="order-card summary-card">
+                <div className="card-header">
+                  <FaRegFileAlt className="card-icon" />
+                  <h2>Order Summary</h2>
+                </div>
+                
+                <div className="summary-details">
+                  <div className="summary-section-label">Garment Info</div>
+                  <div className="summary-row">
+                    <span>Type</span>
+                    <strong>{garmentType || 'Saree'}</strong>
+                  </div>
+                  <div className="summary-row">
+                    <span>Fabric</span>
+                    <strong>{selectedFabric?.name || fabricQuery || 'To be selected'}</strong>
+                  </div>
+                  
+                  <div className="summary-section-label">Delivery Info</div>
+                  <div className="summary-row">
+                    <span>Priority</span>
+                    <strong>
+                      {priority ? priority.charAt(0).toUpperCase() + priority.slice(1) : 'Not selected'}
+                    </strong>
+                  </div>
+                  <div className="summary-row">
+                    <span>Delivery Date</span>
+                    <strong>
+                      {deliveryDate ? new Date(deliveryDate).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric' 
+                      }) : 'Not selected'}
+                    </strong>
+                  </div>
+                  {deliveryDate && priority && (
+                    <div className="summary-row">
+                      <span>Days from now</span>
+                      <strong>
+                        {priceDetails.daysFromNow} days
+                      </strong>
                     </div>
                   )}
-                </div>
-              </div>
-            </div>
-          </div>
+                  
+                  <div className="summary-section-label">Design Details</div>
+                  <div className="summary-row">
+                    <span>Silhouette</span>
+                    <strong>{silhouette || 'A-Line'}</strong>
+                  </div>
+                  <div className="summary-row">
+                    <span>Neckline</span>
+                    <strong>{neckline || 'Sweetheart'}</strong>
+                  </div>
+                  <div className="summary-row">
+                    <span>Sleeve</span>
+                    <strong>{sleeve || 'Sleeveless'}</strong>
+                  </div>
 
-          {/* Reference Images Upload Section */}
-          <div className="customization-section" style={{ marginTop: '24px' }}>
-            <h4 style={{ marginBottom: '16px', color: '#1e293b', fontSize: '1.1rem', fontWeight: '600' }}>
-              📸 Reference Images for Tailor
-            </h4>
-            <div className="form-group">
-              <label>Upload Reference Images (Optional)</label>
-              <input 
-                type="file" 
-                multiple 
-                accept="image/*"
-                onChange={handleReferenceImageChange}
-                className="file-input"
-                max="5"
-              />
-              <p className="file-help">
-                📸 Upload up to 5 reference photos for the tailor (design inspiration, fitting style, fabric samples, etc.)
-              </p>
-              
-              {/* Image Previews */}
-              {referenceImagePreviews.length > 0 && (
-                <div className="image-previews" style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                  gap: '16px',
-                  marginTop: '16px',
-                  padding: '16px',
-                  background: '#f8f9fa',
-                  borderRadius: '12px',
-                  border: '2px dashed #d1d5db'
-                }}>
-                  {referenceImagePreviews.map((preview, index) => (
-                    <div key={index} style={{
-                      position: 'relative',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      border: '2px solid #e5e7eb',
-                      aspectRatio: '1',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                      transition: 'transform 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                    >
-                      <img 
-                        src={preview} 
-                        alt={`Reference ${index + 1}`}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeReferenceImage(index)}
-                        style={{
-                          position: 'absolute',
-                          top: '6px',
-                          right: '6px',
-                          background: 'rgba(220, 38, 38, 0.95)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '28px',
-                          height: '28px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '18px',
-                          fontWeight: 'bold',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#dc2626';
-                          e.currentTarget.style.transform = 'scale(1.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'rgba(220, 38, 38, 0.95)';
-                          e.currentTarget.style.transform = 'scale(1)';
-                        }}
-                        title="Remove image"
-                      >
-                        ×
-                      </button>
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '0',
-                        left: '0',
-                        right: '0',
-                        background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
-                        padding: '16px 8px 6px',
-                        color: 'white',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        textAlign: 'center'
-                      }}>
-                        Image {index + 1}
-                      </div>
+                  {(hasLining || hasEmbroidery) && (
+                    <>
+                      <div className="summary-section-label">Add-ons</div>
+                      {hasLining && (
+                        <div className="summary-row">
+                          <span>Lining</span>
+                          <strong>Premium</strong>
+                        </div>
+                      )}
+                      {hasEmbroidery && (
+                        <div className="summary-row">
+                          <span>Embroidery</span>
+                          <strong>{embroideryDetails.method} {embroideryDetails.type}</strong>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div className="summary-section-label">Price Breakdown</div>
+                  <div className="summary-row">
+                    <span>Base Price</span>
+                    <span>₹{priceDetails.base.toLocaleString()}</span>
+                  </div>
+                  <div className="summary-row">
+                    <span>Customization</span>
+                    <span>₹{priceDetails.customization.toLocaleString()}</span>
+                  </div>
+                  {priceDetails.fabricCost > 0 && (
+                    <div className="summary-row">
+                      <span>Fabric Cost</span>
+                      <span>₹{priceDetails.fabricCost.toLocaleString()}</span>
                     </div>
-                  ))}
+                  )}
+                  {hasLining && (
+                    <div className="summary-row">
+                      <span>Lining</span>
+                      <span>₹{priceDetails.lining.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {hasEmbroidery && (
+                    <div className="summary-row">
+                      <span>Embroidery</span>
+                      <span>₹{priceDetails.embroidery.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {priceDetails.priorityFee > 0 && (
+                    <div className="summary-row">
+                      <span>Rush Fee ({priceDetails.daysFromNow} days)</span>
+                      <span>₹{priceDetails.priorityFee.toLocaleString()}</span>
+                    </div>
+                  )}
+                  
+                  <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '12px 0' }} />
+                  <div className="summary-row total">
+                    <span>Final Estimated Total</span>
+                    <strong>₹{priceDetails.total.toLocaleString()}</strong>
+                  </div>
                 </div>
-              )}
-              
-              {referenceImagePreviews.length > 0 && (
-                <div style={{
-                  marginTop: '12px',
-                  padding: '12px',
-                  background: '#ecfdf5',
-                  borderRadius: '8px',
-                  color: '#065f46',
-                  fontSize: '0.875rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <span style={{ fontSize: '1.2rem' }}>✓</span>
-                  <span>{referenceImagePreviews.length} image(s) selected. These will help the tailor understand your vision!</span>
+
+                <div className="action-buttons">
+                  {activeStep === 1 ? (
+                    <button 
+                      className="btn-next-step"
+                      onClick={() => {
+                        if (measurementMode === 'new' && garmentConfig[garmentType]?.some(f => !measurements[f])) {
+                          toast.warning('Please provide all measurements');
+                          return;
+                        }
+                        applyAISuggestions();
+                        setActiveStep(2);
+                      }}
+                    >
+                      Next: Customization Studio <FaChevronRight style={{ fontSize: '10px' }} />
+                    </button>
+                  ) : activeStep === 2 ? (
+                    <>
+                      <button 
+                        className="btn-save-draft"
+                        onClick={() => setActiveStep(1)}
+                        style={{ marginBottom: '12px' }}
+                      >
+                        <FaChevronLeft style={{ marginRight: '8px', fontSize: '12px' }} /> Back to Details
+                      </button>
+                      <button 
+                        className="btn-submit-order"
+                        onClick={() => setActiveStep(3)}
+                        style={{ backgroundColor: '#ad1457', color: 'white' }}
+                      >
+                        Continue to Timeline <FaChevronRight style={{ marginLeft: '8px', fontSize: '12px' }} />
+                      </button>
+                    </>
+                  ) : activeStep === 3 ? (
+                    <>
+                      <button 
+                        className="btn-save-draft"
+                        onClick={() => setActiveStep(2)}
+                        style={{ marginBottom: '12px' }}
+                      >
+                        <FaChevronLeft style={{ marginRight: '8px', fontSize: '12px' }} /> Back to Studio
+                      </button>
+                      <button 
+                        className="btn-submit-order"
+                        onClick={(e) => handleSubmit(e)}
+                        disabled={submitting}
+                      >
+                        {submitting ? 'Submitting...' : (
+                          <>Submit Request <FaPaperPlane /></>
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <button 
+                      className="btn-submit-order"
+                      onClick={(e) => handleSubmit(e)}
+                      disabled={submitting}
+                    >
+                      {submitting ? 'Submitting...' : (
+                        <>Submit Request <FaPaperPlane /></>
+                      )}
+                    </button>
+                  )}
                 </div>
-              )}
-              
-              {uploadingImages && (
-                <div style={{
-                  marginTop: '12px',
-                  padding: '16px',
-                  background: '#f0f9ff',
-                  borderRadius: '8px',
-                  color: '#0369a1',
-                  fontSize: '0.875rem',
-                  textAlign: 'center',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}>
-                  <div className="spinner" style={{
-                    width: '16px',
-                    height: '16px',
-                    border: '2px solid #0369a1',
-                    borderTopColor: 'transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 0.8s linear infinite'
-                  }}></div>
-                  📤 Uploading images to server...
-                </div>
-              )}
+              </section>
             </div>
-          </div>
-          
-          <div className="step-actions">
-            <button type="button" className="btn-secondary" onClick={prevStep}>
-              ← Back: Measurements
-            </button>
-            <button 
-              type="button" 
-              className={`btn-primary ${isStep3Valid() ? 'completed' : ''}`}
-              onClick={nextStep}
-            >
-              {isStep3Valid() ? '✓ Fabric & Customization Complete' : 'Next: Review & Submit →'}
-            </button>
-          </div>
         </div>
-
-        {/* Step 4: Review & Submit */}
-        <div className={`order-step ${currentStep === 4 ? 'active' : ''}`}>
-          <div className="step-header">
-            <h3>Review & Submit</h3>
-            <p>Review your order details and submit</p>
-          </div>
-          
-          <div className="order-summary">
-            <div className="summary-section">
-              <h4>Order Details</h4>
-              <div className="summary-item">
-                <span>Garment Type:</span>
-                <span>{details.garmentType || 'Not selected'}</span>
-              </div>
-              <div className="summary-item">
-                <span>Expected Delivery:</span>
-                <span>{details.expectedDelivery ? new Date(details.expectedDelivery).toLocaleDateString() : 'Not set'}</span>
-              </div>
-              {details.specialInstructions && (
-                <div className="summary-item">
-                  <span>Special Instructions:</span>
-                  <span>{details.specialInstructions}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="summary-section">
-              <h4>Measurements</h4>
-              {useSaved ? (
-                <div className="summary-item">
-                  <span>Using saved measurements from:</span>
-                  <span>{mhistory.find(h => h._id === selectedHistoryId)?.createdAt ? new Date(mhistory.find(h => h._id === selectedHistoryId).createdAt).toLocaleDateString() : 'Latest'}</span>
-                </div>
-              ) : (
-                <div className="measurements-summary">
-                  {Object.entries(measurements).map(([key, value]) => (
-                    value && (
-                      <div key={key} className="summary-item">
-                        <span>{key.charAt(0).toUpperCase() + key.slice(1)}:</span>
-                        <span>{value}</span>
-                      </div>
-                    )
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="summary-section">
-              <h4>Fabric</h4>
-              {ownFabric ? (
-                <div className="summary-item">
-                  <span>Bringing own fabric:</span>
-                  <span>{ownFabricNotes || 'No description provided'}</span>
-                </div>
-              ) : (
-                <div className="summary-item">
-                  <span>Selected fabric:</span>
-                  <span>{selectedFabric ? `${selectedFabric.name} (${fabricQty} meters)` : 'No fabric selected'}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="summary-section">
-              <h4>Customization</h4>
-              <div className="summary-item">
-                <span>Collar Type:</span>
-                <span>{customization.collarType || 'Not selected'}</span>
-              </div>
-              <div className="summary-item">
-                <span>Sleeve Type:</span>
-                <span>{customization.sleeveType || 'Not selected'}</span>
-              </div>
-              {Object.keys(customization.garmentOptions || {}).length > 0 && (
-                <div className="summary-item" style={{ display:'block' }}>
-                  <span>Requirements:</span>
-                  <div style={{ marginTop: 6 }}>
-                    {Object.entries(customization.garmentOptions).map(([k,v]) => (
-                      <div key={k} style={{ color:'#374151' }}>
-                        {k}: {Array.isArray(v) ? v.join(', ') : (v || '-')}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {customization.hasButtons && (
-                <div className="summary-item">
-                  <span>Features:</span>
-                  <span>Buttons</span>
-                </div>
-              )}
-              {customization.hasZippers && (
-                <div className="summary-item">
-                  <span>Features:</span>
-                  <span>Zippers</span>
-                </div>
-              )}
-              {customization.embroidery.enabled && (
-                <div className="summary-item">
-                  <span>Embroidery:</span>
-                  <span>{customization.embroidery.type} - {customization.embroidery.placements.join(', ')}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="summary-section price-summary">
-              <h4>Price Estimation</h4>
-              <div className="price-breakdown">
-                <div className="price-item">
-                  <span>Base Stitching:</span>
-                  <span>₹{getBasePrice()}</span>
-                </div>
-                {details.urgency === 'urgent' && (
-                  <div className="price-item urgent">
-                    <span>Urgent Delivery:</span>
-                    <span>+₹500</span>
-                  </div>
-                )}
-                {!ownFabric && selectedFabric && (
-                  <div className="price-item">
-                    <span>Fabric Cost:</span>
-                    <span>₹{autoFabricCost}</span>
-                  </div>
-                )}
-                {customization.embroidery.enabled && (
-                  <div className="price-item">
-                    <span>Embroidery:</span>
-                    <span>₹{getEmbroideryPrice()}</span>
-                  </div>
-                )}
-                <div className="price-total">
-                  <span>Estimated Total:</span>
-                  <span>₹{getTotalPrice()}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={prevStep}>
-              ← Back: Fabric & Customization
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => navigate(-1)}>
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              className="btn-primary btn-primary-cta" 
-              disabled={saving}
-              onClick={async (e) => {
-                e.preventDefault(); // Prevent default form submission
-                console.log('🖱️ Create Order & Pay button clicked');
-                
-                if (saving) {
-                  console.log('⚠️ Already saving, ignoring click');
-                  return;
-                }
-                
-                console.log('🖱️ Form data check:', {
-                  garmentType: details.garmentType,
-                  expectedDelivery: details.expectedDelivery,
-                  currentStep: currentStep,
-                  totalPrice: getTotalPrice()
-                });
-                
-                // Check required fields
-                if (!details.garmentType) {
-                  alert('Please select a garment type');
-                  return;
-                }
-                if (!details.expectedDelivery) {
-                  alert('Please select expected delivery date');
-                  return;
-                }
-                
-                // Directly call the submit function
-                console.log('🚀 Starting order creation...');
-                await submit(e);
-              }}
-            >
-              {saving ? 'Creating Order...' : 'Create Order & Pay'}
-            </button>
-          </div>
-        </div>
-        </form>
       </div>
     </DashboardLayout>
   );

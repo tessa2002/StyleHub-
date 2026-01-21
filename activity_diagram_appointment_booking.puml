@@ -1,0 +1,58 @@
+@startuml Activity_Appointment_Booking
+
+skinparam activity {
+  BackgroundColor White
+  BorderColor Black
+  FontColor Black
+}
+
+skinparam arrow {
+  Color Black
+}
+
+title Appointment Booking Activity Diagram
+
+start
+
+:Customer logs in;
+:Customer requests appointment;
+:Fill appointment form\n(service, preferred date/time);
+:Submit appointment request;
+
+:Create appointment\n(status = "Pending");
+:Send notification to admin/staff;
+
+:Admin/Staff views pending appointments;
+:Admin/Staff reviews appointment details;
+
+if (Appointment approved?) then (yes)
+  :Update appointment status to "Scheduled";
+  :Set approved = true;
+  :Set approvedBy and approvedAt;
+  :Send notification to customer;
+  
+  :Customer receives approval;
+  :Customer views scheduled appointment;
+  
+  :Appointment date arrives;
+  :Conduct appointment;
+  :Take measurements (if needed);
+  :Update appointment status to "Completed";
+  
+  if (Order created from appointment?) then (yes)
+    :Create order;
+    :Link order to appointment;
+    stop
+  else (no)
+    stop
+  endif
+else (no)
+  :Update appointment status to "Cancelled";
+  :Set approved = false;
+  :Send rejection notification to customer;
+  stop
+endif
+
+@enduml
+
+

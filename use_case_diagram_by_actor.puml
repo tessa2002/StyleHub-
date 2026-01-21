@@ -1,0 +1,252 @@
+@startuml Use_Case_Diagram_By_Actor
+
+!define RECTANGLE(name) rectangle name ##[#FFAAAA]
+
+' ============================================
+' CUSTOMER USE CASES
+' ============================================
+RECTANGLE("Customer Use Cases") {
+  actor Customer
+
+  package "Authentication & Profile" {
+    usecase "Register Account" as C1
+    usecase "Login" as C2
+    usecase "View Profile" as C3
+    usecase "Update Profile" as C4
+  }
+
+  package "Measurements" {
+    usecase "View Measurements" as C5
+    usecase "Update Measurements" as C6
+  }
+
+  package "Orders" {
+    usecase "Place Order" as C7
+    usecase "View My Orders" as C8
+    usecase "Track Order Status" as C9
+    usecase "View Order Details" as C10
+    usecase "Cancel Order" as C11
+  }
+
+  package "Appointments" {
+    usecase "Book Appointment" as C12
+    usecase "View Appointments" as C13
+    usecase "Cancel Appointment" as C14
+  }
+
+  package "Payment" {
+    usecase "View Bills" as C15
+    usecase "Make Payment" as C16
+    usecase "View Payment History" as C17
+  }
+
+  package "Catalog" {
+    usecase "Browse Fabrics" as C18
+    usecase "View Fabric Details" as C19
+  }
+
+  package "Notifications" {
+    usecase "View Notifications" as C20
+    usecase "Mark as Read" as C21
+  }
+
+  Customer --> C1
+  Customer --> C2
+  Customer --> C3
+  Customer --> C4
+  Customer --> C5
+  Customer --> C6
+  Customer --> C7
+  Customer --> C8
+  Customer --> C9
+  Customer --> C10
+  Customer --> C11
+  Customer --> C12
+  Customer --> C13
+  Customer --> C14
+  Customer --> C15
+  Customer --> C16
+  Customer --> C17
+  Customer --> C18
+  Customer --> C19
+  Customer --> C20
+  Customer --> C21
+
+  C7 ..> C12 : <<extend>>
+  C7 ..> C18 : <<extend>>
+  C9 ..> C20 : <<extend>>
+}
+
+' ============================================
+' ADMIN USE CASES
+' ============================================
+RECTANGLE("Admin Use Cases") {
+  actor Admin
+
+  package "User Management" {
+    usecase "Manage Users" as A1
+    usecase "Create Staff Account" as A2
+    usecase "Create Tailor Account" as A3
+    usecase "Suspend/Activate User" as A4
+  }
+
+  package "Customer Management" {
+    usecase "View All Customers" as A5
+    usecase "Add Customer" as A6
+    usecase "Edit Customer" as A7
+    usecase "View Customer Details" as A8
+    usecase "Manage Measurements" as A9
+  }
+
+  package "Order Management" {
+    usecase "View All Orders" as A10
+    usecase "Create Order" as A11
+    usecase "Update Order Status" as A12
+    usecase "Assign to Tailor" as A13
+    usecase "Edit Order" as A14
+    usecase "Delete Order" as A15
+  }
+
+  package "Fabric Management" {
+    usecase "Add Fabric" as A16
+    usecase "Edit Fabric" as A17
+    usecase "Delete Fabric" as A18
+    usecase "Manage Stock" as A19
+    usecase "View Inventory" as A20
+  }
+
+  package "Appointment Management" {
+    usecase "View All Appointments" as A21
+    usecase "Approve Appointment" as A22
+    usecase "Reject Appointment" as A23
+    usecase "Reschedule" as A24
+  }
+
+  package "Billing" {
+    usecase "Create Bill" as A25
+    usecase "View All Bills" as A26
+    usecase "Process Payment" as A27
+  }
+
+  package "Analytics" {
+    usecase "View Dashboard" as A28
+    usecase "View Analytics" as A29
+    usecase "Generate Reports" as A30
+  }
+
+  Admin --> A1
+  Admin --> A2
+  Admin --> A3
+  Admin --> A4
+  Admin --> A5
+  Admin --> A6
+  Admin --> A7
+  Admin --> A8
+  Admin --> A9
+  Admin --> A10
+  Admin --> A11
+  Admin --> A12
+  Admin --> A13
+  Admin --> A14
+  Admin --> A15
+  Admin --> A16
+  Admin --> A17
+  Admin --> A18
+  Admin --> A19
+  Admin --> A20
+  Admin --> A21
+  Admin --> A22
+  Admin --> A23
+  Admin --> A24
+  Admin --> A25
+  Admin --> A26
+  Admin --> A27
+  Admin --> A28
+  Admin --> A29
+  Admin --> A30
+
+  A12 ..> A13 : <<extend>>
+  A11 ..> A8 : <<include>>
+}
+
+' ============================================
+' STAFF USE CASES
+' ============================================
+RECTANGLE("Staff Use Cases") {
+  actor Staff
+
+  package "Order Management" {
+    usecase "View Orders" as S1
+    usecase "Create Order" as S2
+    usecase "Update Order" as S3
+    usecase "Assign to Tailor" as S4
+  }
+
+  package "Customer Management" {
+    usecase "View Customers" as S5
+    usecase "Add Customer" as S6
+    usecase "Edit Customer" as S7
+    usecase "Manage Measurements" as S8
+  }
+
+  package "Appointments" {
+    usecase "View Appointments" as S9
+    usecase "Approve Appointments" as S10
+  }
+
+  Staff --> S1
+  Staff --> S2
+  Staff --> S3
+  Staff --> S4
+  Staff --> S5
+  Staff --> S6
+  Staff --> S7
+  Staff --> S8
+  Staff --> S9
+  Staff --> S10
+
+  S2 ..> S6 : <<include>>
+}
+
+' ============================================
+' TAILOR USE CASES
+' ============================================
+RECTANGLE("Tailor Use Cases") {
+  actor Tailor
+
+  package "Order Management" {
+    usecase "View Assigned Orders" as T1
+    usecase "Accept Order" as T2
+    usecase "Start Work" as T3
+    usecase "Update Stage" as T4
+    usecase "Mark Ready" as T5
+    usecase "Request Changes" as T6
+    usecase "Add Notes" as T7
+  }
+
+  package "Customer Info" {
+    usecase "View Customer Details" as T8
+    usecase "View Measurements" as T9
+  }
+
+  package "Notifications" {
+    usecase "View Notifications" as T10
+  }
+
+  Tailor --> T1
+  Tailor --> T2
+  Tailor --> T3
+  Tailor --> T4
+  Tailor --> T5
+  Tailor --> T6
+  Tailor --> T7
+  Tailor --> T8
+  Tailor --> T9
+  Tailor --> T10
+
+  T3 ..> T4 : <<extend>>
+}
+
+@enduml
+
+

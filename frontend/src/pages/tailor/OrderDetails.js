@@ -38,6 +38,16 @@ export default function OrderDetails() {
         return;
       }
       
+      // 🔍 DEBUG: Log order data and attachments
+      console.log('🔍 ORDER DATA:', foundOrder);
+      console.log('📸 ATTACHMENTS:', foundOrder.attachments);
+      console.log('📸 Attachment count:', foundOrder.attachments?.length || 0);
+      if (foundOrder.attachments && foundOrder.attachments.length > 0) {
+        console.log('✅ Order HAS attachments:', foundOrder.attachments);
+      } else {
+        console.warn('⚠️ Order has NO attachments. Customer did not upload reference images.');
+      }
+      
       setOrder(foundOrder);
     } catch (error) {
       console.error('Error fetching order details:', error);
@@ -264,6 +274,110 @@ export default function OrderDetails() {
               </div>
             </div>
           )}
+
+          {/* Reference Images from Customer - ALWAYS VISIBLE */}
+          <div className="details-section">
+            <div className="section-header">
+              <FaStickyNote />
+              <h2>📸 Reference Images from Customer</h2>
+            </div>
+            
+            {order.attachments && order.attachments.length > 0 ? (
+              <div>
+                <p style={{ fontSize: '0.875rem', color: '#10b981', marginBottom: '16px', fontWeight: '600' }}>
+                  ✅ Customer uploaded {order.attachments.filter(att => att.category === 'Sketch' || att.mimeType?.startsWith('image/')).length} reference image(s)
+                </p>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  gap: '16px',
+                  marginTop: '12px'
+                }}>
+                  {order.attachments
+                    .filter(att => att.category === 'Sketch' || att.mimeType?.startsWith('image/'))
+                    .map((attachment, index) => (
+                      <div 
+                        key={index}
+                        style={{
+                          position: 'relative',
+                          borderRadius: '12px',
+                          overflow: 'hidden',
+                          border: '2px solid #e5e7eb',
+                          backgroundColor: '#f8f9fa',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                        }}
+                        onClick={() => window.open(attachment.url, '_blank')}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'scale(1.02)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                        }}
+                      >
+                        <img 
+                          src={attachment.url}
+                          alt={attachment.filename || `Reference ${index + 1}`}
+                          style={{
+                            width: '100%',
+                            height: '200px',
+                            objectFit: 'cover'
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#64748b;">Image not available</div>';
+                          }}
+                        />
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
+                          padding: '24px 12px 8px',
+                          color: 'white',
+                          fontSize: '0.75rem',
+                          fontWeight: '500'
+                        }}>
+                          Reference {index + 1}
+                        </div>
+                        <div style={{
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px',
+                          background: 'rgba(79, 70, 229, 0.9)',
+                          color: 'white',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.7rem',
+                          fontWeight: '600'
+                        }}>
+                          🔍 Click to enlarge
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                padding: '24px',
+                background: '#fef3c7',
+                borderRadius: '8px',
+                border: '2px dashed #f59e0b',
+                textAlign: 'center'
+              }}>
+                <p style={{ fontSize: '0.9rem', color: '#92400e', marginBottom: '8px', fontWeight: '600' }}>
+                  ⚠️ No reference images attached
+                </p>
+                <p style={{ fontSize: '0.8rem', color: '#78716c' }}>
+                  Customer did not upload any reference photos for this order
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Items List */}
           {order.items && order.items.length > 0 && (

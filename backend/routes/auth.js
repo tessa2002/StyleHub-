@@ -1,11 +1,15 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require('google-auth-library');
 const User = require("../models/User");
 const Customer = require("../models/Customer");
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
+
+// Initialize Google OAuth client
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Register endpoint (test-friendly version)
 router.post("/register", async (req, res) => {
@@ -43,6 +47,110 @@ router.post("/register", async (req, res) => {
   } catch (err) {
     console.error("❌ Register error:", err.message);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Google OAuth login endpoint
+router.post("/google", async (req, res) => {
+  try {
+    const { credential } = req.body;
+    
+    if (!credential) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Google credential is required" 
+      });
+    }
+
+    // Verify the Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Email not provided by Google" 
+      });
+    }
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+    
+    if (user) {
+      // User exists, update Google ID if not set
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+    } else {
+      // Create new user with Google account
+      const hashedPassword = await bcrypt.hash(googleId + email, 10); // Use Google ID + email as password
+      
+      user = await User.create({
+        name: name || email.split('@')[0],
+        email,
+        password: hashedPassword,
+        role: "Customer", // Default role for Google sign-ups
+        phone: "", // Will be empty, user can update later
+        googleId,
+        profilePicture: picture
+      });
+
+      // Create linked Customer profile
+      try {
+        await Customer.create({
+          name: user.name,
+          email: user.email,
+          phone: "",
+          address: "",
+          user: user._id
+        });
+      } catch (customerError) {
+        // If customer creation fails, delete the user and return error
+        await User.findByIdAndDelete(user._id);
+        console.error("❌ Customer creation error:", customerError);
+        return res.status(500).json({ 
+          success: false, 
+          error: "Failed to create customer profile" 
+        });
+      }
+    }
+
+    // Generate JWT token
+    const jwtPayload = { id: user._id, role: user.role };
+    const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: "7d" });
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profilePicture: user.profilePicture
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Google OAuth error:", error);
+    
+    if (error.message && error.message.includes('Token used too early')) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Invalid Google token timing" 
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      error: "Google authentication failed" 
+    });
   }
 });
 
