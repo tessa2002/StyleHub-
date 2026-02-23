@@ -23,6 +23,7 @@ import {
   FaCheck
 } from 'react-icons/fa';
 import DashboardLayout from '../../components/DashboardLayout';
+import VirtualGarmentPreview from '../../components/VirtualGarmentPreview';
 import { toast } from 'react-toastify';
 import './NewOrder.css';
 
@@ -1095,26 +1096,13 @@ export default function PortalNewOrder() {
                     {bodyShape && <span className="shape-tag">Tailored for: <strong>{bodyShape}</strong></span>}
                   </div>
                   <div className="garment-render 3d-effect">
-                    <img 
-                      src={getGarmentPreview()} 
-                      alt="Garment Preview" 
-                      className="preview-image 3d-model"
+                    <VirtualGarmentPreview
+                      garmentType={garmentType}
+                      measurements={measurementMode === 'saved' ? profile.customer?.measurements : measurements}
+                      bodyShape={bodyShape}
+                      silhouette={silhouette}
+                      selectedFabric={selectedFabric}
                     />
-                    {selectedFabric && (
-                      <div className="fabric-swatch-overlay">
-                        <img src={selectedFabric.images?.[0]?.url || 'https://images.unsplash.com/photo-1601662528567-526cd06f6582?w=100'} alt="Fabric Swatch" />
-                        <span>Applying {selectedFabric.name}</span>
-                      </div>
-                    )}
-                    <div className="preview-dot dot-neckline" style={{ top: '35%', left: '46%' }}></div>
-                    <div className="preview-dot dot-waist" style={{ top: '56%', left: '43%' }}></div>
-                  </div>
-                  
-                  <div className="canvas-controls">
-                    <button className="canvas-btn" title="Rotate"><FaUndo /></button>
-                    <button className="canvas-btn" title="Zoom In"><FaPlus /></button>
-                    <button className="canvas-btn" title="Zoom Out"><FaMinus /></button>
-                    <button className="canvas-btn" title="Reset View"><FaSync /></button>
                   </div>
                   
                   <div className="canvas-footer-info">

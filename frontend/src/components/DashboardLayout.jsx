@@ -23,11 +23,6 @@ export default function DashboardLayout({ title, actions, children, showTitle = 
 
   const isCustomer = user?.role === 'Customer';
   const isAdmin = user?.role === 'Admin';
-  
-  // Debug: Log user role and sidebar visibility
-  console.log('DashboardLayout - user:', user);
-  console.log('DashboardLayout - isAdmin:', isAdmin);
-  console.log('DashboardLayout - isCustomer:', isCustomer);
 
   return (
     <div className="dashboard-root">

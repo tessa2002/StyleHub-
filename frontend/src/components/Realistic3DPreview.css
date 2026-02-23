@@ -1,0 +1,166 @@
+.realistic-3d-preview {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Canvas container */
+.realistic-3d-preview canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* Controls overlay */
+.preview-controls-3d {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.control-btn-3d {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(233, 30, 99, 0.3);
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e91e63;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-btn-3d:hover {
+  background: #e91e63;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(233, 30, 99, 0.3);
+}
+
+.control-hint {
+  font-size: 11px;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 12px;
+  border-radius: 12px;
+  backdrop-filter: blur(5px);
+}
+
+/* Info badges */
+.preview-info-3d {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+}
+
+.info-badge-3d {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 8px 14px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(233, 30, 99, 0.2);
+}
+
+.badge-label-3d {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.badge-value-3d {
+  color: #e91e63;
+  font-weight: 700;
+}
+
+/* Loading state */
+.realistic-3d-preview::before {
+  content: 'Loading 3D Model...';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 600;
+  z-index: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .realistic-3d-preview {
+    height: 500px;
+  }
+  
+  .preview-info-3d {
+    top: 10px;
+    left: 10px;
+  }
+  
+  .info-badge-3d {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+  
+  .preview-controls-3d {
+    bottom: 15px;
+  }
+  
+  .control-btn-3d {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+}
+
+/* Animation for loading */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.realistic-3d-preview::before {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* 3D badge indicator */
+.realistic-3d-preview::after {
+  content: '3D';
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #e91e63 0%, #9c27b0 100%);
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+  z-index: 10;
+}

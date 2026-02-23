@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import { 
-  FaShoppingBag, FaPlus, FaSearch, FaEdit, FaTrash, FaEye,
-  FaUser, FaCalendarAlt, FaClock, FaCheckCircle, FaExclamationTriangle,
-  FaFilter, FaDownload, FaPrint, FaUserTie, FaBell, FaArrowUp, FaArrowDown,
-  FaEllipsisH, FaChevronLeft, FaChevronRight
+  FaShoppingBag, FaPlus, FaSearch, FaEdit, FaTrash,
+  FaUser, FaCheckCircle, FaExclamationTriangle,
+  FaFilter, FaUserTie, FaChevronDown, FaCog, FaSignOutAlt
 } from 'react-icons/fa';
 import './Orders.css';
 
 const Orders = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [tailors, setTailors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -307,18 +309,33 @@ const Orders = () => {
             </div>
             <span>Clients</span>
           </Link>
-          <Link to="/admin/fabrics" className="nav-item">
+          <Link to="/admin/staff" className="nav-item">
             <div className="nav-icon-wrapper">
-              <FaShoppingBag className="nav-icon" />
+              <FaUserTie className="nav-icon" />
             </div>
-            <span>Inventory</span>
+            <span>Tailors</span>
           </Link>
-          <Link to="/admin/reports" className="nav-item">
+          <Link to="/admin/settings" className="nav-item">
             <div className="nav-icon-wrapper">
-              <FaShoppingBag className="nav-icon" />
+              <FaCog className="nav-icon" />
             </div>
-            <span>Reports</span>
+            <span>Settings</span>
           </Link>
+          
+          <div className="nav-section-divider"></div>
+          
+          <button 
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }} 
+            className="nav-item logout-btn"
+          >
+            <div className="nav-icon-wrapper">
+              <FaSignOutAlt className="nav-icon" />
+            </div>
+            <span>Logout</span>
+          </button>
         </nav>
 
         <div className="sidebar-footer">

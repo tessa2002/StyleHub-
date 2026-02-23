@@ -399,4 +399,30 @@ router.get('/fabrics', auth, requireTailor, async (req, res) => {
   }
 });
 
+// Get upcoming fittings for tailor
+router.get('/fittings', auth, requireTailor, async (req, res) => {
+  try {
+    const tailorId = req.user._id;
+    
+    // Find orders assigned to this tailor
+    const orderIds = await Order.find({ assignedTailor: tailorId }).distinct('_id');
+    
+    // Find appointments related to these orders or specifically for this tailor if they were assigned directly (though currently appointments are linked to orders)
+    const Appointment = require('../models/Appointment');
+    const fittings = await Appointment.find({
+      relatedOrder: { $in: orderIds },
+      scheduledAt: { $gte: new Date() },
+      status: { $in: ['Scheduled', 'Pending'] }
+    })
+    .populate('customer', 'name phone')
+    .populate('relatedOrder', 'orderNumber itemType')
+    .sort({ scheduledAt: 1 });
+
+    res.json(fittings);
+  } catch (error) {
+    console.error('Error fetching tailor fittings:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

@@ -15,6 +15,7 @@ const TailorDashboard = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fittings, setFittings] = useState([]);
   const [stats, setStats] = useState({
     completedToday: 0,
     pendingTasks: 0,
@@ -218,23 +219,31 @@ const TailorDashboard = () => {
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-label">COMPLETED TODAY</div>
-            <div className="stat-number">4</div>
-            <div className="stat-change">+20% vs yesterday</div>
+            <div className="stat-number">{stats.completedToday}</div>
+            <div className="stat-change">Today's productivity</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">PENDING TASKS</div>
-            <div className="stat-number">6</div>
-            <div className="stat-change">High priority</div>
+            <div className="stat-number">{stats.pendingTasks}</div>
+            <div className="stat-change">Awaiting completion</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">ACTIVE FITTINGS</div>
-            <div className="stat-number">3</div>
-            <div className="stat-change">This afternoon</div>
+            <div className="stat-number">{stats.activeFittings}</div>
+            <div className="stat-change">Scheduled trials</div>
           </div>
           <div className="stat-card next-fitting">
             <div className="fitting-title">NEXT FITTING</div>
-            <div className="fitting-client">Mr. Harrison</div>
-            <div className="fitting-time">2:00 PM • Tuxedo Final</div>
+            {nextFitting ? (
+              <>
+                <div className="fitting-client">{nextFitting.customer?.name || 'Unknown Client'}</div>
+                <div className="fitting-time">
+                  {new Date(nextFitting.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {nextFitting.relatedOrder?.itemType || 'Garment Trial'}
+                </div>
+              </>
+            ) : (
+              <div className="fitting-client">No upcoming fittings</div>
+            )}
           </div>
         </div>
 

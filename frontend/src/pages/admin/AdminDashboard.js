@@ -30,6 +30,12 @@ const AdminDashboard = () => {
     finishing: 0,
     ready: 0
   });
+  const [workflowOrders, setWorkflowOrders] = useState({
+    cutting: [],
+    stitching: [],
+    finishing: [],
+    ready: []
+  });
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -117,35 +123,51 @@ const AdminDashboard = () => {
         ready: 0
       };
 
+      const workflowItems = {
+        cutting: [],
+        stitching: [],
+        finishing: [],
+        ready: []
+      };
+
       ordersArray.forEach(order => {
         const status = (order.status || '').toLowerCase();
+        const orderInfo = {
+          id: order.id || order._id,
+          client: order.customerName || order.customer?.name || 'Unknown',
+          type: order.garmentType || order.itemType || 'Garment'
+        };
+
         switch (status) {
           case 'cutting':
           case 'pattern making':
           case 'fabric cutting':
             workflowCounts.cutting++;
+            if (workflowItems.cutting.length < 3) workflowItems.cutting.push(orderInfo);
             break;
           case 'stitching':
           case 'sewing':
           case 'in progress':
           case 'tailoring':
             workflowCounts.stitching++;
+            if (workflowItems.stitching.length < 3) workflowItems.stitching.push(orderInfo);
             break;
           case 'finishing':
           case 'quality check':
           case 'final touches':
           case 'pressing':
+          case 'trial':
             workflowCounts.finishing++;
+            if (workflowItems.finishing.length < 3) workflowItems.finishing.push(orderInfo);
             break;
           case 'ready':
           case 'completed':
           case 'ready for pickup':
           case 'ready for delivery':
             workflowCounts.ready++;
+            if (workflowItems.ready.length < 3) workflowItems.ready.push(orderInfo);
             break;
           default:
-            // Orders that are not yet in production (pending, order placed, etc.)
-            // Don't count these in the production workflow
             break;
         }
       });
@@ -164,6 +186,7 @@ const AdminDashboard = () => {
       setTodaysFittings(fittingsData);
       setRecentOrders(recentOrdersData);
       setProductionWorkflow(workflowCounts);
+      setWorkflowOrders(workflowItems);
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -500,6 +523,54 @@ const AdminDashboard = () => {
               <span>STITCHING</span>
               <span>FINISHING</span>
               <span>READY</span>
+            </div>
+
+            {/* Current Workflow Detail View */}
+            <div className="current-workflow">
+              <div className="workflow-stage-column">
+                {workflowOrders.cutting.map(order => (
+                  <div key={order.id} className="workflow-item-mini">
+                    <span className="dot cutting"></span>
+                    <div className="item-info">
+                      <p className="item-client">{order.client}</p>
+                      <p className="item-type">{order.type}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="workflow-stage-column">
+                {workflowOrders.stitching.map(order => (
+                  <div key={order.id} className="workflow-item-mini">
+                    <span className="dot stitching"></span>
+                    <div className="item-info">
+                      <p className="item-client">{order.client}</p>
+                      <p className="item-type">{order.type}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="workflow-stage-column">
+                {workflowOrders.finishing.map(order => (
+                  <div key={order.id} className="workflow-item-mini">
+                    <span className="dot finishing"></span>
+                    <div className="item-info">
+                      <p className="item-client">{order.client}</p>
+                      <p className="item-type">{order.type}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="workflow-stage-column">
+                {workflowOrders.ready.map(order => (
+                  <div key={order.id} className="workflow-item-mini">
+                    <span className="dot ready"></span>
+                    <div className="item-info">
+                      <p className="item-client">{order.client}</p>
+                      <p className="item-type">{order.type}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

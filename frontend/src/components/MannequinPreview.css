@@ -1,0 +1,216 @@
+.mannequin-preview {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.mannequin-preview canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* Controls */
+.mannequin-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.control-btn-mannequin {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(233, 30, 99, 0.3);
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #e91e63;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-btn-mannequin:hover {
+  background: #e91e63;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(233, 30, 99, 0.4);
+}
+
+.control-hint-mannequin {
+  font-size: 11px;
+  color: #6c757d;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 6px 14px;
+  border-radius: 15px;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Info badges */
+.mannequin-info {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10;
+}
+
+.info-badge-mannequin {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  padding: 10px 16px;
+  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(233, 30, 99, 0.15);
+}
+
+.realistic-badge {
+  background: linear-gradient(135deg, #e91e63 0%, #9c27b0 100%);
+  color: white;
+  font-weight: 700;
+  border: none;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 2px 10px rgba(233, 30, 99, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(233, 30, 99, 0.6);
+  }
+}
+
+.badge-label {
+  color: #6c757d;
+  font-weight: 600;
+}
+
+.badge-value {
+  color: #e91e63;
+  font-weight: 700;
+}
+
+/* Fallback notice */
+.fallback-notice {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 193, 7, 0.95);
+  color: #856404;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  z-index: 10;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.fallback-notice a {
+  color: #e91e63;
+  text-decoration: underline;
+  margin-left: 4px;
+}
+
+.fallback-notice a:hover {
+  color: #c2185b;
+}
+
+.error-notice {
+  background: rgba(220, 53, 69, 0.95);
+  color: white;
+}
+
+/* Loading state */
+.mannequin-preview::before {
+  content: 'Loading Mannequin...';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 600;
+  z-index: 1;
+  animation: pulse-text 2s ease-in-out infinite;
+}
+
+@keyframes pulse-text {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .mannequin-preview {
+    height: 500px;
+  }
+  
+  .mannequin-info {
+    top: 10px;
+    left: 10px;
+  }
+  
+  .info-badge-mannequin {
+    font-size: 11px;
+    padding: 8px 12px;
+  }
+  
+  .mannequin-controls {
+    bottom: 15px;
+  }
+  
+  .control-btn-mannequin {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+  
+  .fallback-notice {
+    bottom: 60px;
+    font-size: 10px;
+    padding: 6px 12px;
+  }
+}
+
+/* 3D indicator badge */
+.mannequin-preview::after {
+  content: '3D MANNEQUIN';
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 8px 14px;
+  border-radius: 20px;
+  letter-spacing: 1.2px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  z-index: 10;
+}

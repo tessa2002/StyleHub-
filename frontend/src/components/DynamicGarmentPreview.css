@@ -1,0 +1,233 @@
+.dynamic-garment-preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fafbfc 0%, #e8eef3 100%);
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.garment-svg {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.1));
+  transition: transform 0.3s ease;
+}
+
+.garment-svg:hover {
+  transform: scale(1.01);
+}
+
+/* Body mannequin styling */
+.body-mannequin {
+  transition: opacity 0.3s ease;
+}
+
+.body-mannequin ellipse,
+.body-mannequin path,
+.body-mannequin rect {
+  transition: all 0.3s ease;
+}
+
+/* Face features */
+.face-features {
+  pointer-events: none;
+}
+
+/* Arms */
+.arms path {
+  transition: opacity 0.3s ease;
+}
+
+.dynamic-garment-preview:hover .arms path {
+  opacity: 0.7;
+}
+
+/* Measurement guides */
+.measurement-guides {
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.dynamic-garment-preview:hover .measurement-guides {
+  opacity: 0.8 !important;
+}
+
+.measurement-guides text {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-weight: 600;
+}
+
+/* Garment body styling */
+.garment-body {
+  transition: all 0.4s ease;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.garment-body:hover {
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.25));
+}
+
+/* Sleeve styling */
+.garment-sleeve {
+  fill: inherit;
+  stroke: #8b7355;
+  stroke-width: 2;
+  opacity: 0.95;
+  transition: opacity 0.3s ease;
+}
+
+/* Neckline styling */
+.garment-neckline {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke-width 0.3s ease;
+}
+
+.garment-neckline:hover {
+  stroke-width: 3;
+}
+
+/* Body silhouette guide */
+.body-silhouette {
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.dynamic-garment-preview:hover .body-mannequin {
+  opacity: 1;
+}
+
+/* Show body measurements on hover */
+.dynamic-garment-preview:hover .body-mannequin .measurement-guides {
+  opacity: 0.9 !important;
+}
+
+/* Embroidery layer */
+.embroidery-layer {
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Measurement indicators */
+.measurement-indicators {
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.dynamic-garment-preview:hover .measurement-indicators {
+  opacity: 0.8 !important;
+}
+
+/* Realistic body shading */
+.body-mannequin ellipse:first-child {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.body-mannequin path {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.08));
+}
+
+/* Hair styling */
+.body-mannequin ellipse:nth-of-type(2) {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+}
+
+/* Info overlay badges */
+.preview-info-overlay {
+  position: absolute;
+  bottom: 15px;
+  left: 15px;
+  right: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.info-badge {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 6px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(233, 30, 99, 0.2);
+}
+
+.badge-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.badge-value {
+  color: #e91e63;
+  font-weight: 700;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dynamic-garment-preview {
+    padding: 10px;
+  }
+  
+  .garment-svg {
+    max-width: 300px;
+  }
+  
+  .preview-info-overlay {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+  }
+  
+  .info-badge {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+}
+
+/* Animation for initial load */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.garment-svg {
+  animation: fadeInScale 0.6s ease-out;
+}
+
+/* Fabric texture effects */
+.garment-body[fill*="silk"] {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)) brightness(1.05);
+}
+
+.garment-body[fill*="velvet"] {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) saturate(1.2);
+}
+
+.garment-body[fill*="cotton"] {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+}

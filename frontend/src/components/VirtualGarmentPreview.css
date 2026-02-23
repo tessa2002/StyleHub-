@@ -1,0 +1,195 @@
+/* Virtual Garment Preview - 2D Image Based */
+
+.virtual-garment-preview {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Preview Container - Relative positioning for layering */
+.preview-container {
+  position: relative;
+  width: 80%;
+  max-width: 400px;
+  height: 90%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Base Layer: Body Silhouette */
+.body-layer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+  z-index: 1;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
+}
+
+/* Overlay Layer: Garment */
+.garment-layer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+  z-index: 2;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.15));
+  transition: filter 0.3s ease;
+}
+
+/* Info Badges */
+.preview-info-badges {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10;
+}
+
+.info-badge {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  padding: 10px 16px;
+  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(233, 30, 99, 0.15);
+}
+
+.badge-label {
+  color: #6c757d;
+  font-weight: 600;
+}
+
+.badge-value {
+  color: #e91e63;
+  font-weight: 700;
+}
+
+/* Measurement Display */
+.measurement-display {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 15px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  padding: 12px 20px;
+  border-radius: 30px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.measurement-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.measurement-label {
+  color: #6c757d;
+  font-weight: 600;
+}
+
+.measurement-value {
+  color: #e91e63;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .virtual-garment-preview {
+    height: 500px;
+  }
+  
+  .preview-container {
+    width: 90%;
+  }
+  
+  .preview-info-badges {
+    top: 10px;
+    left: 10px;
+  }
+  
+  .info-badge {
+    font-size: 11px;
+    padding: 8px 12px;
+  }
+  
+  .measurement-display {
+    bottom: 15px;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 16px;
+  }
+  
+  .measurement-item {
+    font-size: 11px;
+  }
+  
+  .measurement-value {
+    font-size: 12px;
+  }
+}
+
+/* Loading State */
+.body-layer,
+.garment-layer {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Hover Effects */
+.preview-container:hover .garment-layer {
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.2));
+}
+
+/* 2D Badge Indicator */
+.virtual-garment-preview::after {
+  content: 'VIRTUAL TRY-ON';
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 8px 14px;
+  border-radius: 20px;
+  letter-spacing: 1.2px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  z-index: 10;
+}
