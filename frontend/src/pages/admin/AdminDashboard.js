@@ -6,7 +6,7 @@ import {
   FaUsers, FaShoppingBag, FaCalendarAlt, FaCut, FaUserTie,
   FaBell, FaCog, FaPlus, FaEye, FaChevronRight, FaArrowUp,
   FaArrowDown, FaClock, FaCheckCircle, FaExclamationTriangle,
-  FaSearch, FaFilter, FaFileExport, FaEllipsisH, FaBox
+  FaSearch, FaFilter, FaFileExport, FaEllipsisH, FaBox, FaBrain
 } from 'react-icons/fa';
 import './AdminDashboard.css';
 
@@ -323,6 +323,12 @@ const AdminDashboard = () => {
             </div>
             <span>Inventory</span>
           </Link>
+          <Link to="/admin/ml" className="nav-item">
+            <div className="nav-icon-wrapper">
+              <FaBrain className="nav-icon" />
+            </div>
+            <span>🤖 AI/ML</span>
+          </Link>
           
           <div className="nav-section-title">PREFERENCES</div>
           <Link to="/admin/settings" className="nav-item">
@@ -421,15 +427,15 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="stat-card">
+          <div className="stat-card" onClick={() => navigate('/admin/ml')} style={{ cursor: 'pointer' }}>
             <div className="stat-icon tailors">
-              <FaUserTie />
+              <FaBrain />
             </div>
             <div className="stat-content">
-              <div className="stat-label">Active Tailors</div>
-              <div className="stat-value">{stats.activeTailors}</div>
-              <div className="stat-change active">
-                Active Now
+              <div className="stat-label">AI/ML MODELS</div>
+              <div className="stat-value">5 Active</div>
+              <div className="stat-change positive">
+                <FaCheckCircle /> Optimized
               </div>
             </div>
           </div>

@@ -370,35 +370,57 @@ router.get('/bills/by-order/:orderId', auth, allowRoles('Customer'), async (req,
       if (!amount || amount === 0) {
         console.log(`⚠️ Order has totalAmount = 0, calculating from garment type...`);
         const basePrices = {
-          'shirt': 800,
-          'pants': 600,
-          'suit': 2000,
-          'dress': 1200,
-          'kurta': 1000,
-          'blouse': 800,
-          'lehenga': 2500,
-          'jacket': 1500,
-          'other': 1000
+          'Saree': 2500,
+          'Kurthi': 1500,
+          'Short Kurthi': 1200,
+          'Lehenga': 5000,
+          'Salwar Kameez': 2200,
+          'Gown': 4500,
+          'Anarkali': 3500,
+          'Palazzo Set': 2800,
+          'Sharara': 4000,
+          'Gharara': 4200,
+          'Indo-Western Dress': 3800,
+          'Crop Top & Skirt': 2500,
+          'Jacket': 2000,
+          'Blouse': 1200,
+          'Dupatta': 800,
+          'Pants': 1800,
+          'Skirt': 1500,
+          'Sherwani': 6000,
+          'Kurta (Men)': 2000,
+          'Nehru Jacket': 2500,
+          'Dhoti': 1000,
+          'Pajama': 1500
         };
         
-        const garmentType = (order.itemType || '').toLowerCase();
-        amount = basePrices[garmentType] || 1000;
+        const garmentType = order.itemType || 'other';
+        const basePrice = basePrices[garmentType] || 2000;
+        const customization = 350;
+        let subtotal = basePrice + customization;
         
         // Add fabric cost if exists
         if (order.fabric && order.fabric.source === 'shop' && order.fabric.cost) {
-          amount += Number(order.fabric.cost);
+          subtotal += Number(order.fabric.cost);
         }
         
         // Add embroidery cost if exists
         if (order.customizations?.embroidery?.enabled) {
           const embroideryTotal = order.customizations.embroidery.pricing?.total || 0;
-          amount += embroideryTotal;
+          subtotal += embroideryTotal;
+        }
+
+        // Add lining cost if exists
+        if (order.customizations?.hasLining) {
+          subtotal += 500;
         }
         
         // Add urgency charge
-        if (order.urgency === 'urgent') {
-          amount += 500;
-        }
+        let urgencyCharge = 0;
+        if (order.urgency === 'express') urgencyCharge = Math.round(subtotal * 0.2);
+        if (order.urgency === 'urgent') urgencyCharge = Math.round(subtotal * 0.4);
+        
+        amount = subtotal + urgencyCharge;
         
         console.log(`💰 Calculated amount: ₹${amount} for ${order.itemType}`);
         
@@ -482,7 +504,7 @@ router.post('/orders', auth, allowRoles('Customer'), async (req, res) => {
     const customer = await getCustomerByUser(req.user.id);
     if (!customer) return res.status(404).json({ message: 'Customer profile not found' });
 
-    const { garmentType, items = [], measurementSnapshot = {}, measurements, notes, specialInstructions, expectedDelivery, urgency, fabric, customizations, sleeveType, collarType, hasButtons, hasZippers, requirements, embroidery } = req.body;
+    const { garmentType, items = [], measurementSnapshot = {}, measurements, notes, specialInstructions, expectedDelivery, urgency, fabric, customizations, sleeveType, collarType, hasButtons, hasZippers, requirements, embroidery, materialSource } = req.body;
 
     console.log('📝 Creating order with data:', { garmentType, urgency, fabric: fabric?.source, embroidery: embroidery?.enabled || customizations?.embroidery?.enabled });
 
@@ -516,11 +538,64 @@ router.post('/orders', auth, allowRoles('Customer'), async (req, res) => {
       'Short Kurthi': 1200,
       'Lehenga': 5000,
       'Salwar Kameez': 2200,
-      'Gown': 4500
+      'Gown': 4500,
+      'Anarkali': 3500,
+      'Palazzo Set': 2800,
+      'Sharara': 4000,
+      'Gharara': 4200,
+      'Indo-Western Dress': 3800,
+      'Crop Top & Skirt': 2500,
+      'Jacket': 2000,
+      'Blouse': 1200,
+      'Dupatta': 800,
+      'Pants': 1800,
+      'Skirt': 1500,
+      'Sherwani': 6000,
+      'Kurta (Men)': 2000,
+      'Nehru Jacket': 2500,
+      'Dhoti': 1000,
+      'Pajama': 1500
     };
     const basePrice = basePrices[garmentType] || 2000;
     const customizationFee = 350;
     console.log('💰 Base price for', garmentType, ':', basePrice, '+ customization:', customizationFee);
+
+    // Calculate fabric meters (Sync with frontend calculateFabricMeters)
+    const calculateFabricMeters = (type, measurements) => {
+      if (!measurements) return 3.0; // Default
+      
+      const height = parseFloat(measurements.height || measurements.Height || 165);
+      const chest = parseFloat(measurements.chest || measurements.Chest || 90);
+      const hips = parseFloat(measurements.hips || measurements.Hips || 95);
+      
+      const requirements = {
+        'Saree': 5.5,
+        'Kurthi': Math.max(2.5, (height / 100) * 1.5),
+        'Short Kurthi': Math.max(1.5, (height / 100) * 1.0),
+        'Lehenga': Math.max(4.0, (height / 100) * 2.5 + (hips / 100) * 0.5),
+        'Salwar Kameez': Math.max(3.5, (height / 100) * 2.0),
+        'Gown': Math.max(4.5, (height / 100) * 2.8),
+        'Anarkali': Math.max(4.0, (height / 100) * 2.5),
+        'Palazzo Set': Math.max(3.0, (height / 100) * 1.8),
+        'Sharara': Math.max(4.0, (height / 100) * 2.3),
+        'Gharara': Math.max(4.5, (height / 100) * 2.5),
+        'Indo-Western Dress': Math.max(3.0, (height / 100) * 1.8),
+        'Crop Top & Skirt': Math.max(2.5, (height / 100) * 1.5),
+        'Jacket': Math.max(1.5, (chest / 100) * 1.2),
+        'Blouse': Math.max(1.0, (chest / 100) * 0.8),
+        'Dupatta': 2.5,
+        'Pants': Math.max(2.0, (height / 100) * 1.2),
+        'Skirt': Math.max(2.0, (height / 100) * 1.3),
+        'Sherwani': Math.max(3.5, (height / 100) * 2.0),
+        'Kurta (Men)': Math.max(2.5, (height / 100) * 1.5),
+        'Nehru Jacket': Math.max(1.5, (chest / 100) * 1.0),
+        'Dhoti': 4.5,
+        'Pajama': Math.max(2.0, (height / 100) * 1.2)
+      };
+      
+      const base = requirements[type] || 3.0;
+      return Math.ceil(base * 1.1 * 4) / 4; // 10% wastage + round to 0.25
+    };
 
     // Handle fabric selection and stock decrement
     let fabricInfo = { source: 'none' };
@@ -538,7 +613,9 @@ router.post('/orders', auth, allowRoles('Customer'), async (req, res) => {
       );
       if (!fb) return res.status(400).json({ message: 'Insufficient fabric stock' });
 
-      const unitPrice = Number(fb.price || 0);
+      // Use DB price if available, otherwise fall back to client-provided price or default ₹500
+      const clientUnitPrice = Number((fabric.unitPrice ?? fabric.price ?? 500));
+      const unitPrice = Number(fb.price ?? clientUnitPrice ?? 500);
       fabricCost = unitPrice * qty;
       console.log('🧵 Fabric cost:', fabricCost, '(', qty, 'm @', unitPrice, '/m)');
       
@@ -567,6 +644,19 @@ router.post('/orders', auth, allowRoles('Customer'), async (req, res) => {
         unitPrice: 0,
         cost: 0,
         notes: fabric.notes || ''
+      };
+    } else if (materialSource === 'catalog') {
+      // Handle "Select from Catalog" but no specific fabric selected yet (Estimate cost)
+      const qty = calculateFabricMeters(garmentType, finalMeasurements);
+      const unitPrice = 500; // Standard estimate fallback
+      fabricCost = unitPrice * qty;
+      console.log('🧵 Estimated fabric cost (catalog estimate):', fabricCost, '(', qty, 'm @', unitPrice, '/m)');
+      
+      fabricInfo = {
+        source: 'none',
+        quantity: qty,
+        unitPrice,
+        cost: fabricCost
       };
     }
     

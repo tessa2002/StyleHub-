@@ -193,3 +193,42 @@
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   z-index: 10;
 }
+
+/* Additional Layers */
+.neckline-layer,
+.sleeve-layer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.15));
+  animation: fadeIn 0.4s ease-in;
+}
+
+.neckline-layer {
+  z-index: 3;
+}
+
+.sleeve-layer {
+  z-index: 4;
+}
+
+.preview-title {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: #334155;
+  background: rgba(255,255,255,0.9);
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  z-index: 11;
+}

@@ -24,10 +24,12 @@ import StaffDashboard from './pages/staff/StaffDashboard';
 // Import customer dashboard robustly to avoid default-import issues
 import * as CustomerDashboardModule from './pages/dashboards/CustomerDashboard';
 import TailorDashboard from './pages/dashboards/TailorDashboard';
+import NewTailorDashboard from './pages/tailor/NewTailorDashboard';
+import IncomingOrders from './pages/tailor/IncomingOrders';
 import MyOrders from './pages/tailor/MyOrders';
 import InProgress from './pages/tailor/InProgress';
 import ReadyToDeliver from './pages/tailor/ReadyToDeliver';
-import OrderDetails from './pages/tailor/OrderDetails';
+import EnhancedOrderDetails from './pages/tailor/EnhancedOrderDetails';
 // Admin Dashboard Components
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminCustomers from './pages/admin/Customers';
@@ -42,6 +44,7 @@ import AdminNotifications from './pages/admin/Notifications';
 import AdminAppointments from './pages/admin/Appointments';
 import AdminTest from './pages/admin/AdminTest';
 import SimpleAdminDashboard from './pages/admin/SimpleAdminDashboard';
+import AdminEmbroidery from './pages/admin/Embroidery';
 import MLDashboard from './components/MLDashboard';
 // PortalDashboard removed - using CustomerDashboard instead
 import ProfilePage from './pages/portal/Profile';
@@ -50,6 +53,7 @@ import MeasurementsPage from './pages/portal/Measurements';
 import AppointmentsPage from './pages/portal/Appointments';
 import PortalNewOrder from './pages/portal/NewOrder';
 import FabricCatalog from './pages/portal/FabricCatalog';
+import EmbroiderySpec from './pages/portal/EmbroiderySpec';
 import ManageUsers from './pages/ManageUsers';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -228,17 +232,25 @@ function App() {
             path="/dashboard/tailor"
             element={
               <ProtectedRoute allowedRoles={["Tailor"]}>
-                <TailorDashboard />
+                <NewTailorDashboard />
               </ProtectedRoute>
             }
           />
           
           {/* Tailor Dashboard Routes - Simplified */}
           <Route
+            path="/dashboard/tailor/new-orders"
+            element={
+              <ProtectedRoute allowedRoles={["Tailor"]}>
+                <IncomingOrders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/dashboard/tailor/orders"
             element={
               <ProtectedRoute allowedRoles={["Tailor"]}>
-                <MyOrders />
+                <TailorDashboard />
               </ProtectedRoute>
             }
           />
@@ -246,7 +258,7 @@ function App() {
             path="/dashboard/tailor/order/:orderId"
             element={
               <ProtectedRoute allowedRoles={["Tailor"]}>
-                <OrderDetails />
+                <EnhancedOrderDetails />
               </ProtectedRoute>
             }
           />
@@ -350,6 +362,14 @@ function App() {
             }
           />
           <Route
+            path="/admin/embroidery"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <AdminEmbroidery />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/inventory"
             element={
               <ProtectedRoute allowedRoles={["Admin"]}>
@@ -444,6 +464,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["Customer"]}>
                 <FabricCatalog />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/portal/embroidery/spec"
+            element={
+              <ProtectedRoute allowedRoles={["Customer"]}>
+                <EmbroiderySpec />
               </ProtectedRoute>
             }
           />

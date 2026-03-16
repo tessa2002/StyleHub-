@@ -29,11 +29,7 @@ echo.
 echo Available endpoints:
 echo   - GET  /health
 echo   - GET  /models/status
-echo   - POST /predict/customer-preference
-echo   - POST /predict/fabric-recommendation
-echo   - POST /predict/tailor-allocation
-echo   - POST /predict/order-delay
-echo   - POST /predict/customer-satisfaction
+echo   - POST /predict/body-measurement
 echo.
 echo Press CTRL+C to stop the server
 echo ========================================

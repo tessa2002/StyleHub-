@@ -17,6 +17,7 @@ const DynamicGarmentPreview = ({
   hasEmbroidery,
   embroideryDetails
 }) => {
+  const centerX = 200; // Define globally for the component
   
   // Calculate body proportions from measurements
   const bodyProportions = useMemo(() => {
@@ -55,21 +56,21 @@ const DynamicGarmentPreview = ({
     if (!bodyProportions) return null;
     
     const { chestWidth, waistWidth, hipsWidth, shoulderWidth, heightScale } = bodyProportions;
-    const centerX = 200;
     
     // Vertical positions (scaled by height)
-    const headTop = 20;
-    const neckY = 60 * heightScale;
-    const shoulderY = 80 * heightScale;
-    const chestY = 140 * heightScale;
-    const waistY = 200 * heightScale;
-    const hipY = 260 * heightScale;
-    const thighY = 320 * heightScale;
-    const kneeY = 380 * heightScale;
-    const ankleY = 440 * heightScale;
+    const headTop = 15;
+    const neckY = 55 * heightScale;
+    const shoulderY = 75 * heightScale;
+    const chestY = 135 * heightScale;
+    const waistY = 195 * heightScale;
+    const hipY = 255 * heightScale;
+    const thighY = 315 * heightScale;
+    const kneeY = 375 * heightScale;
+    const ankleY = 435 * heightScale;
+    const footY = 460 * heightScale;
     
     // Calculate widths at each body point (in pixels, scaled appropriately)
-    const scale = 0.7; // Overall scale factor
+    const scale = 0.75; // Increased scale for better detail
     const shoulderLeft = centerX - (shoulderWidth * scale);
     const shoulderRight = centerX + (shoulderWidth * scale);
     const chestLeft = centerX - (chestWidth * scale);
@@ -80,40 +81,62 @@ const DynamicGarmentPreview = ({
     const hipRight = centerX + (hipsWidth * scale);
     const thighLeft = centerX - (hipsWidth * scale * 0.85);
     const thighRight = centerX + (hipsWidth * scale * 0.85);
-    const kneeLeft = centerX - (hipsWidth * scale * 0.5);
-    const kneeRight = centerX + (hipsWidth * scale * 0.5);
-    const ankleLeft = centerX - (hipsWidth * scale * 0.35);
-    const ankleRight = centerX + (hipsWidth * scale * 0.35);
+    const kneeLeft = centerX - (hipsWidth * scale * 0.45);
+    const kneeRight = centerX + (hipsWidth * scale * 0.45);
+    const ankleLeft = centerX - (hipsWidth * scale * 0.25);
+    const ankleRight = centerX + (hipsWidth * scale * 0.25);
     
-    // Build body path
-    let bodyPath = `M ${shoulderLeft} ${shoulderY} `; // Start left shoulder
+    // Build body path with professional mannequin (dress form) curves
+    let bodyPath = `M ${centerX} ${neckY} `; // Start at center neck
     
-    // Left side of body
-    bodyPath += `L ${chestLeft} ${chestY} `; // Down to chest
-    bodyPath += `Q ${waistLeft} ${waistY} ${hipLeft} ${hipY} `; // Curve to waist and hip
-    bodyPath += `L ${thighLeft} ${thighY} `; // Down to thigh
-    bodyPath += `L ${kneeLeft} ${kneeY} `; // Down to knee
-    bodyPath += `L ${ankleLeft} ${ankleY} `; // Down to ankle
+    // Left side - Sculpted dress form style
+    bodyPath += `C ${centerX - 15} ${neckY} ${centerX - 20} ${neckY + 5} ${shoulderLeft} ${shoulderY} `; // Neck to shoulder
+    bodyPath += `C ${shoulderLeft - 8} ${shoulderY + 15} ${chestLeft - 15} ${chestY - 25} ${chestLeft} ${chestY} `; // Shoulder to bust
+    bodyPath += `C ${chestLeft + 10} ${chestY + 35} ${waistLeft} ${waistY - 35} ${waistLeft} ${waistY} `; // Bust to waist
+    bodyPath += `C ${waistLeft} ${waistY + 35} ${hipLeft} ${hipY - 35} ${hipLeft} ${hipY} `; // Waist to hip
     
-    // Bottom (feet)
-    bodyPath += `L ${ankleRight} ${ankleY} `;
+    // Crotch area
+    bodyPath += `C ${hipLeft} ${hipY + 15} ${centerX - 10} ${hipY + 15} ${centerX} ${hipY + 20} `;
     
-    // Right side of body (mirror)
-    bodyPath += `L ${kneeRight} ${kneeY} `;
-    bodyPath += `L ${thighRight} ${thighY} `;
-    bodyPath += `Q ${hipRight} ${hipY} ${waistRight} ${waistY} `;
-    bodyPath += `L ${chestRight} ${chestY} `;
-    bodyPath += `L ${shoulderRight} ${shoulderY} `;
-    
-    // Neck and close
-    bodyPath += `L ${centerX + 15} ${neckY} `; // Right neck
-    bodyPath += `L ${centerX - 15} ${neckY} `; // Left neck
+    // Right side (mirror)
+    bodyPath += `C ${centerX + 10} ${hipY + 15} ${hipRight} ${hipY + 15} ${hipRight} ${hipY} `;
+    bodyPath += `C ${hipRight} ${hipY - 35} ${waistRight} ${waistY + 35} ${waistRight} ${waistY} `;
+    bodyPath += `C ${waistRight} ${waistY - 35} ${chestRight - 10} ${chestY + 35} ${chestRight} ${chestY} `;
+    bodyPath += `C ${chestRight + 15} ${chestY - 25} ${shoulderRight + 8} ${shoulderY + 15} ${shoulderRight} ${shoulderY} `;
+    bodyPath += `C ${shoulderRight + 20} ${neckY + 5} ${centerX + 15} ${neckY} ${centerX} ${neckY} `;
     bodyPath += `Z`;
+
+    // Separate paths for legs with realistic definition (knees, calves, ankles, feet)
+    const leftLegPath = `
+      M ${hipLeft} ${hipY}
+      C ${hipLeft} ${hipY + 30} ${thighLeft} ${thighY - 20} ${thighLeft} ${thighY}
+      C ${thighLeft} ${thighY + 30} ${kneeLeft - 8} ${kneeY - 15} ${kneeLeft} ${kneeY}
+      C ${kneeLeft + 8} ${kneeY + 15} ${kneeLeft - 10} ${ankleY - 30} ${ankleLeft} ${ankleY}
+      C ${ankleLeft} ${ankleY + 10} ${ankleLeft - 18} ${footY} ${ankleLeft - 8} ${footY}
+      L ${ankleLeft + 12} ${footY}
+      C ${ankleLeft + 22} ${footY} ${ankleLeft + 15} ${ankleY + 5} ${ankleLeft + 8} ${ankleY}
+      L ${centerX} ${hipY + 20}
+      Z
+    `;
+
+    const rightLegPath = `
+      M ${hipRight} ${hipY}
+      C ${hipRight} ${hipY + 30} ${thighRight} ${thighY - 20} ${thighRight} ${thighY}
+      C ${thighRight} ${thighY + 30} ${kneeRight + 8} ${kneeY - 15} ${kneeRight} ${kneeY}
+      C ${kneeRight - 8} ${kneeY + 15} ${kneeRight + 10} ${ankleY - 30} ${ankleRight} ${ankleY}
+      C ${ankleRight} ${ankleY + 10} ${ankleRight + 18} ${footY} ${ankleRight + 8} ${footY}
+      L ${ankleRight - 12} ${footY}
+      C ${ankleRight - 22} ${footY} ${ankleRight - 15} ${ankleY + 5} ${ankleRight - 8} ${ankleY}
+      L ${centerX} ${hipY + 20}
+      Z
+    `;
     
     return {
       bodyPath,
+      leftLegPath,
+      rightLegPath,
       headCenterX: centerX,
-      headCenterY: headTop + 20,
+      headCenterY: headTop + 25,
       neckY,
       shoulderY,
       chestY,
@@ -126,7 +149,17 @@ const DynamicGarmentPreview = ({
       waistLeft,
       waistRight,
       hipLeft,
-      hipRight
+      hipRight,
+      thighLeft,
+      thighRight,
+      kneeLeft,
+      kneeRight,
+      ankleLeft,
+      ankleRight,
+      kneeY,
+      thighY,
+      ankleY,
+      footY
     };
   };
 
@@ -135,17 +168,18 @@ const DynamicGarmentPreview = ({
   const generateGarmentPath = () => {
     if (!bodyProportions || !bodyData) return '';
     
-    const { shoulderLeft, shoulderRight, chestLeft, chestRight, waistLeft, waistRight, hipLeft, hipRight, shoulderY, chestY, waistY, hipY } = bodyData;
+    const { shoulderLeft, shoulderRight, chestLeft, chestRight, waistLeft, waistRight, hipLeft, hipRight, shoulderY, chestY, waistY, hipY, ankleY } = bodyData;
     
     // Adjust garment length based on type
     let hemY = hipY + 80;
+    let isSaree = garmentType === 'Saree';
     
     if (garmentType === 'Short Kurthi' || garmentType === 'Crop Top & Skirt') {
       hemY = hipY + 40;
     } else if (garmentType === 'Kurthi') {
-      hemY = hipY + 100;
+      hemY = hipY + 110;
     } else if (garmentType === 'Gown' || garmentType === 'Anarkali' || garmentType === 'Lehenga') {
-      hemY = hipY + 140;
+      hemY = ankleY + 10;
     }
     
     // Calculate garment widths based on silhouette
@@ -156,40 +190,68 @@ const DynamicGarmentPreview = ({
     let garmentHemLeft = hipLeft;
     let garmentHemRight = hipRight;
     
-    const centerX = 200;
-    
-    if (silhouette === 'A-Line') {
-      garmentHemLeft = centerX - (bodyProportions.hipsWidth * 0.9);
-      garmentHemRight = centerX + (bodyProportions.hipsWidth * 0.9);
+    if (silhouette === 'A-Line' || garmentType === 'Lehenga') {
+      garmentWaistLeft = waistLeft - 2;
+      garmentWaistRight = waistRight + 2;
+      garmentHemLeft = centerX - (bodyProportions.hipsWidth * 1.6);
+      garmentHemRight = centerX + (bodyProportions.hipsWidth * 1.6);
     } else if (silhouette === 'Mermaid') {
-      garmentHipLeft = hipLeft - 5;
-      garmentHipRight = hipRight + 5;
-      garmentHemLeft = centerX - (bodyProportions.hipsWidth * 1.1);
-      garmentHemRight = centerX + (bodyProportions.hipsWidth * 1.1);
+      garmentWaistLeft = waistLeft + 2;
+      garmentWaistRight = waistRight - 2;
+      garmentHipLeft = hipLeft + 3;
+      garmentHipRight = hipRight - 3;
+      garmentHemLeft = centerX - (bodyProportions.hipsWidth * 1.8);
+      garmentHemRight = centerX + (bodyProportions.hipsWidth * 1.8);
     } else if (silhouette === 'Empire') {
-      garmentWaistLeft = chestLeft;
-      garmentWaistRight = chestRight;
-      garmentHemLeft = centerX - (bodyProportions.hipsWidth * 0.95);
-      garmentHemRight = centerX + (bodyProportions.hipsWidth * 0.95);
+      garmentWaistLeft = chestLeft - 3;
+      garmentWaistRight = chestRight + 3;
+      garmentHemLeft = centerX - (bodyProportions.hipsWidth * 1.4);
+      garmentHemRight = centerX + (bodyProportions.hipsWidth * 1.4);
     } else if (silhouette === 'Sheath') {
-      garmentHemLeft = hipLeft + 5;
-      garmentHemRight = hipRight - 5;
+      garmentWaistLeft = waistLeft + 1;
+      garmentWaistRight = waistRight - 1;
+      garmentHipLeft = hipLeft + 1;
+      garmentHipRight = hipRight - 1;
+      garmentHemLeft = hipLeft + 3;
+      garmentHemRight = hipRight - 3;
+    }
+
+    // Special path for Saree (Drape effect)
+    if (isSaree) {
+      // Bottom skirt part of Saree
+      let sareePath = `M ${waistLeft} ${waistY} 
+                       L ${hipLeft - 10} ${hipY} 
+                       L ${centerX - (bodyProportions.hipsWidth * 1.1)} ${ankleY + 15}
+                       Q ${centerX} ${ankleY + 25} ${centerX + (bodyProportions.hipsWidth * 1.1)} ${ankleY + 15}
+                       L ${hipRight + 10} ${hipY}
+                       L ${waistRight} ${waistY}
+                       Z `;
+      
+      // Pallu (Diagonal drape)
+      sareePath += `M ${shoulderLeft + 5} ${shoulderY + 10}
+                    L ${centerX + 20} ${waistY}
+                    L ${waistRight} ${waistY}
+                    L ${shoulderRight - 5} ${shoulderY + 10}
+                    Z`;
+      return sareePath;
     }
     
-    // Build garment path
+    // Build garment path with smooth curves for other types
     let path = `M ${shoulderLeft + 5} ${shoulderY + 10} `; // Start left shoulder
     
     // Left side
     path += `L ${chestLeft + 3} ${chestY} `;
-    path += `Q ${garmentWaistLeft} ${waistY} ${garmentHipLeft} ${hipY} `;
+    path += `C ${chestLeft + 3} ${chestY + 20} ${garmentWaistLeft} ${waistY - 20} ${garmentWaistLeft} ${waistY} `;
+    path += `C ${garmentWaistLeft} ${waistY + 20} ${garmentHipLeft} ${hipY - 20} ${garmentHipLeft} ${hipY} `;
     path += `L ${garmentHemLeft} ${hemY} `;
     
-    // Bottom hem
-    path += `L ${garmentHemRight} ${hemY} `;
+    // Bottom hem (slightly curved)
+    path += `Q ${centerX} ${hemY + 15} ${garmentHemRight} ${hemY} `;
     
     // Right side
     path += `L ${garmentHipRight} ${hipY} `;
-    path += `Q ${garmentWaistRight} ${waistY} ${chestRight - 3} ${chestY} `;
+    path += `C ${garmentHipRight} ${hipY - 20} ${garmentWaistRight} ${waistY + 20} ${garmentWaistRight} ${waistY} `;
+    path += `C ${garmentWaistRight} ${waistY - 20} ${chestRight - 3} ${chestY + 20} ${chestRight - 3} ${chestY} `;
     path += `L ${shoulderRight - 5} ${shoulderY + 10} `;
     
     // Close at neckline
@@ -202,7 +264,6 @@ const DynamicGarmentPreview = ({
   const generateNeckline = () => {
     if (!bodyData) return '';
     
-    const centerX = 200;
     const neckY = bodyData.shoulderY + 10;
     
     switch(neckline) {
@@ -228,7 +289,6 @@ const DynamicGarmentPreview = ({
   const generateSleeves = () => {
     if (!bodyProportions || !bodyData) return null;
     
-    const centerX = 200;
     const shoulderY = bodyData.shoulderY;
     const shoulderLeft = bodyData.shoulderLeft;
     const shoulderRight = bodyData.shoulderRight;
@@ -321,151 +381,142 @@ const DynamicGarmentPreview = ({
       >
         {/* Define patterns for different fabrics */}
         <defs>
-          <pattern id="silk-pattern" patternUnits="userSpaceOnUse" width="20" height="20">
-            <rect width="20" height="20" fill={getFabricColor()} opacity="0.9"/>
-            <path d="M0 10 Q 5 8, 10 10 T 20 10" stroke="white" strokeWidth="0.5" fill="none" opacity="0.3"/>
+          <pattern id="silk-pattern" patternUnits="userSpaceOnUse" width="40" height="40">
+            <rect width="40" height="40" fill={getFabricColor()}/>
+            <path d="M0 20 Q 10 15, 20 20 T 40 20" stroke="white" strokeWidth="0.5" fill="none" opacity="0.15">
+              <animate attributeName="d" dur="5s" repeatCount="indefinite"
+                values="M0 20 Q 10 15, 20 20 T 40 20; M0 20 Q 10 25, 20 20 T 40 20; M0 20 Q 10 15, 20 20 T 40 20" />
+            </path>
           </pattern>
           
-          <pattern id="cotton-pattern" patternUnits="userSpaceOnUse" width="15" height="15">
-            <rect width="15" height="15" fill={getFabricColor()}/>
-            <circle cx="7.5" cy="7.5" r="1" fill="white" opacity="0.2"/>
+          <pattern id="cotton-pattern" patternUnits="userSpaceOnUse" width="20" height="20">
+            <rect width="20" height="20" fill={getFabricColor()}/>
+            <path d="M0 0 L 20 20 M 20 0 L 0 20" stroke="black" strokeWidth="0.2" opacity="0.05"/>
           </pattern>
           
-          <pattern id="velvet-pattern" patternUnits="userSpaceOnUse" width="10" height="10">
-            <rect width="10" height="10" fill={getFabricColor()}/>
-            <rect width="10" height="10" fill="black" opacity="0.1"/>
+          <pattern id="velvet-pattern" patternUnits="userSpaceOnUse" width="30" height="30">
+            <rect width="30" height="30" fill={getFabricColor()}/>
+            <rect width="30" height="30" fill="url(#velvet-grad)" opacity="0.3"/>
           </pattern>
+
+          <linearGradient id="velvet-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="rgba(0,0,0,0.2)" />
+            <stop offset="50%" stopColor="rgba(255,255,255,0.1)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.2)" />
+          </linearGradient>
           
-          {/* Skin tone gradient */}
+          {/* Skin tone gradient - Professional Mannequin Style */}
           <linearGradient id="skin-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#f4d4b8" />
-            <stop offset="50%" stopColor="#f7dfc8" />
-            <stop offset="100%" stopColor="#f4d4b8" />
+            <stop offset="0%" stopColor="#e2e8f0" />
+            <stop offset="50%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#e2e8f0" />
           </linearGradient>
           
           {/* Garment gradient for depth */}
-          <linearGradient id="garment-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="rgba(0,0,0,0.15)" />
-            <stop offset="50%" stopColor="rgba(255,255,255,0.1)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0.15)" />
-          </linearGradient>
+          <radialGradient id="garment-shading" cx="50%" cy="40%" r="60%" fx="50%" fy="30%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.2)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.2)" />
+          </radialGradient>
           
-          {/* Embroidery pattern */}
-          {hasEmbroidery && (
-            <pattern id="embroidery-pattern" patternUnits="userSpaceOnUse" width="30" height="30">
-              <circle cx="15" cy="15" r="3" fill="gold" opacity="0.6"/>
-              <path d="M 10 15 Q 15 10, 20 15 Q 15 20, 10 15" fill="none" stroke="gold" strokeWidth="1" opacity="0.5"/>
-            </pattern>
-          )}
+          {/* Advanced Skin Shading */}
+          <radialGradient id="skin-shadow" cx="50%" cy="50%" r="50%">
+            <stop offset="80%" stopColor="rgba(0,0,0,0)" />
+            <stop offset="100%" stopColor="rgba(148,163,184,0.15)" />
+          </radialGradient>
+
+          <linearGradient id="leg-shadow" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="rgba(0,0,0,0.1)" />
+            <stop offset="50%" stopColor="rgba(0,0,0,0)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.1)" />
+          </linearGradient>
+
+          {/* Garment texture and depth */}
+          <pattern id="premium-weave" patternUnits="userSpaceOnUse" width="4" height="4">
+            <path d="M0 0 L4 4 M4 0 L0 4" stroke="black" strokeWidth="0.1" opacity="0.1" />
+          </pattern>
+          
+          <radialGradient id="garment-highlight" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.2)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.1)" />
+          </radialGradient>
         </defs>
-        
+
+        {/* Studio Background */}
+        <rect width="400" height="500" fill="url(#studio-grad)" />
+        <defs>
+          <radialGradient id="studio-grad" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#e2e8f0" />
+          </radialGradient>
+        </defs>
+
         {/* Realistic Body Mannequin */}
         {bodyData && (
           <g className="body-mannequin">
-            {/* Head */}
-            <ellipse 
-              cx={bodyData.headCenterX} 
-              cy={bodyData.headCenterY} 
-              rx="28" 
-              ry="35" 
-              fill="url(#skin-gradient)"
-              stroke="#d4a574"
-              strokeWidth="1.5"
-            />
+            {/* Main Body */}
+            <path d={bodyData.bodyPath} fill="url(#skin-gradient)" stroke="#cbd5e1" strokeWidth="0.5" />
             
-            {/* Face features */}
-            <g className="face-features" opacity="0.6">
-              {/* Eyes */}
-              <circle cx={bodyData.headCenterX - 10} cy={bodyData.headCenterY - 5} r="2" fill="#5a4a3a"/>
-              <circle cx={bodyData.headCenterX + 10} cy={bodyData.headCenterY - 5} r="2" fill="#5a4a3a"/>
-              {/* Nose */}
-              <line x1={bodyData.headCenterX} y1={bodyData.headCenterY} x2={bodyData.headCenterX} y2={bodyData.headCenterY + 8} stroke="#d4a574" strokeWidth="1.5"/>
-              {/* Mouth */}
-              <path d={`M ${bodyData.headCenterX - 8} ${bodyData.headCenterY + 15} Q ${bodyData.headCenterX} ${bodyData.headCenterY + 18} ${bodyData.headCenterX + 8} ${bodyData.headCenterY + 15}`} stroke="#d4a574" strokeWidth="1.5" fill="none"/>
+            {/* Legs */}
+            <path d={bodyData.leftLegPath} fill="url(#skin-gradient)" stroke="#cbd5e1" strokeWidth="0.5" />
+            <path d={bodyData.rightLegPath} fill="url(#skin-gradient)" stroke="#cbd5e1" strokeWidth="0.5" />
+
+            {/* Skin Shading Layer */}
+            <path d={bodyData.bodyPath} fill="url(#skin-shadow)" opacity="0.4" />
+            <path d={bodyData.leftLegPath} fill="url(#skin-shadow)" opacity="0.2" />
+            <path d={bodyData.rightLegPath} fill="url(#skin-shadow)" opacity="0.2" />
+            
+            {/* Joint Markers (Professional Mannequin Look) */}
+            <g fill="#cbd5e1" opacity="0.5">
+              {/* Elbows */}
+              <circle cx={bodyData.shoulderLeft - 22} cy={bodyData.waistY} r="4" />
+              <circle cx={bodyData.shoulderRight + 22} cy={bodyData.waistY} r="4" />
+              {/* Knees */}
+              <circle cx={bodyData.kneeLeft} cy={bodyData.kneeY} r="5" />
+              <circle cx={bodyData.kneeRight} cy={bodyData.kneeY} r="5" />
             </g>
-            
-            {/* Hair */}
-            <ellipse 
-              cx={bodyData.headCenterX} 
-              cy={bodyData.headCenterY - 15} 
-              rx="30" 
-              ry="25" 
-              fill="#3a2a1a"
-              opacity="0.8"
-            />
-            
-            {/* Neck */}
-            <rect
-              x={bodyData.headCenterX - 15}
-              y={bodyData.headCenterY + 25}
-              width="30"
-              height={bodyData.neckY - (bodyData.headCenterY + 25)}
-              fill="url(#skin-gradient)"
-              stroke="#d4a574"
-              strokeWidth="1"
-            />
-            
-            {/* Body silhouette */}
-            <path
-              d={bodyData.bodyPath}
-              fill="url(#skin-gradient)"
-              stroke="#d4a574"
-              strokeWidth="2"
-              opacity="0.95"
-            />
-            
-            {/* Arms */}
-            <g className="arms">
-              {/* Left arm */}
-              <path
-                d={`M ${bodyData.shoulderLeft} ${bodyData.shoulderY + 10}
-                    L ${bodyData.shoulderLeft - 20} ${bodyData.chestY}
-                    L ${bodyData.shoulderLeft - 25} ${bodyData.waistY}
-                    L ${bodyData.shoulderLeft - 22} ${bodyData.hipY}
-                    L ${bodyData.shoulderLeft - 18} ${bodyData.hipY}
-                    L ${bodyData.shoulderLeft - 20} ${bodyData.waistY}
-                    L ${bodyData.shoulderLeft - 15} ${bodyData.chestY}
-                    Z`}
-                fill="url(#skin-gradient)"
-                stroke="#d4a574"
-                strokeWidth="1.5"
-                opacity="0.9"
-              />
+
+            {/* Anatomical Details (Subtle) */}
+            <g opacity="0.1" stroke="#94a3b8" fill="none" strokeWidth="1" strokeLinecap="round">
+              {/* Collarbones */}
+              <path d={`M ${centerX - 40} ${bodyData.neckY + 10} Q ${centerX - 20} ${bodyData.neckY + 15} ${centerX - 10} ${bodyData.neckY + 12}`} />
+              <path d={`M ${centerX + 40} ${bodyData.neckY + 10} Q ${centerX + 20} ${bodyData.neckY + 15} ${centerX + 10} ${bodyData.neckY + 12}`} />
               
-              {/* Right arm */}
-              <path
-                d={`M ${bodyData.shoulderRight} ${bodyData.shoulderY + 10}
-                    L ${bodyData.shoulderRight + 20} ${bodyData.chestY}
-                    L ${bodyData.shoulderRight + 25} ${bodyData.waistY}
-                    L ${bodyData.shoulderRight + 22} ${bodyData.hipY}
-                    L ${bodyData.shoulderRight + 18} ${bodyData.hipY}
-                    L ${bodyData.shoulderRight + 20} ${bodyData.waistY}
-                    L ${bodyData.shoulderRight + 15} ${bodyData.chestY}
-                    Z`}
-                fill="url(#skin-gradient)"
-                stroke="#d4a574"
-                strokeWidth="1.5"
-                opacity="0.9"
-              />
+              {/* Abs/Torso definition */}
+              <path d={`M ${centerX} ${bodyData.chestY + 20} L ${centerX} ${bodyData.waistY - 10}`} strokeWidth="0.5" />
+              <path d={`M ${bodyData.waistLeft + 15} ${bodyData.waistY} Q ${centerX} ${bodyData.waistY + 5} ${bodyData.waistRight - 15} ${bodyData.waistY}`} opacity="0.5" />
+            </g>
+
+            {/* Head and Hair */}
+            <g className="head-group">
+              <ellipse cx={bodyData.headCenterX} cy={bodyData.headCenterY} rx="24" ry="30" fill="url(#skin-gradient)" stroke="#cbd5e1" strokeWidth="0.5" />
             </g>
             
-            {/* Measurement guide lines */}
-            <g className="measurement-guides" opacity="0.4">
+            {/* Face features - more subtle */}
+            <g className="face-features" opacity="0.3">
+              <path d={`M ${bodyData.headCenterX - 12} ${bodyData.headCenterY - 2} Q ${bodyData.headCenterX - 8} ${bodyData.headCenterY - 5} ${bodyData.headCenterX - 4} ${bodyData.headCenterY - 2}`} stroke="#5a4a3a" fill="none" />
+              <path d={`M ${bodyData.headCenterX + 4} ${bodyData.headCenterY - 2} Q ${bodyData.headCenterX + 8} ${bodyData.headCenterY - 5} ${bodyData.headCenterX + 12} ${bodyData.headCenterY - 2}`} stroke="#5a4a3a" fill="none" />
+            </g>
+            
+        {/* Measurement guide lines */}
+            <g className="measurement-guides" opacity="0.6">
               {/* Chest line */}
-              <line x1={bodyData.chestLeft - 30} y1={bodyData.chestY} x2={bodyData.chestRight + 30} y2={bodyData.chestY} stroke="#e91e63" strokeWidth="1" strokeDasharray="3,3"/>
-              <text x={bodyData.chestRight + 35} y={bodyData.chestY + 5} fontSize="10" fill="#e91e63" fontWeight="600">
+              <line x1={bodyData.chestLeft - 40} y1={bodyData.chestY} x2={bodyData.chestRight + 40} y2={bodyData.chestY} stroke="#fcd34d" strokeWidth="4" />
+              <line x1={bodyData.chestLeft - 40} y1={bodyData.chestY} x2={bodyData.chestRight + 40} y2={bodyData.chestY} stroke="#000" strokeWidth="0.5" strokeDasharray="2,2" />
+              <text x={bodyData.chestRight + 45} y={bodyData.chestY + 4} fontSize="10" fill="#444" fontWeight="800">
                 {bodyProportions.chest}"
               </text>
               
               {/* Waist line */}
-              <line x1={bodyData.waistLeft - 30} y1={bodyData.waistY} x2={bodyData.waistRight + 30} y2={bodyData.waistY} stroke="#e91e63" strokeWidth="1" strokeDasharray="3,3"/>
-              <text x={bodyData.waistRight + 35} y={bodyData.waistY + 5} fontSize="10" fill="#e91e63" fontWeight="600">
+              <line x1={bodyData.waistLeft - 40} y1={bodyData.waistY} x2={bodyData.waistRight + 40} y2={bodyData.waistY} stroke="#fcd34d" strokeWidth="4" />
+              <line x1={bodyData.waistLeft - 40} y1={bodyData.waistY} x2={bodyData.waistRight + 40} y2={bodyData.waistY} stroke="#000" strokeWidth="0.5" strokeDasharray="2,2" />
+              <text x={bodyData.waistRight + 45} y={bodyData.waistY + 4} fontSize="10" fill="#444" fontWeight="800">
                 {bodyProportions.waist}"
               </text>
               
               {/* Hip line */}
-              <line x1={bodyData.hipLeft - 30} y1={bodyData.hipY} x2={bodyData.hipRight + 30} y2={bodyData.hipY} stroke="#e91e63" strokeWidth="1" strokeDasharray="3,3"/>
-              <text x={bodyData.hipRight + 35} y={bodyData.hipY + 5} fontSize="10" fill="#e91e63" fontWeight="600">
+              <line x1={bodyData.hipLeft - 40} y1={bodyData.hipY} x2={bodyData.hipRight + 40} y2={bodyData.hipY} stroke="#fcd34d" strokeWidth="4" />
+              <line x1={bodyData.hipLeft - 40} y1={bodyData.hipY} x2={bodyData.hipRight + 40} y2={bodyData.hipY} stroke="#000" strokeWidth="0.5" strokeDasharray="2,2" />
+              <text x={bodyData.hipRight + 45} y={bodyData.hipY + 4} fontSize="10" fill="#444" fontWeight="800">
                 {bodyProportions.hips}"
               </text>
             </g>
@@ -473,30 +524,103 @@ const DynamicGarmentPreview = ({
         )}
         
         {/* Main garment body */}
-        <path
-          d={generateGarmentPath()}
-          fill={getFabricPattern() || getFabricColor()}
-          stroke="#8b7355"
-          strokeWidth="2"
-          className="garment-body"
-          opacity="0.92"
-        />
-        
-        {/* Gradient overlay for 3D effect */}
-        <path
-          d={generateGarmentPath()}
-          fill="url(#garment-gradient)"
-          opacity="0.3"
-        />
+        <g className="garment-group">
+          <path
+            d={generateGarmentPath()}
+            fill={getFabricPattern() || getFabricColor()}
+            stroke="rgba(0,0,0,0.05)"
+            strokeWidth="0.5"
+            className="garment-body"
+          />
+          
+          {/* Fabric Weave Texture */}
+          <path d={generateGarmentPath()} fill="url(#premium-weave)" opacity="0.2" pointerEvents="none" />
+          
+          {/* Shading overlay */}
+          <path d={generateGarmentPath()} fill="url(#garment-shading)" opacity="0.4" pointerEvents="none" />
+          
+          {/* Dynamic Highlights */}
+          <path d={generateGarmentPath()} fill="url(#garment-highlight)" opacity="0.3" pointerEvents="none" />
+
+          {/* Fabric Folds (Visual depth) */}
+          <g opacity="0.15" stroke="black" fill="none" strokeWidth="1">
+            <path d={`M ${bodyData.waistLeft + 5} ${bodyData.waistY - 10} Q ${centerX} ${bodyData.waistY - 5} ${bodyData.waistRight - 5} ${bodyData.waistY - 10}`} />
+            <path d={`M ${bodyData.waistLeft + 10} ${bodyData.waistY + 5} Q ${centerX} ${bodyData.waistY + 10} ${bodyData.waistRight - 10} ${bodyData.waistY + 5}`} />
+            {/* Vertical drape folds */}
+            <path d={`M ${centerX - 20} ${bodyData.waistY + 10} Q ${centerX - 25} ${bodyData.hipY} ${centerX - 30} ${bodyData.hipY + 80}`} />
+            <path d={`M ${centerX + 20} ${bodyData.waistY + 10} Q ${centerX + 25} ${bodyData.hipY} ${centerX + 30} ${bodyData.hipY + 80}`} />
+            {/* Hemline folds */}
+            <path d={`M ${bodyData.hipLeft + 10} ${bodyData.hipY + 80} Q ${centerX} ${bodyData.hipY + 95} ${bodyData.hipRight - 10} ${bodyData.hipY + 80}`} />
+          </g>
+        </g>
+
+        {/* Realistic Arms with Hands - Attached correctly to shoulders */}
+        {bodyData && (
+          <g className="arms-overlay">
+            {/* Left arm */}
+            <g className="arm-left">
+              <path
+                d={`M ${bodyData.shoulderLeft} ${bodyData.shoulderY}
+                    C ${bodyData.shoulderLeft - 20} ${bodyData.shoulderY} ${bodyData.shoulderLeft - 35} ${bodyData.shoulderY + 20} ${bodyData.shoulderLeft - 40} ${bodyData.chestY}
+                    C ${bodyData.shoulderLeft - 45} ${bodyData.waistY} ${bodyData.shoulderLeft - 45} ${bodyData.hipY - 20} ${bodyData.shoulderLeft - 42} ${bodyData.hipY}
+                    L ${bodyData.shoulderLeft - 25} ${bodyData.hipY}
+                    C ${bodyData.shoulderLeft - 28} ${bodyData.hipY - 20} ${bodyData.shoulderLeft - 28} ${bodyData.waistY} ${bodyData.shoulderLeft - 25} ${bodyData.chestY}
+                    C ${bodyData.shoulderLeft - 22} ${bodyData.shoulderY + 20} ${bodyData.shoulderLeft - 10} ${bodyData.shoulderY + 10} ${bodyData.shoulderLeft} ${bodyData.shoulderY + 15}
+                    Z`}
+                fill="url(#skin-gradient)"
+                stroke="#cbd5e1"
+                strokeWidth="0.5"
+              />
+              {/* Left Hand - Attached to wrist */}
+              <g className="hand-left" transform={`translate(${bodyData.shoulderLeft - 33.5}, ${bodyData.hipY})`}>
+                <path 
+                  d="M -4 0 C -9 4 -12 15 -7 28 C -5 34 5 34 7 28 C 11 15 9 4 4 0 Z"
+                  fill="url(#skin-gradient)"
+                  stroke="#cbd5e1"
+                  strokeWidth="0.4"
+                />
+                <path d="M 4 2 C 10 5 12 12 9 18 C 7 21 5 18 4 12" fill="none" stroke="#cbd5e1" strokeWidth="0.4" />
+              </g>
+            </g>
+            
+            {/* Right arm */}
+            <g className="arm-right">
+              <path
+                d={`M ${bodyData.shoulderRight} ${bodyData.shoulderY}
+                    C ${bodyData.shoulderRight + 20} ${bodyData.shoulderY} ${bodyData.shoulderRight + 35} ${bodyData.shoulderY + 20} ${bodyData.shoulderRight + 40} ${bodyData.chestY}
+                    C ${bodyData.shoulderRight + 45} ${bodyData.waistY} ${bodyData.shoulderRight + 45} ${bodyData.hipY - 20} ${bodyData.shoulderRight + 42} ${bodyData.hipY}
+                    L ${bodyData.shoulderRight + 25} ${bodyData.hipY}
+                    C ${bodyData.shoulderRight + 28} ${bodyData.hipY - 20} ${bodyData.shoulderRight + 28} ${bodyData.waistY} ${bodyData.shoulderRight + 25} ${bodyData.chestY}
+                    C ${bodyData.shoulderRight + 22} ${bodyData.shoulderY + 20} ${bodyData.shoulderRight + 10} ${bodyData.shoulderY + 10} ${bodyData.shoulderRight} ${bodyData.shoulderY + 15}
+                    Z`}
+                fill="url(#skin-gradient)"
+                stroke="#cbd5e1"
+                strokeWidth="0.5"
+              />
+              {/* Right Hand - Attached to wrist */}
+              <g className="hand-right" transform={`translate(${bodyData.shoulderRight + 33.5}, ${bodyData.hipY})`}>
+                <path 
+                  d="M 4 0 C 9 4 12 15 7 28 C 5 34 -5 34 -7 28 C -11 15 -9 4 -4 0 Z"
+                  fill="url(#skin-gradient)"
+                  stroke="#cbd5e1"
+                  strokeWidth="0.4"
+                />
+                <path d="M -4 2 C -10 5 -12 12 -9 18 C -7 21 -5 18 -4 12" fill="none" stroke="#cbd5e1" strokeWidth="0.4" />
+              </g>
+            </g>
+          </g>
+        )}
         
         {/* Sleeves */}
-        {generateSleeves()}
+        <g opacity="0.95">
+          {generateSleeves()}
+        </g>
         
         {/* Neckline */}
         <path
           d={generateNeckline()}
-          stroke="#8b7355"
-          strokeWidth="2.5"
+          stroke="rgba(0,0,0,0.2)"
+          strokeWidth="1.5"
           fill="none"
           className="garment-neckline"
         />
@@ -507,9 +631,9 @@ const DynamicGarmentPreview = ({
             d={generateGarmentPath()}
             fill="none"
             stroke="#d4af37"
-            strokeWidth="1"
-            strokeDasharray="5,5"
-            opacity="0.5"
+            strokeWidth="0.5"
+            strokeDasharray="3,3"
+            opacity="0.4"
           />
         )}
         

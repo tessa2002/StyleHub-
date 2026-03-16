@@ -28,7 +28,7 @@ const roleToPath = {
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -81,10 +81,14 @@ const Login = () => {
           callback: handleGoogleResponse,
           auto_select: false,
           cancel_on_tap_outside: true,
-          use_fedcm_for_prompt: false
+          use_fedcm_for_prompt: true,
+          itp_support: true
         });
         
-        console.log('✅ Google Sign-In initialized successfully');
+        console.log('✅ Google Sign-In initialized successfully with FedCM');
+        
+        // Also render the button immediately so it's ready as a fallback
+        renderGoogleButton();
       }
     } catch (error) {
       console.error('Failed to load Google Sign-In:', error);
@@ -139,47 +143,18 @@ const Login = () => {
   const handleGoogleResponse = async (response) => {
     setGoogleLoading(true);
     try {
-      console.log('🔍 Google response received:', response);
+      console.log('🔍 Google response received');
       
-      // Send the Google credential to your backend
-      const result = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          credential: response.credential,
-        }),
-      });
-
-      const data = await result.json();
-      console.log('📦 Backend response:', data);
+      // Use the AuthContext's loginWithGoogle method
+      const result = await loginWithGoogle({ credential: response.credential });
       
-      if (data.success) {
-        // Use the existing login context to handle authentication
-        try {
-          // Manually set the authentication state
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          
-          // Set axios authorization header
-          if (window.axios) {
-            window.axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-          }
-          
-          // Navigate to appropriate dashboard
-          const path = roleToPath[data.user.role] || "/dashboard/customer";
-          navigate(path, { replace: true });
-          
-          // Show success message briefly
-          setSuccessMessage(`Welcome ${data.user.name}! Signed in with Google.`);
-          
-        } catch (authError) {
-          console.error('Auth context error:', authError);
-          setErrors({ general: 'Authentication failed. Please try again.' });
-        }
+      if (result.success) {
+        // Navigate to appropriate dashboard
+        const path = roleToPath[result.user.role] || "/dashboard/customer";
+        navigate(path, { replace: true });
+        setSuccessMessage(`Welcome ${result.user.name}! Signed in with Google.`);
       } else {
-        setErrors({ general: data.error || 'Google login failed' });
+        setErrors({ general: result.error || 'Google login failed' });
       }
     } catch (error) {
       console.error('Google login error:', error);
@@ -193,7 +168,6 @@ const Login = () => {
     const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
     
     console.log('🔍 Google button clicked!');
-    console.log('🔍 Client ID:', clientId);
     
     if (!clientId) {
       console.error('❌ No Client ID found');
@@ -209,35 +183,22 @@ const Login = () => {
       return;
     }
     
-    console.log('✅ Attempting to show Google prompt...');
+    console.log('✅ Attempting to show Google prompt with FedCM...');
     
     try {
-      // Simple approach - just show the prompt
+      // With FedCM, prompt() is the recommended way to start the flow
       window.google.accounts.id.prompt((notification) => {
-        console.log('📋 Google prompt result:', notification);
-        
         if (notification.isNotDisplayed()) {
-          console.log('⚠️ Prompt not displayed, trying button render...');
-          // If prompt doesn't show, try rendering a button
-          setTimeout(() => {
-            const buttonDiv = document.getElementById('google-signin-button');
-            if (buttonDiv && window.google) {
-              buttonDiv.style.display = 'block';
-              buttonDiv.innerHTML = '';
-              window.google.accounts.id.renderButton(buttonDiv, {
-                theme: 'outline',
-                size: 'large',
-                text: 'signin_with',
-                shape: 'rectangular',
-                width: 200
-              });
-            }
-          }, 100);
+          console.warn('⚠️ Google prompt not displayed');
+          renderGoogleButton();
+        } else if (notification.isSkippedMoment()) {
+          console.warn('⚠️ Google prompt skipped');
+          renderGoogleButton();
         }
       });
     } catch (error) {
       console.error('❌ Google prompt error:', error);
-      setErrors({ general: 'Google Sign-In failed. Error: ' + error.message });
+      renderGoogleButton();
     }
   };
   

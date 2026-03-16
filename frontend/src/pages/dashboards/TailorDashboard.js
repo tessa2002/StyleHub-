@@ -25,6 +25,7 @@ const TailorDashboard = () => {
   const [nextFitting, setNextFitting] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
 
   useEffect(() => {
     fetchDashboardData();
@@ -53,6 +54,11 @@ const TailorDashboard = () => {
         order.status === 'fitting_scheduled'
       ).length;
 
+      // Count new orders (Assigned or Pending status)
+      const newOrders = allOrders.filter(order => 
+        ['Assigned', 'Pending', 'Order Placed'].includes(order.status)
+      ).length;
+
       // Find next fitting
       const upcomingFittings = allOrders.filter(order => 
         order.status === 'fitting_scheduled' && 
@@ -62,6 +68,7 @@ const TailorDashboard = () => {
 
       setOrders(allOrders);
       setStats({ completedToday, pendingTasks, activeFittings });
+      setNewOrdersCount(newOrders);
       setNextFitting(upcomingFittings[0] || null);
       
       // Fetch fabric inventory
@@ -99,14 +106,24 @@ const TailorDashboard = () => {
   };
 
   const getStatusLabel = (status) => {
+    if (!status) return 'PENDING';
+    
+    const statusLower = status.toLowerCase();
     const labels = {
+      'assigned': 'NEW ORDER',
+      'pending': 'NOT STARTED',
+      'order placed': 'NEW ORDER',
       'cutting': 'CUTTING STAGE',
-      'stitching': 'SEWING STAGE', 
+      'stitching': 'SEWING STAGE',
+      'sewing': 'SEWING STAGE',
       'finishing': 'FINAL PRESS',
-      'quality_check': 'PATTERN MAKING',
-      'completed': 'READY TODAY'
+      'quality_check': 'QUALITY CHECK',
+      'in progress': 'IN PROGRESS',
+      'completed': 'READY TODAY',
+      'ready': 'READY TODAY',
+      'delivered': 'DELIVERED'
     };
-    return labels[status] || status.toUpperCase();
+    return labels[statusLower] || status.toUpperCase();
   };
 
   const getDueText = (order) => {
@@ -157,17 +174,34 @@ const TailorDashboard = () => {
         </div>
 
         <nav className="sidebar-nav">
-          <div className="nav-item active">
+          <div className="nav-item" onClick={() => navigate('/dashboard/tailor/new-orders')}>
+            <FaBell className="nav-icon" />
+            <span>New Orders</span>
+            {newOrdersCount > 0 && (
+              <span style={{
+                marginLeft: 'auto',
+                background: '#dc3545',
+                color: 'white',
+                borderRadius: '12px',
+                padding: '2px 8px',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}>
+                {newOrdersCount}
+              </span>
+            )}
+          </div>
+          <div className="nav-item active" onClick={() => navigate('/dashboard/tailor/orders')}>
             <FaTshirt className="nav-icon" />
-            <span>My Work</span>
+            <span>My Orders</span>
           </div>
-          <div className="nav-item">
+          <div className="nav-item" onClick={() => navigate('/dashboard/tailor/in-progress')}>
             <FaRuler className="nav-icon" />
-            <span>Measurements</span>
+            <span>In Progress</span>
           </div>
-          <div className="nav-item">
+          <div className="nav-item" onClick={() => navigate('/dashboard/tailor/ready')}>
             <FaCalendarAlt className="nav-icon" />
-            <span>Schedule</span>
+            <span>Ready to Deliver</span>
           </div>
           <div className="nav-item">
             <FaBox className="nav-icon" />
@@ -183,6 +217,43 @@ const TailorDashboard = () => {
           <button className="btn-new-job">
             <FaPlus />
             New Job
+          </button>
+        </div>
+
+        <div className="sidebar-footer" style={{ marginTop: 'auto', padding: '20px' }}>
+          <button 
+            className="logout-btn"
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: 'rgba(220, 53, 69, 0.1)',
+              color: '#dc3545',
+              border: '1px solid rgba(220, 53, 69, 0.3)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              transition: 'all 0.3s'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = '#dc3545';
+              e.target.style.color = 'white';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'rgba(220, 53, 69, 0.1)';
+              e.target.style.color = '#dc3545';
+            }}
+          >
+            <FaSignOutAlt />
+            Logout
           </button>
         </div>
       </div>
@@ -217,6 +288,11 @@ const TailorDashboard = () => {
 
         {/* Stats Cards */}
         <div className="stats-grid">
+          <div className="stat-card" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+            <div className="stat-label">NEW ORDERS</div>
+            <div className="stat-number">{newOrdersCount}</div>
+            <div className="stat-change">Waiting to start</div>
+          </div>
           <div className="stat-card">
             <div className="stat-label">COMPLETED TODAY</div>
             <div className="stat-number">{stats.completedToday}</div>
@@ -226,11 +302,6 @@ const TailorDashboard = () => {
             <div className="stat-label">PENDING TASKS</div>
             <div className="stat-number">{stats.pendingTasks}</div>
             <div className="stat-change">Awaiting completion</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">ACTIVE FITTINGS</div>
-            <div className="stat-number">{stats.activeFittings}</div>
-            <div className="stat-change">Scheduled trials</div>
           </div>
           <div className="stat-card next-fitting">
             <div className="fitting-title">NEXT FITTING</div>
@@ -251,7 +322,7 @@ const TailorDashboard = () => {
         <div className="active-jobs-section">
           <div className="section-header">
             <h2>Active Jobs</h2>
-            <div className="job-count">12 Total</div>
+            <div className="job-count">{orders.length} Total</div>
             <div className="section-filters">
               <button className="filter-btn active">All Stages</button>
               <button className="filter-btn">Priority</button>
@@ -259,265 +330,67 @@ const TailorDashboard = () => {
           </div>
 
           <div className="jobs-grid">
-            {/* Three-Piece Suit */}
-            <div className="job-card" onClick={() => handleOrderClick({
-              _id: '1',
-              garmentType: 'Three-Piece Suit',
-              customer: { 
-                name: 'Mr. Harrison',
-                email: 'harrison@email.com',
-                phone: '+91 98765 43210',
-                address: '123 Business District, Mumbai'
-              },
-              status: 'stitching',
-              expectedDelivery: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-              priority: 'Standard',
-              totalAmount: 15000,
-              measurements: {
-                chest: '42"',
-                waist: '36"',
-                shoulder: '18"',
-                length: '30"',
-                sleeve: '25"'
-              },
-              customizations: {
-                fabric: 'Merino Wool - Navy',
-                style: 'Classic Fit',
-                buttons: 'Horn Buttons',
-                lining: 'Silk Lining',
-                lapel: 'Notched Lapel'
-              },
-              specialInstructions: 'Extra attention to lapel stitching. Customer prefers slightly tapered fit.',
-              attachments: ['https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=200&h=200&fit=crop']
-            })}>
-              <div className="job-image">
-                <img 
-                  src="https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=200&h=200&fit=crop" 
-                  alt="Three-Piece Suit" 
-                />
+            {orders.length === 0 ? (
+              <div style={{ 
+                gridColumn: '1 / -1', 
+                textAlign: 'center', 
+                padding: '60px 20px',
+                color: '#6c757d'
+              }}>
+                <FaTshirt style={{ fontSize: '48px', marginBottom: '20px', opacity: 0.3 }} />
+                <h3>No Orders Found</h3>
+                <p>You have no orders assigned yet.</p>
               </div>
-              <div className="progress-circle">
-                <svg className="progress-svg" viewBox="0 0 36 36">
-                  <path
-                    className="progress-bg"
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    className="progress-bar"
-                    strokeDasharray="75, 100"
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="progress-text">75%</div>
-              </div>
-              <div className="job-info">
-                <h3>Three-Piece Suit</h3>
-                <p>Client: Mr. Harrison</p>
-              </div>
-              <div className="job-status">
-                <span className="status-badge sewing">SEWING STAGE</span>
-                <span className="due-date">DUE IN 2 DAYS</span>
-              </div>
-            </div>
-
-            {/* Evening Gown */}
-            <div className="job-card" onClick={() => handleOrderClick({
-              _id: '2',
-              garmentType: 'Evening Gown',
-              customer: { 
-                name: 'Sarah Jenkins',
-                email: 'sarah.jenkins@email.com',
-                phone: '+91 87654 32109',
-                address: '456 Fashion Street, Delhi'
-              },
-              status: 'cutting',
-              expectedDelivery: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
-              priority: 'Express',
-              totalAmount: 25000,
-              measurements: {
-                bust: '36"',
-                waist: '28"',
-                hips: '38"',
-                length: '58"',
-                shoulder: '15"'
-              },
-              customizations: {
-                fabric: 'Silk Chiffon - Burgundy',
-                style: 'A-Line Silhouette',
-                neckline: 'V-Neck',
-                sleeves: 'Sleeveless',
-                embellishments: 'Beaded Bodice'
-              },
-              specialInstructions: 'Handle with extra care. Customer is attending a wedding ceremony.',
-              attachments: ['https://images.unsplash.com/photo-1566479179817-c0ae8e4b4b3d?w=200&h=200&fit=crop']
-            })}>
-              <div className="job-image">
-                <img 
-                  src="https://images.unsplash.com/photo-1566479179817-c0ae8e4b4b3d?w=200&h=200&fit=crop" 
-                  alt="Evening Gown" 
-                />
-              </div>
-              <div className="progress-circle">
-                <svg className="progress-svg" viewBox="0 0 36 36">
-                  <path
-                    className="progress-bg"
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    className="progress-bar"
-                    strokeDasharray="60, 100"
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="progress-text">60%</div>
-              </div>
-              <div className="job-info">
-                <h3>Evening Gown</h3>
-                <p>Client: Sarah Jenkins</p>
-              </div>
-              <div className="job-status">
-                <span className="status-badge cutting">CUTTING STAGE</span>
-                <span className="due-date">DUE TOMORROW</span>
-              </div>
-            </div>
-
-            {/* Tailored Blazer */}
-            <div className="job-card" onClick={() => handleOrderClick({
-              _id: '3',
-              garmentType: 'Tailored Blazer',
-              customer: { 
-                name: 'Michael Chen',
-                email: 'michael.chen@email.com',
-                phone: '+91 76543 21098',
-                address: '789 Corporate Plaza, Bangalore'
-              },
-              status: 'finishing',
-              expectedDelivery: new Date(),
-              priority: 'Urgent',
-              totalAmount: 12000,
-              measurements: {
-                chest: '40"',
-                waist: '34"',
-                shoulder: '17"',
-                length: '28"',
-                sleeve: '24"'
-              },
-              customizations: {
-                fabric: 'Wool Blend - Charcoal',
-                style: 'Slim Fit',
-                buttons: 'Metal Buttons',
-                lining: 'Polyester Lining',
-                lapel: 'Peak Lapel'
-              },
-              specialInstructions: 'Rush order for business presentation. Ensure perfect fit.',
-              attachments: ['https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop']
-            })}>
-              <div className="job-image">
-                <img 
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop" 
-                  alt="Tailored Blazer" 
-                />
-              </div>
-              <div className="progress-circle">
-                <svg className="progress-svg" viewBox="0 0 36 36">
-                  <path
-                    className="progress-bg"
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    className="progress-bar"
-                    strokeDasharray="90, 100"
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="progress-text">90%</div>
-              </div>
-              <div className="job-info">
-                <h3>Tailored Blazer</h3>
-                <p>Client: Michael Chen</p>
-              </div>
-              <div className="job-status">
-                <span className="status-badge final">FINAL PRESS</span>
-                <span className="due-date">READY TODAY</span>
-              </div>
-            </div>
-
-            {/* Silk Summer Dress */}
-            <div className="job-card" onClick={() => handleOrderClick({
-              _id: '4',
-              garmentType: 'Silk Summer Dress',
-              customer: { 
-                name: 'Elena Rodriguez',
-                email: 'elena.rodriguez@email.com',
-                phone: '+91 65432 10987',
-                address: '321 Garden View, Chennai'
-              },
-              status: 'pattern_making',
-              expectedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-              priority: 'Standard',
-              totalAmount: 8000,
-              measurements: {
-                bust: '34"',
-                waist: '26"',
-                hips: '36"',
-                length: '42"',
-                shoulder: '14"'
-              },
-              customizations: {
-                fabric: 'Pure Silk - Floral Print',
-                style: 'Fit and Flare',
-                neckline: 'Round Neck',
-                sleeves: 'Short Sleeves',
-                closure: 'Back Zipper'
-              },
-              specialInstructions: 'Customer prefers loose fit around waist. Add pockets if possible.',
-              attachments: ['https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=200&h=200&fit=crop']
-            })}>
-              <div className="job-image">
-                <img 
-                  src="https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=200&h=200&fit=crop" 
-                  alt="Silk Summer Dress" 
-                />
-              </div>
-              <div className="progress-circle">
-                <svg className="progress-svg" viewBox="0 0 36 36">
-                  <path
-                    className="progress-bg"
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    className="progress-bar"
-                    strokeDasharray="20, 100"
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="progress-text">20%</div>
-              </div>
-              <div className="job-info">
-                <h3>Silk Summer Dress</h3>
-                <p>Client: Elena Rodriguez</p>
-              </div>
-              <div className="job-status">
-                <span className="status-badge pattern">PATTERN MAKING</span>
-                <span className="due-date">DUE IN 5 DAYS</span>
-              </div>
-            </div>
+            ) : (
+              orders.map((order) => (
+                <div key={order._id} className="job-card" onClick={() => handleOrderClick(order)}>
+                  <div className="job-image">
+                    {order.attachments && order.attachments.length > 0 ? (
+                      <img 
+                        src={order.attachments[0].url || order.attachments[0]} 
+                        alt={order.itemType || order.garmentType}
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=200&h=200&fit=crop';
+                        }}
+                      />
+                    ) : (
+                      <img 
+                        src="https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=200&h=200&fit=crop" 
+                        alt={order.itemType || order.garmentType}
+                      />
+                    )}
+                  </div>
+                  <div className="progress-circle">
+                    <svg className="progress-svg" viewBox="0 0 36 36">
+                      <path
+                        className="progress-bg"
+                        d="M18 2.0845
+                          a 15.9155 15.9155 0 0 1 0 31.831
+                          a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="progress-bar"
+                        strokeDasharray={`${getProgressPercentage(order)}, 100`}
+                        d="M18 2.0845
+                          a 15.9155 15.9155 0 0 1 0 31.831
+                          a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                    <div className="progress-text">{getProgressPercentage(order)}%</div>
+                  </div>
+                  <div className="job-info">
+                    <h3>{order.itemType || order.garmentType || 'Custom Order'}</h3>
+                    <p>Client: {order.customer?.name || order.customerName || 'Unknown'}</p>
+                  </div>
+                  <div className="job-status">
+                    <span className={`status-badge ${order.status?.toLowerCase().replace(/\s+/g, '-')}`}>
+                      {getStatusLabel(order.status)}
+                    </span>
+                    <span className="due-date">{getDueText(order)}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

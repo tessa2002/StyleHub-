@@ -9,6 +9,8 @@ const VirtualGarmentPreview = ({
   garmentType,
   bodyShape,
   silhouette,
+  neckline,
+  sleeve,
   selectedFabric,
   measurements
 }) => {
@@ -26,6 +28,16 @@ const VirtualGarmentPreview = ({
     return `/images/${garment}_${style}.png`;
   }, [garmentType, silhouette]);
   
+  const necklineImagePath = useMemo(() => {
+    const name = neckline?.toLowerCase().replace(/\s+/g, '_') || 'round';
+    return `/images/neckline_${name}.png`;
+  }, [neckline]);
+  
+  const sleeveImagePath = useMemo(() => {
+    const name = sleeve?.toLowerCase().replace(/\s+/g, '_') || 'sleeveless';
+    return `/images/sleeve_${name}.png`;
+  }, [sleeve]);
+  
   // Fallback images if specific ones don't exist
   const handleBodyImageError = (e) => {
     e.target.src = '/images/default_body.png';
@@ -35,8 +47,17 @@ const VirtualGarmentPreview = ({
     e.target.src = '/images/default_garment.png';
   };
   
+  const handleNecklineImageError = (e) => {
+    e.target.style.display = 'none';
+  };
+  
+  const handleSleeveImageError = (e) => {
+    e.target.style.display = 'none';
+  };
+  
   return (
     <div className="virtual-garment-preview">
+      <div className="preview-title">Virtual Preview</div>
       <div className="preview-container">
         {/* Base Layer: Body Silhouette */}
         <img 
@@ -55,6 +76,22 @@ const VirtualGarmentPreview = ({
           style={{
             filter: selectedFabric?.color ? `hue-rotate(${getHueRotation(selectedFabric.color)}deg)` : 'none'
           }}
+        />
+        
+        {/* Overlay Layer: Neckline */}
+        <img 
+          src={necklineImagePath}
+          alt={`neckline ${neckline}`}
+          className="neckline-layer"
+          onError={handleNecklineImageError}
+        />
+        
+        {/* Overlay Layer: Sleeve */}
+        <img 
+          src={sleeveImagePath}
+          alt={`sleeve ${sleeve}`}
+          className="sleeve-layer"
+          onError={handleSleeveImageError}
         />
       </div>
       

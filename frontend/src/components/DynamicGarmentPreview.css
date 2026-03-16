@@ -15,8 +15,10 @@
   width: 100%;
   max-width: 400px;
   height: auto;
-  filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.1));
-  transition: transform 0.3s ease;
+  filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1));
+  border-radius: 20px;
+  background: #fff;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .garment-svg:hover {
@@ -29,9 +31,12 @@
 }
 
 .body-mannequin ellipse,
-.body-mannequin path,
 .body-mannequin rect {
   transition: all 0.3s ease;
+}
+
+.body-mannequin path {
+  transition: d 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Face features */
@@ -39,13 +44,25 @@
   pointer-events: none;
 }
 
-/* Arms */
-.arms path {
-  transition: opacity 0.3s ease;
+/* Arms and Hands */
+.arms-overlay {
+  pointer-events: none;
 }
 
-.dynamic-garment-preview:hover .arms path {
-  opacity: 0.7;
+.arms-overlay path {
+  transition: all 0.3s ease;
+}
+
+.arm-left, .arm-right {
+  opacity: 0.9;
+}
+
+.hand-left, .hand-right {
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dynamic-garment-preview:hover .arms-overlay {
+  opacity: 1;
 }
 
 /* Measurement guides */
@@ -58,15 +75,36 @@
   opacity: 0.8 !important;
 }
 
+.measurement-guides line {
+  transition: all 0.6s ease-in-out;
+  stroke-linecap: round;
+}
+
 .measurement-guides text {
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-weight: 600;
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  transition: all 0.6s ease-in-out;
+}
+
+.head-group {
+  transition: transform 0.6s ease-in-out;
+}
+
+/* Add a subtle breathing animation to the mannequin */
+@keyframes breathe {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.005); }
+  100% { transform: scale(1); }
+}
+
+.preview-container {
+  animation: breathe 8s ease-in-out infinite;
 }
 
 /* Garment body styling */
 .garment-body {
-  transition: all 0.4s ease;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
 }
 
 .garment-body:hover {

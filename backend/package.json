@@ -4,8 +4,9 @@
   "description": "Backend for Style Hub Boutique Management System",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "kill-port 5000 && concurrently \"node server.js\" \"npm run python-ml\"",
+    "python-ml": "cd ml/python && python -m pip install -r requirements.txt && python api.py",
+    "dev": "concurrently \"nodemon server.js\" \"npm run python-ml\"",
     "server": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -27,10 +28,13 @@
     "mongoose": "^8.0.3",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
+    "nodemailer": "^8.0.2",
     "razorpay": "^2.9.6",
     "synaptic": "^1.1.4"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
+    "kill-port": "^2.0.1",
     "nodemon": "^3.0.2"
   }
 }

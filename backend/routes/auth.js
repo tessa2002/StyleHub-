@@ -85,28 +85,32 @@ router.post("/google", async (req, res) => {
       // User exists, update Google ID if not set
       if (!user.googleId) {
         user.googleId = googleId;
+        user.profilePicture = picture || user.profilePicture;
         await user.save();
       }
     } else {
       // Create new user with Google account
-      const hashedPassword = await bcrypt.hash(googleId + email, 10); // Use Google ID + email as password
+      const hashedPassword = await bcrypt.hash(googleId + email, 10);
+      
+      // Generate a unique phone placeholder using timestamp and random number
+      const uniquePhone = `google_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       
       user = await User.create({
         name: name || email.split('@')[0],
         email,
         password: hashedPassword,
         role: "Customer", // Default role for Google sign-ups
-        phone: "", // Will be empty, user can update later
+        phone: uniquePhone, // Unique placeholder phone
         googleId,
         profilePicture: picture
       });
 
-      // Create linked Customer profile
+      // Create linked Customer profile with unique phone placeholder
       try {
         await Customer.create({
           name: user.name,
           email: user.email,
-          phone: "",
+          phone: uniquePhone, // Same unique placeholder
           address: "",
           user: user._id
         });

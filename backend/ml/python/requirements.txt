@@ -1,19 +1,9 @@
-# Python ML Dependencies for Style Hub
-# Install with: pip install -r requirements.txt
-
-# Core ML Libraries (Compatible with Python 3.7)
-scikit-learn==1.0.2
+flask
+flask-cors
 numpy==1.21.6
-pandas==1.1.5
-
-# Data Processing
-joblib==1.0.1
-
-# API (Flask for Python endpoints)
-flask==2.0.3
-flask-cors==3.0.10
-werkzeug==2.0.3
-
-# Utilities
-python-dotenv==0.19.2
-
+scikit-learn
+joblib
+pandas
+scipy
+absl-py==0.15.0
+opencv-python

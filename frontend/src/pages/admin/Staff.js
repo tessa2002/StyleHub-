@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { 
   FaSearch, FaPlus, FaFilter, FaDownload, FaBell, FaUser,
-  FaShoppingBag, FaCalendarAlt, FaCog, FaUserTie, FaTrash, FaSignOutAlt
+  FaShoppingBag, FaCalendarAlt, FaCog, FaUserTie, FaTrash, FaSignOutAlt, FaPaintBrush
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './Staff.css';
@@ -414,6 +414,12 @@ const Staff = () => {
               <FaUserTie className="nav-icon" />
             </div>
             <span>Tailor Team</span>
+          </Link>
+          <Link to="/admin/embroidery" className="nav-item">
+            <div className="nav-icon-wrapper">
+              <FaPaintBrush className="nav-icon" />
+            </div>
+            <span>Embroidery</span>
           </Link>
           <Link to="/admin/orders" className="nav-item">
             <div className="nav-icon-wrapper">

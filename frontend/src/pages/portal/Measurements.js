@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import DashboardLayout from '../../components/DashboardLayout';
 import './Measurements.css';
-import { FaTshirt, FaSlidersH, FaQuestionCircle, FaMagic, FaRuler, FaCheckCircle, FaLock } from 'react-icons/fa';
+import { FaTshirt, FaSlidersH, FaQuestionCircle, FaMagic, FaRuler, FaCheckCircle, FaLock, FaRobot, FaCamera } from 'react-icons/fa';
 import { GiTrousers } from 'react-icons/gi';
+import mlService from '../../services/mlService';
+import WebcamBodyScanner from '../../components/WebcamBodyScanner';
 
 export default function MeasurementsPage() {
   const [data, setData] = useState({ current: {}, history: [] });
@@ -12,6 +14,79 @@ export default function MeasurementsPage() {
   const [error, setError] = useState('');
   const [unit, setUnit] = useState('IN'); // IN or CM
   const [activeField, setActiveField] = useState(null);
+  const [predicting, setPredicting] = useState(false);
+  const [showWebcam, setShowWebcam] = useState(false);
+  const [annotatedImage, setAnnotatedImage] = useState(null);
+
+  // Default values for ML prediction if not available in current measurements
+  const [mlInputs, setMlInputs] = useState({
+    height_cm: 170,
+    weight_kg: 70,
+    shoulder_width_cm: 45
+  });
+
+  const handlePredictMeasurements = async (webcamImage = null) => {
+    setPredicting(true);
+    if (webcamImage) setShowWebcam(false);
+    
+    console.log('Sending prediction request with:', {
+      height: mlInputs.height_cm,
+      weight: mlInputs.weight_kg,
+      shoulder: mlInputs.shoulder_width_cm,
+      hasImage: !!webcamImage
+    });
+
+    try {
+      const result = await mlService.predictBodyMeasurements(
+        mlInputs.height_cm,
+        mlInputs.weight_kg,
+        webcamImage ? null : mlInputs.shoulder_width_cm,
+        webcamImage
+      );
+
+      if (result.success) {
+        const { chest_cm, waist_cm, hips_cm, shoulder_cm, annotated_image } = result.data;
+        
+        // Update annotated image if available
+        if (annotated_image) {
+          setAnnotatedImage(annotated_image);
+        }
+
+        // Update shoulder width if it was detected from image
+        if (shoulder_cm) {
+          setMlInputs(prev => ({ ...prev, shoulder_width_cm: shoulder_cm }));
+        }
+        
+        // Convert to current unit if necessary
+        const factor = unit === 'IN' ? 0.393701 : 1;
+        
+        setData(d => ({
+          ...d,
+          current: {
+            ...d.current,
+            chest: (chest_cm * factor).toFixed(2),
+            waist: (waist_cm * factor).toFixed(2),
+            hips: (hips_cm * factor).toFixed(2)
+          }
+        }));
+        
+        alert('✨ AI successfully estimated your measurements!');
+      } else {
+        alert('❌ AI Prediction failed: ' + result.error);
+      }
+    } catch (err) {
+      alert('❌ Error: ' + err.message);
+    } finally {
+      setPredicting(false);
+    }
+  };
+
+  const handleMlInputChange = (e) => {
+    const { name, value } = e.target;
+    const numValue = value === '' ? 0 : Number(value);
+    console.log(`ML input change: ${name} = ${numValue}`);
+    setMlInputs(prev => ({ ...prev, [name]: numValue }));
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -131,20 +206,74 @@ export default function MeasurementsPage() {
                 
                 <div className="body-guide-v2">
                   <div className="body-svg-container">
-                    <svg viewBox="0 0 200 400" className="body-svg">
-                      {/* Simplified body outline/proxy */}
-                      <path d="M100 50 L130 80 L140 150 L130 250 L120 350 L80 350 L70 250 L60 150 L70 80 Z" 
-                            fill="none" stroke="#ff4d8d" strokeWidth="1" strokeOpacity="0.3" />
-                      <circle cx="100" cy="70" r="4" fill="#ff4d8d" className={activeField === 'neck' ? 'active-dot' : ''} />
-                      <circle cx="80" cy="110" r="4" fill="#ff4d8d" className={activeField === 'chest' ? 'active-dot' : ''} />
-                      <circle cx="120" cy="110" r="4" fill="#ff4d8d" className={activeField === 'chest' ? 'active-dot' : ''} />
-                      <circle cx="100" cy="130" r="4" fill="#ff4d8d" className={activeField === 'upperWaist' ? 'active-dot' : ''} />
-                    </svg>
+                    {annotatedImage ? (
+                      <div className="annotated-image-container">
+                        <img src={annotatedImage} alt="Body scan" className="annotated-img" />
+                        <button className="reset-scan-btn" onClick={() => setAnnotatedImage(null)}>
+                          <FaSync /> Reset Scan
+                        </button>
+                      </div>
+                    ) : (
+                      <svg viewBox="0 0 200 400" className="body-svg">
+                        {/* Simplified body outline/proxy */}
+                        <path d="M100 50 L130 80 L140 150 L130 250 L120 350 L80 350 L70 250 L60 150 L70 80 Z" 
+                              fill="none" stroke="#ff4d8d" strokeWidth="1" strokeOpacity="0.3" />
+                        <circle cx="100" cy="70" r="4" fill="#ff4d8d" className={activeField === 'neck' ? 'active-dot' : ''} />
+                        <circle cx="80" cy="110" r="4" fill="#ff4d8d" className={activeField === 'chest' ? 'active-dot' : ''} />
+                        <circle cx="120" cy="110" r="4" fill="#ff4d8d" className={activeField === 'chest' ? 'active-dot' : ''} />
+                        <circle cx="100" cy="130" r="4" fill="#ff4d8d" className={activeField === 'upperWaist' ? 'active-dot' : ''} />
+                      </svg>
+                    )}
                   </div>
+                  
+                  {/* AI Prediction Tool in anatomical guide */}
+                  <div className="ai-predictor-card-v2">
+                    <h4><FaRobot /> AI Measurement Predictor</h4>
+                    <p>Scan with webcam or enter stats to estimate sizes.</p>
+                    <div className="ai-input-row-v2">
+                      <div className="ai-field-v2">
+                        <label>Height (cm)</label>
+                        <input name="height_cm" type="number" step="1" value={mlInputs.height_cm || ''} onChange={handleMlInputChange} />
+                      </div>
+                      <div className="ai-field-v2">
+                        <label>Weight (kg)</label>
+                        <input name="weight_kg" type="number" step="0.1" value={mlInputs.weight_kg || ''} onChange={handleMlInputChange} />
+                      </div>
+                      <div className="ai-field-v2">
+                        <label>Shoulder (cm)</label>
+                        <input name="shoulder_width_cm" type="number" step="0.1" value={mlInputs.shoulder_width_cm || ''} onChange={handleMlInputChange} />
+                      </div>
+                    </div>
+                    
+                    <div className="ai-action-buttons-v2">
+                      <button 
+                        className="btn-ai-webcam-v2" 
+                        onClick={() => setShowWebcam(true)}
+                        disabled={predicting}
+                      >
+                        <FaCamera /> Scan Body
+                      </button>
+                      <button 
+                        className="btn-ai-predict-v2" 
+                        onClick={() => handlePredictMeasurements()}
+                        disabled={predicting}
+                      >
+                        {predicting ? '...' : 'Predict'}
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="guide-footer-v2">
-                    "Click an input field to highlight the measurement zone on the body."
+                    {annotatedImage ? "Pose detected! Measurements updated." : "Click an input field to highlight the measurement zone."}
                   </div>
                 </div>
+
+                {showWebcam && (
+                  <WebcamBodyScanner 
+                    onCapture={handlePredictMeasurements} 
+                    onClose={() => setShowWebcam(false)} 
+                  />
+                )}
               </div>
 
               {/* Right Column - Input Sections */}

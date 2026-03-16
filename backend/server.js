@@ -52,18 +52,29 @@ app.use(express.json());
 // MongoDB Connection with better error handling
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/stylehub';
 
+// Set global mongoose option to allow buffering
+// This prevents errors if requests arrive before the initial connection is complete
+mongoose.set('bufferCommands', true);
+
 // Only connect to MongoDB if it's available, otherwise run in test mode
 mongoose.connect(MONGODB_URI, {
-  serverSelectionTimeoutMS: 3000, // 3 second timeout
-  socketTimeoutMS: 3000,
-  connectTimeoutMS: 3000
+  serverSelectionTimeoutMS: 5000, 
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 10000
 })
   .then(() => {
     console.log('✅ MongoDB connected successfully');
+    // Once connected, we could re-enable buffering if desired for transient disconnects
+    // mongoose.set('bufferCommands', true);
   })
   .catch(err => {
-    // Silently handle MongoDB connection failure for testing
-    console.log('ℹ️  Running in test mode (MongoDB not required for Razorpay testing)');
+    console.error('❌ MongoDB Connection Error:', err.message);
+    if (err.message.includes('IP not whitelisted')) {
+      console.log('👉 ACTION REQUIRED: Add your current IP to MongoDB Atlas Network Access');
+    } else if (err.message.includes('Authentication failed')) {
+      console.log('👉 ACTION REQUIRED: Check your MONGODB_URI credentials in .env');
+    }
+    console.log('ℹ️  Running in limited mode (Database operations will fail until connected)');
   });
 
 // Basic Test Route
@@ -85,6 +96,7 @@ app.use('/api/appointments', appointmentsRoutes);
 app.use('/api/portal', require('./routes/portal'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/staff', require('./routes/staff'));
+app.use('/api/ml', mlRoutes);
 app.use('/api/tailor', require('./routes/tailor'));
 app.use('/api/tailors', require('./routes/tailors')); // List all tailors
 app.use('/api/bills', require('./routes/bills'));
@@ -92,6 +104,7 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/fabrics', require('./routes/fabrics'));
 app.use('/api/offers', offerRoutes);
 app.use('/api/ml', mlRoutes);
+app.use('/api/embroidery', require('./routes/embroidery'));
 
 // ALSO mount portal routes at /portal (for cached frontend compatibility)
 app.use('/portal', require('./routes/portal'));

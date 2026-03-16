@@ -257,6 +257,143 @@
   margin-top: 4px;
 }
 
+/* AI Predictor Tool */
+.ai-predictor-order-v2 {
+  background: #fdf2f8;
+  border: 1px solid #fce7f3;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 15px 0 25px 0;
+}
+
+.ai-header-v2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.ai-icon {
+  color: #db2777;
+  font-size: 1.2rem;
+}
+
+.ai-header-v2 h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #db2777;
+}
+
+.ai-predictor-order-v2 p {
+  margin: 0 0 20px 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.ai-input-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.ai-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.ai-field input {
+  border: 1px solid #fce7f3;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+  width: 100%;
+}
+
+.ai-field input:focus {
+  outline: none;
+  border-color: #db2777;
+  box-shadow: 0 0 0 3px rgba(219, 39, 119, 0.1);
+}
+
+/* AI Predictor Tool - Actions */
+.ai-actions-row-v2 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+}
+
+.btn-ai-scan {
+  background: #fdf2f8;
+  color: #db2777;
+  border: 1px solid #db2777;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-ai-scan:hover:not(:disabled) {
+  background: #db2777;
+  color: white;
+}
+
+.btn-ai-predict {
+  width: 100%;
+  background: #db2777;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 6px -1px rgba(219, 39, 119, 0.2);
+}
+
+.btn-ai-predict:hover:not(:disabled) {
+  background: #be185d;
+  transform: translateY(-1px);
+}
+
+.btn-ai-predict:disabled {
+  background: #f472b6;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.fa-spin {
+  animation: fa-spin 2s infinite linear;
+}
+
+@keyframes fa-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(359deg); }
+}
+
 /* Material Source Options */
 .material-source-grid {
   display: grid;

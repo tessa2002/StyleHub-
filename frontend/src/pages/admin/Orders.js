@@ -5,7 +5,9 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   FaShoppingBag, FaPlus, FaSearch, FaEdit, FaTrash,
   FaUser, FaCheckCircle, FaExclamationTriangle,
-  FaFilter, FaUserTie, FaChevronDown, FaCog, FaSignOutAlt
+  FaFilter, FaUserTie, FaChevronDown, FaCog, FaSignOutAlt, FaBell,
+  FaArrowUp, FaArrowDown, FaEllipsisH, FaChevronLeft, FaChevronRight,
+  FaBrain, FaBox
 } from 'react-icons/fa';
 import './Orders.css';
 
@@ -315,11 +317,17 @@ const Orders = () => {
             </div>
             <span>Tailors</span>
           </Link>
-          <Link to="/admin/settings" className="nav-item">
+          <Link to="/admin/ml" className="nav-item">
             <div className="nav-icon-wrapper">
-              <FaCog className="nav-icon" />
+              <FaBrain className="nav-icon" />
             </div>
-            <span>Settings</span>
+            <span>🤖 AI/ML</span>
+          </Link>
+          <Link to="/admin/inventory" className="nav-item">
+            <div className="nav-icon-wrapper">
+              <FaBox className="nav-icon" />
+            </div>
+            <span>Inventory</span>
           </Link>
           
           <div className="nav-section-divider"></div>

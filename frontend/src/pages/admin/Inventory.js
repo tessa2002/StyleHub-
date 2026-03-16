@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   FaPlus, FaSearch, FaChevronDown, FaFilter,
   FaTh, FaBox, FaUsers, FaChartBar, FaCog, FaExclamationTriangle,
-  FaTimes, FaUpload, FaSave, FaSignOutAlt
+  FaTimes, FaUpload, FaSave, FaSignOutAlt, FaBrain
 } from 'react-icons/fa';
 import './Inventory.css';
 
@@ -407,6 +407,10 @@ const Inventory = () => {
           <Link to="/admin/staff" className="nav-item">
             <FaChartBar className="nav-icon" />
             <span>Reports</span>
+          </Link>
+          <Link to="/admin/ml" className="nav-item">
+            <FaBrain className="nav-icon" />
+            <span>🤖 AI/ML</span>
           </Link>
           <Link to="/admin/settings" className="nav-item">
             <FaCog className="nav-icon" />

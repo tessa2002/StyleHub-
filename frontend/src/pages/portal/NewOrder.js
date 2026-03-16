@@ -20,12 +20,15 @@ import {
   FaSync,
   FaMinus,
   FaMagic,
-  FaCheck
+  FaCheck,
+  FaCamera
 } from 'react-icons/fa';
 import DashboardLayout from '../../components/DashboardLayout';
-import VirtualGarmentPreview from '../../components/VirtualGarmentPreview';
+import DynamicGarmentPreview from '../../components/DynamicGarmentPreview';
 import { toast } from 'react-toastify';
 import './NewOrder.css';
+import mlService from '../../services/mlService';
+import WebcamBodyScanner from '../../components/WebcamBodyScanner';
 
 const shapeRecommendations = {
   'Hourglass': {
@@ -83,6 +86,65 @@ export default function PortalNewOrder() {
   const [measurementMode, setMeasurementMode] = useState('saved'); // 'saved' or 'new'
   const [measurements, setMeasurements] = useState({});
   
+  // AI Prediction State
+  const [predicting, setPredicting] = useState(false);
+  const [showWebcam, setShowWebcam] = useState(false);
+  const [mlInputs, setMlInputs] = useState({
+    height_cm: 170,
+    weight_kg: 70,
+    shoulder_width_cm: 45
+  });
+
+  const handlePredictMeasurements = async (webcamImage = null) => {
+    setPredicting(true);
+    if (webcamImage) setShowWebcam(false);
+    
+    try {
+      const result = await mlService.predictBodyMeasurements(
+        mlInputs.height_cm,
+        mlInputs.weight_kg,
+        webcamImage ? null : mlInputs.shoulder_width_cm,
+        webcamImage
+      );
+
+      if (result.success) {
+        const { chest_cm, waist_cm, hips_cm, shoulder_cm } = result.data;
+        
+        // Update shoulder width if it was detected from image
+        if (shoulder_cm) {
+          setMlInputs(prev => ({ ...prev, shoulder_width_cm: shoulder_cm }));
+        }
+
+        // Convert to inches (standard for this app)
+        const factor = 0.393701;
+        
+        const newMeasurements = {
+          ...measurements,
+          'Chest': (chest_cm * factor).toFixed(1),
+          'Waist': (waist_cm * factor).toFixed(1),
+          'Hips': (hips_cm * factor).toFixed(1),
+          'Shoulder': (shoulder_cm ? shoulder_cm * factor : (mlInputs.shoulder_width_cm * factor)).toFixed(1),
+          'Height': (mlInputs.height_cm * factor).toFixed(1)
+        };
+        
+        setMeasurements(newMeasurements);
+        setMeasurementMode('new');
+        toast.success('✨ AI successfully estimated your measurements!');
+      } else {
+        toast.error('❌ AI Prediction failed: ' + result.error);
+      }
+    } catch (err) {
+      toast.error('❌ Error: ' + err.message);
+    } finally {
+      setPredicting(false);
+    }
+  };
+
+  const handleMlInputChange = (e) => {
+    const { name, value } = e.target;
+    setMlInputs(prev => ({ ...prev, [name]: Number(value) }));
+  };
+  
   // Advanced Customization State
   const [hasLining, setHasLining] = useState(false);
   const [hasEmbroidery, setHasEmbroidery] = useState(false);
@@ -90,8 +152,101 @@ export default function PortalNewOrder() {
     type: 'Zardosi',
     method: 'Hand',
     placement: 'Neckline',
-    pattern: 'Floral'
+    pattern: 'Floral',
+    imageUrl: '',
+    colors: [],
+    stitch: 'Satin Stitch',
+    density: '0.4mm (High)',
+    material: 'Silk',
+    metallic: false,
+    beads: false,
+    gradient: false
   });
+  const [embroideryPatterns, setEmbroideryPatterns] = useState([]);
+  const [showPatternLibrary, setShowPatternLibrary] = useState(false);
+  
+  // Helper function to map pattern names to valid enum values
+  const mapPatternToEnum = (patternName) => {
+    if (!patternName) return 'floral';
+    const name = patternName.toLowerCase();
+    // Map pattern names/categories to valid enum values
+    if (name.includes('floral') || name.includes('nature') || name.includes('flower')) return 'floral';
+    if (name.includes('geometric') || name.includes('linear') || name.includes('shape')) return 'geometric';
+    if (name.includes('paisley') || name.includes('traditional')) return 'paisley';
+    if (name.includes('abstract') || name.includes('modern')) return 'abstract';
+    // Default to 'custom' for anything else
+    return 'custom';
+  };
+
+  // Calculate fabric requirement based on garment type and measurements
+  const calculateFabricMeters = (garmentType, measurements) => {
+    if (!measurements) return 0;
+    
+    const height = parseFloat(measurements.height || measurements.Height || 165); // cm
+    const chest = parseFloat(measurements.chest || measurements.Chest || 90); // cm
+    const hips = parseFloat(measurements.hips || measurements.Hips || 95); // cm
+    
+    // Base fabric requirements (in meters) for different garments
+    const fabricRequirements = {
+      'Saree': 5.5, // Standard saree length
+      'Kurthi': Math.max(2.5, (height / 100) * 1.5), // Based on height
+      'Short Kurthi': Math.max(1.5, (height / 100) * 1.0),
+      'Lehenga': Math.max(4.0, (height / 100) * 2.5 + (hips / 100) * 0.5),
+      'Salwar Kameez': Math.max(3.5, (height / 100) * 2.0),
+      'Gown': Math.max(4.5, (height / 100) * 2.8),
+      'Anarkali': Math.max(4.0, (height / 100) * 2.5),
+      'Palazzo Set': Math.max(3.0, (height / 100) * 1.8),
+      'Sharara': Math.max(4.0, (height / 100) * 2.3),
+      'Gharara': Math.max(4.5, (height / 100) * 2.5),
+      'Indo-Western Dress': Math.max(3.0, (height / 100) * 1.8),
+      'Crop Top & Skirt': Math.max(2.5, (height / 100) * 1.5),
+      'Jacket': Math.max(1.5, (chest / 100) * 1.2),
+      'Blouse': Math.max(1.0, (chest / 100) * 0.8),
+      'Dupatta': 2.5,
+      'Pants': Math.max(2.0, (height / 100) * 1.2),
+      'Skirt': Math.max(2.0, (height / 100) * 1.3),
+      'Sherwani': Math.max(3.5, (height / 100) * 2.0),
+      'Kurta (Men)': Math.max(2.5, (height / 100) * 1.5),
+      'Nehru Jacket': Math.max(1.5, (chest / 100) * 1.0),
+      'Dhoti': 4.5,
+      'Pajama': Math.max(2.0, (height / 100) * 1.2)
+    };
+    
+    const baseRequirement = fabricRequirements[garmentType] || 3.0;
+    
+    // Add 10% wastage allowance
+    const withWastage = baseRequirement * 1.1;
+    
+    // Round to nearest 0.25 meters
+    return Math.ceil(withWastage * 4) / 4;
+  };
+  
+  const threadPalette = [
+    { name: 'Vibrant Pink', hex: '#ee3a6a' },
+    { name: 'Blush Rose', hex: '#ff9eb5' },
+    { name: 'Royal Gold', hex: '#d4af37' },
+    { name: 'Ivory Silk', hex: '#f5f5dc' },
+    { name: 'Emerald', hex: '#2ecc71' },
+    { name: 'Sapphire', hex: '#1e3a8a' },
+    { name: 'Onyx', hex: '#111827' },
+    { name: 'Silver', hex: '#c0c0c0' }
+  ];
+  
+  const API_URL = process.env.REACT_APP_API_URL !== undefined 
+    ? process.env.REACT_APP_API_URL 
+    : (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000');
+  const api = axios.create({ baseURL: API_URL });
+  api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    return config;
+  });
+  
+  // Calculate fabric meters required (must be before priceDetails)
+  const fabricMeters = useMemo(() => {
+    const m = (measurementMode === 'saved' ? profile.customer?.measurements : measurements) || {};
+    return calculateFabricMeters(garmentType, m);
+  }, [garmentType, measurements, profile.customer, measurementMode]);
   
   // Dynamic Pricing Logic - Fixed percentages for each priority level
   const priceDetails = useMemo(() => {
@@ -123,9 +278,23 @@ export default function PortalNewOrder() {
     const base = basePrices[garmentType] || 2000;
     const customization = 350;
     let fabricCost = 0;
-    if (materialSource === 'catalog' && selectedFabric) {
-      fabricCost = (selectedFabric.price || 0) * 2.5; // Default 2.5m as used in backend
+    let fabricPricePerMeter = 0;
+    
+    // Calculate fabric cost based on actual meters required
+    if (materialSource === 'catalog') {
+      if (selectedFabric) {
+        // Use selected fabric price with fallback to match backend
+        fabricPricePerMeter = selectedFabric.price || 500;
+      } else if (fabricMeters > 0) {
+        // Use default estimated price when no fabric selected yet
+        fabricPricePerMeter = 500; // Default ₹500 per meter estimate
+      }
+      
+      if (fabricPricePerMeter > 0 && fabricMeters > 0) {
+        fabricCost = fabricPricePerMeter * fabricMeters;
+      }
     }
+    
     let lining = hasLining ? 500 : 0;
     let embroidery = 0;
 
@@ -158,13 +327,15 @@ export default function PortalNewOrder() {
       base,
       customization,
       fabricCost,
+      fabricMeters: fabricMeters > 0 ? fabricMeters : 0,
+      fabricPricePerMeter,
       lining,
       embroidery,
       priorityFee,
       total: subtotal + priorityFee,
       daysFromNow: deliveryDate ? Math.ceil((new Date(deliveryDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0
     };
-  }, [garmentType, materialSource, selectedFabric, hasLining, hasEmbroidery, embroideryDetails, priority, deliveryDate]);
+  }, [garmentType, materialSource, selectedFabric, hasLining, hasEmbroidery, embroideryDetails, priority, deliveryDate, fabricMeters]);
 
   // Preview mapping
   const previewImages = {
@@ -254,9 +425,29 @@ export default function PortalNewOrder() {
 
     let text = suggestions[garmentType] || "Our AI Stylist suggests choosing a breathable fabric for your body type.";
     
+    // Add fabric requirement information
+    if (fabricMeters > 0) {
+      text += ` You'll need approximately ${fabricMeters} meters of fabric for this ${garmentType}.`;
+    }
+    
     if (bodyShape && shapeRecommendations[bodyShape]) {
       const recs = shapeRecommendations[bodyShape];
       text = `AI DETECTED: ${bodyShape} Shape. ${recs.text} To save you time, I've automatically selected a ${recs.defaults.silhouette} silhouette with a ${recs.defaults.neckline} neckline and ${recs.defaults.sleeve} which will suit you perfectly!`;
+      
+      // Add fabric requirement after body shape info
+      if (fabricMeters > 0) {
+        text += ` You'll need approximately ${fabricMeters} meters of fabric for this ${garmentType}.`;
+      }
+    } else {
+      // Prompt user to enter measurements for body shape detection
+      const m = measurementMode === 'saved' ? profile.customer?.measurements : measurements;
+      const hasChest = m && (m.Chest || m.chest);
+      const hasWaist = m && (m.Waist || m.waist);
+      const hasHips = m && (m.Hips || m.hips);
+      
+      if (!hasChest || !hasWaist || !hasHips) {
+        text = `💡 Enter your measurements (Chest, Waist, Hips) to unlock personalized AI styling recommendations based on your body shape! ${text}`;
+      }
     }
 
     if (selectedFabric) {
@@ -264,7 +455,7 @@ export default function PortalNewOrder() {
     }
 
     return text;
-  }, [garmentType, selectedFabric, silhouette, bodyShape]);
+  }, [garmentType, selectedFabric, silhouette, bodyShape, fabricMeters, measurementMode, profile.customer, measurements]);
 
   const applyAISuggestions = () => {
     if (bodyShape && shapeRecommendations[bodyShape]) {
@@ -469,7 +660,7 @@ export default function PortalNewOrder() {
   const garmentTypes = Object.keys(garmentConfig);
   const occasions = ['Wedding Guest', 'Corporate Event', 'Cocktail Party', 'Casual Outing', 'Gala Dinner', 'Festive'];
 
-  // Priority-based date constraints - Updated with correct ranges
+  // Priority-based date constraints - Updated with requested ranges
   const dateConstraints = useMemo(() => {
     const today = new Date();
     const getFormatted = (days) => {
@@ -480,11 +671,11 @@ export default function PortalNewOrder() {
 
     switch(priority) {
       case 'urgent':
-        return { min: getFormatted(5), max: getFormatted(7) }; // 5-7 days for urgent
+        return { min: getFormatted(1), max: getFormatted(2) }; // 1-2 days for urgent
       case 'express':
-        return { min: getFormatted(7), max: getFormatted(10) }; // 7-10 days for express
+        return { min: getFormatted(3), max: getFormatted(5) }; // 3-5 days for express
       case 'standard':
-        return { min: getFormatted(10), max: getFormatted(14) }; // 10-14 days for standard
+        return { min: getFormatted(7), max: getFormatted(10) }; // 7-10 days for standard
       default:
         return null; // No date range until priority is selected
     }
@@ -540,7 +731,7 @@ export default function PortalNewOrder() {
     const fetchData = async () => {
       try {
         const [pRes] = await Promise.all([
-          axios.get('/api/portal/profile')
+          api.get('/api/portal/profile')
         ]);
         setProfile(pRes.data || { user: null, customer: null });
       } catch (e) {
@@ -551,6 +742,44 @@ export default function PortalNewOrder() {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('selectedEmbroideryPattern');
+      if (raw) {
+        const sel = JSON.parse(raw);
+        setEmbroideryDetails(d => {
+          let next = { ...d, pattern: sel.name || d.pattern, imageUrl: sel.imageUrl || d.imageUrl };
+          if (sel.colors && Array.isArray(sel.colors)) {
+            const matched = threadPalette.filter(tp => sel.colors.includes(tp.name));
+            next.colors = matched;
+          }
+          return next;
+        });
+        setHasEmbroidery(true);
+        setActiveStep(3);
+        localStorage.removeItem('selectedEmbroideryPattern');
+      }
+    } catch {}
+  }, [location.key]);
+  useEffect(() => {
+    const loadEmbroidery = async () => {
+      if (!hasEmbroidery) {
+        console.log('Embroidery not enabled, skipping pattern load');
+        return;
+      }
+      try {
+        console.log('Fetching embroidery patterns...');
+        const res = await api.get('/api/embroidery');
+        console.log('Patterns received:', res.data.patterns?.length || 0);
+        setEmbroideryPatterns(res.data.patterns || []);
+      } catch (e) {
+        console.error('Error loading patterns:', e);
+        setEmbroideryPatterns([]);
+      }
+    };
+    loadEmbroidery();
+  }, [hasEmbroidery]);
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -587,8 +816,8 @@ export default function PortalNewOrder() {
       const maxDate = new Date(dateConstraints.max);
       
       if (selectedDate < minDate || selectedDate > maxDate) {
-        const rangeDays = priority === 'urgent' ? '5-7 days' : 
-                         priority === 'express' ? '7-10 days' : '10-14 days';
+        const rangeDays = priority === 'urgent' ? '1-2 days' : 
+                         priority === 'express' ? '3-5 days' : '7-10 days';
         toast.error(`Please select a delivery date within ${rangeDays} from today`);
         return;
       }
@@ -646,7 +875,11 @@ export default function PortalNewOrder() {
           source: 'shop',
           fabricId: selectedFabric._id,
           name: selectedFabric.name,
-          quantity: 2.5 // Default quantity for the garment
+          imageUrl: (selectedFabric.images?.[0]?.url || selectedFabric.imageUrl || ''),
+          color: selectedFabric.color || selectedFabric.materialColor || '',
+          type: selectedFabric.type || selectedFabric.category || '',
+          unitPrice: Number(selectedFabric.price || 0),
+          quantity: fabricMeters > 0 ? fabricMeters : 2.5
         } : {
           source: materialSource === 'own' ? 'customer' : 'none',
           meters: 3.0 // Default for own fabric
@@ -658,7 +891,15 @@ export default function PortalNewOrder() {
             type: embroideryDetails.type.toLowerCase(),
             method: embroideryDetails.method,
             placements: [embroideryDetails.placement.toLowerCase()],
-            pattern: embroideryDetails.pattern.toLowerCase()
+            pattern: mapPatternToEnum(embroideryDetails.pattern), // Use mapping function
+            colors: embroideryDetails.colors.map(c => c.name),
+            stitch: embroideryDetails.stitch,
+            density: embroideryDetails.density,
+            threadMaterial: embroideryDetails.material,
+            metallic: embroideryDetails.metallic,
+            beads: embroideryDetails.beads,
+            gradient: embroideryDetails.gradient,
+            imageUrl: embroideryDetails.imageUrl
           } : { enabled: false }
         },
         attachments: uploadedAttachments,
@@ -710,6 +951,41 @@ export default function PortalNewOrder() {
         }
       } 
     });
+  };
+  const goToEmbroiderySpec = async () => {
+    console.log('Opening pattern library...');
+    console.log('Current patterns count:', embroideryPatterns.length);
+    
+    // Load patterns if not already loaded
+    if (embroideryPatterns.length === 0) {
+      try {
+        console.log('Loading patterns...');
+        const res = await api.get('/api/embroidery');
+        console.log('Patterns loaded:', res.data.patterns?.length || 0);
+        setEmbroideryPatterns(res.data.patterns || []);
+      } catch (e) {
+        console.error('Error loading patterns:', e);
+      }
+    }
+    
+    // Toggle pattern library visibility
+    setShowPatternLibrary(!showPatternLibrary);
+    
+    // Scroll to pattern library section after a brief delay to allow rendering
+    setTimeout(() => {
+      const patternGrid = document.querySelector('.pattern-library-grid');
+      if (patternGrid) {
+        patternGrid.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Highlight it briefly
+        patternGrid.style.border = '2px solid #ee3a6a';
+        patternGrid.style.padding = '12px';
+        patternGrid.style.borderRadius = '8px';
+        setTimeout(() => {
+          patternGrid.style.border = '';
+          patternGrid.style.padding = '';
+        }, 2000);
+      }
+    }, 100);
   };
 
   // Materials & Measurements Card
@@ -905,9 +1181,9 @@ export default function PortalNewOrder() {
                       {!priority ? (
                         '⚠️ Please select a priority level first'
                       ) : (
-                        `📅 ${priority === 'urgent' ? 'Urgent: 5-7 days from today' : 
-                             priority === 'express' ? 'Express: 7-10 days from today' : 
-                             'Standard: 10-14 days from today'}`
+                        `📅 ${priority === 'urgent' ? 'Urgent: 1-2 days from today' : 
+                             priority === 'express' ? 'Express: 3-5 days from today' : 
+                             'Standard: 7-10 days from today'}`
                       )}
                     </div>
                   </div>
@@ -931,7 +1207,7 @@ export default function PortalNewOrder() {
                   >
                     <div className="urgency-icon">📦</div>
                     <span className="urgency-title">Standard</span>
-                    <span className="urgency-desc">10-14 days</span>
+                    <span className="urgency-desc">7-10 days</span>
                     <span className="urgency-price">FREE</span>
                   </div>
                   <div 
@@ -940,7 +1216,7 @@ export default function PortalNewOrder() {
                   >
                     <div className="urgency-icon">⚡</div>
                     <span className="urgency-title">Express</span>
-                    <span className="urgency-desc">7-10 days</span>
+                    <span className="urgency-desc">3-5 days</span>
                     <span className="urgency-price">+20%</span>
                   </div>
                   <div 
@@ -949,7 +1225,7 @@ export default function PortalNewOrder() {
                   >
                     <div className="urgency-icon">🚀</div>
                     <span className="urgency-title">Urgent</span>
-                    <span className="urgency-desc">5-7 days</span>
+                    <span className="urgency-desc">1-2 days</span>
                     <span className="urgency-price">+40%</span>
                   </div>
                 </div>
@@ -964,9 +1240,9 @@ export default function PortalNewOrder() {
                       <div className="info-row">
                         <span className="info-label">Available Date Range:</span>
                         <span className="info-value">
-                          {priority === 'urgent' ? '5-7 days from today' : 
-                           priority === 'express' ? '7-10 days from today' : 
-                           '10-14 days from today'}
+                          {priority === 'urgent' ? '1-2 days from today' : 
+                           priority === 'express' ? '3-5 days from today' : 
+                           '7-10 days from today'}
                         </span>
                       </div>
                       {deliveryDate && (
@@ -1042,6 +1318,58 @@ export default function PortalNewOrder() {
                   </div>
                 </div>
 
+                {/* AI Prediction Tool in Order Form */}
+                <div className="ai-predictor-order-v2">
+                  <div className="ai-header-v2">
+                    <FaRobot className="ai-icon" />
+                    <h4>AI Measurement Predictor</h4>
+                  </div>
+                  <p>Don't know your size? Let AI estimate it based on your height and weight.</p>
+                  
+                  <div className="ai-input-grid-v2">
+                    <div className="ai-field">
+                      <label>Height (cm)</label>
+                      <input name="height_cm" type="number" value={mlInputs.height_cm} onChange={handleMlInputChange} />
+                    </div>
+                    <div className="ai-field">
+                      <label>Weight (kg)</label>
+                      <input name="weight_kg" type="number" value={mlInputs.weight_kg} onChange={handleMlInputChange} />
+                    </div>
+                    <div className="ai-field">
+                      <label>Shoulder (cm)</label>
+                      <input name="shoulder_width_cm" type="number" value={mlInputs.shoulder_width_cm} onChange={handleMlInputChange} />
+                    </div>
+                  </div>
+                  
+                  <div className="ai-actions-row-v2">
+                    <button 
+                      className="btn-ai-scan" 
+                      onClick={() => setShowWebcam(true)}
+                      disabled={predicting}
+                    >
+                      <FaCamera /> Scan Body
+                    </button>
+                    <button 
+                      className="btn-ai-predict" 
+                      onClick={() => handlePredictMeasurements()}
+                      disabled={predicting}
+                    >
+                      {predicting ? (
+                        <> <FaSync className="fa-spin" /> Analyzing...</>
+                      ) : (
+                        <> <FaMagic /> Predict </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {showWebcam && (
+                  <WebcamBodyScanner 
+                    onCapture={handlePredictMeasurements} 
+                    onClose={() => setShowWebcam(false)} 
+                  />
+                )}
+
                 {measurementMode === 'saved' ? (
                   <div className="saved-measurements-preview">
                     {profile.customer?.measurements ? (
@@ -1090,18 +1418,23 @@ export default function PortalNewOrder() {
                 <div className="studio-canvas">
                   <div className="canvas-header-ai">
                     <div className="canvas-title-group">
-                      <span className="ai-3d-badge">AI 3D RENDER</span>
+                      <span className="ai-3d-badge">Virtual Preview</span>
                       <span className="garment-type-badge">{garmentType}</span>
                     </div>
                     {bodyShape && <span className="shape-tag">Tailored for: <strong>{bodyShape}</strong></span>}
                   </div>
                   <div className="garment-render 3d-effect">
-                    <VirtualGarmentPreview
+                    <DynamicGarmentPreview
                       garmentType={garmentType}
                       measurements={measurementMode === 'saved' ? profile.customer?.measurements : measurements}
                       bodyShape={bodyShape}
                       silhouette={silhouette}
+                      neckline={neckline}
+                      sleeve={sleeve}
                       selectedFabric={selectedFabric}
+                      hasLining={hasLining}
+                      hasEmbroidery={hasEmbroidery}
+                      embroideryDetails={embroideryDetails}
                     />
                   </div>
                   
@@ -1119,7 +1452,13 @@ export default function PortalNewOrder() {
                     <FaMagic className="ai-spark-icon" />
                     <div className="ai-title-group">
                       <span className="ai-main-title">AI STYLE ASSISTANT</span>
-                      {bodyShape && <span className="ai-shape-detected">{bodyShape} Shape Detected</span>}
+                      {bodyShape ? (
+                        <span className="ai-shape-detected">{bodyShape} Shape Detected</span>
+                      ) : (
+                        <span className="ai-shape-not-detected" style={{ color: '#f59e0b', fontSize: '11px' }}>
+                          Add measurements for body shape analysis
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="ai-suggestion-content">
@@ -1128,6 +1467,22 @@ export default function PortalNewOrder() {
                       {bodyShape && shapeRecommendations[bodyShape].styles.map(s => (
                         <span key={s} className="recommendation-pill">{s}</span>
                       ))}
+                      {!bodyShape && (
+                        <div style={{ 
+                          marginTop: '12px', 
+                          padding: '12px', 
+                          backgroundColor: '#fef3c7', 
+                          borderRadius: '8px',
+                          border: '1px solid #fbbf24'
+                        }}>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '4px' }}>
+                            🎯 Unlock Personalized Recommendations
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#78350f' }}>
+                            Enter your Chest, Waist, and Hip measurements to get AI-powered body shape analysis and personalized style suggestions!
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1282,9 +1637,9 @@ export default function PortalNewOrder() {
                       value={priority}
                       onChange={(e) => setPriority(e.target.value)}
                     >
-                      <option value="standard">Standard (14-21 Days) - Free</option>
-                      <option value="express">Express (7-10 Days) - +20%</option>
-                      <option value="urgent">Urgent (3-5 Days) - +40%</option>
+                      <option value="standard">Standard (7-10 Days) - Free</option>
+                      <option value="express">Express (3-5 Days) - +20%</option>
+                      <option value="urgent">Urgent (1-2 Days) - +40%</option>
                     </select>
                   </div>
                 </div>
@@ -1295,7 +1650,7 @@ export default function PortalNewOrder() {
                     onClick={() => setPriority('standard')}
                   >
                     <span className="urgency-title">Standard</span>
-                    <span className="urgency-time">14-21 Days</span>
+                    <span className="urgency-time">7-10 Days</span>
                     <span className="urgency-price">FREE</span>
                   </div>
                   <div 
@@ -1303,7 +1658,7 @@ export default function PortalNewOrder() {
                     onClick={() => setPriority('express')}
                   >
                     <span className="urgency-title">Express</span>
-                    <span className="urgency-time">7-10 Days</span>
+                    <span className="urgency-time">3-5 Days</span>
                     <span className="urgency-price">+20%</span>
                   </div>
                   <div 
@@ -1311,7 +1666,7 @@ export default function PortalNewOrder() {
                     onClick={() => setPriority('urgent')}
                   >
                     <span className="urgency-title">Urgent</span>
-                    <span className="urgency-time">3-5 Days</span>
+                    <span className="urgency-time">1-2 Days</span>
                     <span className="urgency-price">+40%</span>
                   </div>
                 </div>
@@ -1395,7 +1750,16 @@ export default function PortalNewOrder() {
                         </select>
                       </div>
                       <div className="form-group-mini">
-                        <label>Pattern Style</label>
+                        <label>
+                          Pattern Style
+                          <button 
+                            type="button" 
+                            onClick={goToEmbroiderySpec}
+                            style={{ marginLeft: 8, fontSize: '11px', color: '#ee3a6a', background: 'none', border: 'none', cursor: 'pointer' }}
+                          >
+                            Open Pattern Library
+                          </button>
+                        </label>
                         <select 
                           value={embroideryDetails.pattern}
                           onChange={(e) => setEmbroideryDetails({...embroideryDetails, pattern: e.target.value})}
@@ -1405,6 +1769,176 @@ export default function PortalNewOrder() {
                           <option value="Paisley">Traditional Paisley</option>
                           <option value="Abstract">Modern Abstract</option>
                         </select>
+                      </div>
+                    </div>
+                    {showPatternLibrary && (
+                      <div className="pattern-library-grid" style={{ marginTop: '12px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+                        <div style={{ marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                          Select from Pattern Library
+                        </div>
+                        {embroideryPatterns.length > 0 ? (
+                          <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                            {embroideryPatterns.map(p => (
+                              <div 
+                                key={p._id} 
+                                className={`pattern-card ${embroideryDetails.imageUrl === p.image?.url ? 'active' : ''}`}
+                                onClick={() => {
+                                  console.log('Pattern clicked:', p.name);
+                                  console.log('Pattern category:', p.category);
+                                  console.log('Mapped enum:', mapPatternToEnum(p.category || p.name));
+                                  setEmbroideryDetails({ 
+                                    ...embroideryDetails, 
+                                    pattern: mapPatternToEnum(p.category || p.name), 
+                                    patternName: p.name,
+                                    imageUrl: p.image?.url || '' 
+                                  });
+                                  console.log('Pattern selected, closing library');
+                                  setShowPatternLibrary(false); // Close after selection
+                                }}
+                                style={{ 
+                                  cursor: 'pointer', 
+                                  border: embroideryDetails.imageUrl === p.image?.url ? '2px solid #ee3a6a' : '1px solid #e2e8f0', 
+                                  borderRadius: '10px', 
+                                  overflow: 'hidden',
+                                  transition: 'all 0.2s ease',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.transform = 'scale(1.05)';
+                                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(238, 58, 106, 0.3)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.transform = 'scale(1)';
+                                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                                }}
+                              >
+                                <div style={{ aspectRatio: '1 / 1', backgroundImage: `url('${p.image?.url || ''}')`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                                <div style={{ padding: '8px' }}>
+                                  <div style={{ fontSize: '12px', fontWeight: 700 }}>{p.name}</div>
+                                  <div style={{ fontSize: '11px', color: '#64748b' }}>{p.category}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '12px', color: '#64748b', padding: '20px', textAlign: 'center' }}>
+                            No patterns available. Please add patterns from admin panel.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="thread-colors" style={{ marginTop: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <label style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>Thread Colors</label>
+                        <span style={{ fontSize: 11, color: '#64748b' }}>Choose up to 2</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        {threadPalette.map(c => {
+                          const isSelected = embroideryDetails.colors.some(sel => sel.name === c.name);
+                          return (
+                            <button
+                              key={c.name}
+                              type="button"
+                              onClick={() => {
+                                let next = [...embroideryDetails.colors];
+                                if (isSelected) {
+                                  next = next.filter(sel => sel.name !== c.name);
+                                } else {
+                                  if (next.length >= 2) {
+                                    next = [next[0], c];
+                                  } else {
+                                    next.push(c);
+                                  }
+                                }
+                                setEmbroideryDetails({ ...embroideryDetails, colors: next });
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                padding: 8,
+                                borderRadius: 10,
+                                border: isSelected ? '2px solid #ee3a6a' : '1px solid #e2e8f0',
+                                background: '#ffffff',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <span style={{ width: 20, height: 20, borderRadius: 6, background: c.hex, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.1)' }} />
+                              <span style={{ fontSize: 11, color: '#334155', fontWeight: 600 }}>{c.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {embroideryDetails.colors.length > 0 && (
+                        <div style={{ marginTop: 8, fontSize: 11, color: '#64748b' }}>
+                          Selected: {embroideryDetails.colors.map(c => c.name).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                    <div className="thread-options" style={{ marginTop: 16 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                        <div className="form-group-mini">
+                          <label style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>Stitch Type</label>
+                          <select 
+                            value={embroideryDetails.stitch}
+                            onChange={(e) => setEmbroideryDetails({ ...embroideryDetails, stitch: e.target.value })}
+                          >
+                            <option>Satin Stitch</option>
+                            <option>Chain Stitch</option>
+                            <option>Running Stitch</option>
+                            <option>Zigzag Stitch</option>
+                            <option>Cross Stitch</option>
+                          </select>
+                        </div>
+                        <div className="form-group-mini">
+                          <label style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>Density</label>
+                          <select 
+                            value={embroideryDetails.density}
+                            onChange={(e) => setEmbroideryDetails({ ...embroideryDetails, density: e.target.value })}
+                          >
+                            <option>0.2mm (Low)</option>
+                            <option>0.3mm (Medium)</option>
+                            <option>0.4mm (High)</option>
+                          </select>
+                        </div>
+                        <div className="form-group-mini">
+                          <label style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>Thread Material</label>
+                          <select 
+                            value={embroideryDetails.material}
+                            onChange={(e) => setEmbroideryDetails({ ...embroideryDetails, material: e.target.value })}
+                          >
+                            <option>Silk</option>
+                            <option>Cotton</option>
+                            <option>Rayon</option>
+                            <option>Metallic</option>
+                          </select>
+                        </div>
+                        <div className="form-group-mini">
+                          <label style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>Special Accents</label>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 6 }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#334155' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={embroideryDetails.metallic} 
+                                onChange={(e) => setEmbroideryDetails({ ...embroideryDetails, metallic: e.target.checked })}
+                              /> Metallic Accent
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#334155' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={embroideryDetails.beads} 
+                                onChange={(e) => setEmbroideryDetails({ ...embroideryDetails, beads: e.target.checked })}
+                              /> Beads/Sequins
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#334155' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={embroideryDetails.gradient} 
+                                onChange={(e) => setEmbroideryDetails({ ...embroideryDetails, gradient: e.target.checked })}
+                              /> Gradient Blend
+                            </label>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1440,6 +1974,12 @@ export default function PortalNewOrder() {
                     <span>Fabric</span>
                     <strong>{selectedFabric?.name || fabricQuery || 'To be selected'}</strong>
                   </div>
+                  {fabricMeters > 0 && (
+                    <div className="summary-row">
+                      <span>Fabric Required</span>
+                      <strong>{fabricMeters} meters</strong>
+                    </div>
+                  )}
                   
                   <div className="summary-section-label">Delivery Info</div>
                   <div className="summary-row">
@@ -1492,8 +2032,57 @@ export default function PortalNewOrder() {
                       {hasEmbroidery && (
                         <div className="summary-row">
                           <span>Embroidery</span>
-                          <strong>{embroideryDetails.method} {embroideryDetails.type}</strong>
+                          <strong>
+                            {embroideryDetails.method} {embroideryDetails.type}
+                            {embroideryDetails.patternName ? ` • ${embroideryDetails.patternName}` : 
+                             embroideryDetails.pattern ? ` • ${embroideryDetails.pattern}` : ''}
+                          </strong>
                         </div>
+                      )}
+                      {hasEmbroidery && embroideryDetails.imageUrl && (
+                        <div className="summary-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                          <span>Pattern Preview</span>
+                          <img 
+                            src={embroideryDetails.imageUrl} 
+                            alt="Selected pattern" 
+                            style={{ 
+                              width: '100%', 
+                              maxWidth: '200px', 
+                              height: 'auto', 
+                              borderRadius: '8px',
+                              border: '1px solid #e2e8f0',
+                              objectFit: 'cover'
+                            }} 
+                          />
+                        </div>
+                      )}
+                      {hasEmbroidery && embroideryDetails.colors?.length > 0 && (
+                        <div className="summary-row">
+                          <span>Embroidery Colors</span>
+                          <strong>{embroideryDetails.colors.map(c => c.name).join(', ')}</strong>
+                        </div>
+                      )}
+                      {hasEmbroidery && (
+                        <>
+                          <div className="summary-row">
+                            <span>Stitch</span>
+                            <strong>{embroideryDetails.stitch}</strong>
+                          </div>
+                          <div className="summary-row">
+                            <span>Density</span>
+                            <strong>{embroideryDetails.density}</strong>
+                          </div>
+                          <div className="summary-row">
+                            <span>Thread</span>
+                            <strong>{embroideryDetails.material}{embroideryDetails.metallic ? ' • Metallic' : ''}</strong>
+                          </div>
+                          {(embroideryDetails.beads || embroideryDetails.gradient) && (
+                            <div className="summary-row">
+                              <span>Accents</span>
+                              <strong>{[embroideryDetails.beads ? 'Beads/Sequins' : null, embroideryDetails.gradient ? 'Gradient' : null].filter(Boolean).join(', ')}</strong>
+                            </div>
+                          )}
+                        </>
                       )}
                     </>
                   )}
@@ -1509,7 +2098,10 @@ export default function PortalNewOrder() {
                   </div>
                   {priceDetails.fabricCost > 0 && (
                     <div className="summary-row">
-                      <span>Fabric Cost</span>
+                      <span>
+                        Fabric Cost ({priceDetails.fabricMeters}m @ ₹{priceDetails.fabricPricePerMeter}/m)
+                        {!selectedFabric && <span style={{ fontSize: '10px', color: '#94a3b8' }}> *est.</span>}
+                      </span>
                       <span>₹{priceDetails.fabricCost.toLocaleString()}</span>
                     </div>
                   )}

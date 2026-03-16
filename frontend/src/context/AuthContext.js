@@ -157,12 +157,20 @@ export const AuthProvider = ({ children }) => {
             axios.defaults.baseURL = API_URL;
             const response = await axios.post('/api/auth/google', profile);
             const { token, user } = response.data;
+            
+            if (!token || !user) {
+                throw new Error('Invalid response from server');
+            }
+            
             localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(user));
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             setUser(user);
+            
             return { success: true, user };
         } catch (err) {
-            const errorMessage = err.response?.data?.message || 'Google login failed. Please try again.';
+            console.error('❌ Google login error:', err);
+            const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Google login failed. Please try again.';
             setError(errorMessage);
             return { success: false, error: errorMessage };
         }

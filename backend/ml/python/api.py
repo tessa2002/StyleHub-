@@ -1,6 +1,6 @@
 """
-Python ML API Server
-Flask server that exposes ML model predictions via REST API
+Python ML API Server (Simplified for Body Estimation)
+Flask server that exposes Body Measurement ML model predictions via REST API
 """
 
 from flask import Flask, request, jsonify
@@ -11,199 +11,103 @@ import os
 # Add current directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from models.knn_customer_preference import CustomerPreferenceModel
-from models.naivebayes_fabric import FabricRecommendationModel
-from models.decisiontree_tailor import TailorAllocationModel
-from models.svm_order_delay import OrderDelayModel
-from models.bpnn_satisfaction import CustomerSatisfactionModel
+# Only import body estimation models as requested
+from models.body_ml_model import BodyMLModel
+# from models.body_measurement import BodyMeasurementModel
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 # Initialize models
-knn_model = CustomerPreferenceModel()
-nb_model = FabricRecommendationModel()
-dt_model = TailorAllocationModel()
-svm_model = OrderDelayModel()
-bpnn_model = CustomerSatisfactionModel()
+print("Initializing body estimation models...")
+print("  - Body ML (Tabular Data)")
+body_ml_model = BodyMLModel()
+# print("  - Body Pose (Image Data)")
+# body_pose_model = BodyMeasurementModel()
+print("Models initialized.")
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
         'status': 'ok',
-        'message': 'Python ML API is running',
+        'message': 'Python ML Body Estimation API is running',
         'port': 5001
     })
 
-@app.route('/predict/customer-preference', methods=['POST'])
-def predict_customer_preference():
+@app.route('/predict/body-measurement', methods=['POST'])
+def predict_body_measurement():
     """
-    Predict customer preference
+    Predict body measurements (Chest, Waist, Hips)
     Expected input: {
-        previousOrders: number,
-        avgOrderValue: number,
-        fabricPreference: number (0-3),
-        designComplexity: number (1-5)
+        height_cm: number,
+        weight_kg: number,
+        shoulder_width_cm: number (optional if image provided),
+        image: string (base64, optional)
     }
     """
     try:
         data = request.get_json()
         
-        # Validate input
-        required_fields = ['previousOrders', 'avgOrderValue', 'fabricPreference', 'designComplexity']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({'error': f'Missing required field: {field}'}), 400
-        
-        # Make prediction
-        result = knn_model.predict(data)
-        
-        return jsonify({
-            'success': True,
-            'prediction': result
-        })
-    
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        # 1. If image is provided, use pose model to get shoulder width first
+        # if 'image' in data and data['image']:
+        #     height_ref = data.get('height_cm', 165)
+        #     weight_ref = data.get('weight_kg', 70)
+        #     
+        #     # Use pose model
+        #     pose_result, err = body_pose_model.estimate_measurements(
+        #         data['image'], 
+        #         user_height_cm=height_ref,
+        #         user_weight_kg=weight_ref
+        #     )
+        #     
+        #     if err:
+        #         return jsonify({'success': False, 'error': f'Pose detection failed: {err}'}), 400
+        #     
+        #     # Use the shoulder width from pose model to feed into ML model
+        #     detected_shoulder = pose_result['measurements'].get('Shoulder', 40.0)
+        #     
+        #     # Use ML model to refine other measurements
+        #     ml_result = body_ml_model.predict(
+        #         height_ref, 
+        #         weight_ref, 
+        #         detected_shoulder
+        #     )
+        #     
+        #     if 'error' in ml_result:
+        #         return jsonify({'success': False, 'error': ml_result['error']}), 400
+        #         
+        #     # Merge results
+        #     final_prediction = {
+        #         **ml_result,
+        #         'annotated_image': pose_result.get('annotated_image'),
+        #         'raw_pose_measurements': pose_result['measurements']
+        #     }
+        #     
+        #     return jsonify({
+        #         'success': True,
+        #         'prediction': final_prediction
+        #     })
 
-@app.route('/predict/fabric-recommendation', methods=['POST'])
-def predict_fabric_recommendation():
-    """
-    Predict fabric recommendation
-    Expected input: {
-        season: number (0-3),
-        occasion: number (0-2),
-        priceRange: number (0-2),
-        skinTone: number (0-2)
-    }
-    """
-    try:
-        data = request.get_json()
-        
-        # Validate input
-        required_fields = ['season', 'occasion', 'priceRange', 'skinTone']
+        # 2. Standard flow (manual inputs)
+        required_fields = ['height_cm', 'weight_kg', 'shoulder_width_cm']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
         
         # Make prediction
-        result = nb_model.predict(data)
+        result = body_ml_model.predict(
+            data['height_cm'], 
+            data['weight_kg'], 
+            data['shoulder_width_cm']
+        )
         
-        return jsonify({
-            'success': True,
-            'prediction': result
-        })
-    
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/predict/tailor-allocation', methods=['POST'])
-def predict_tailor_allocation():
-    """
-    Predict tailor allocation suitability
-    Expected input: {
-        expertise_level: number (1-10),
-        current_workload: number (0-100),
-        order_complexity: number (1-10),
-        deadline_days: number (1-30),
-        specialization_match: number (0-10),
-        customer_priority: number (1-5)
-    }
-    """
-    try:
-        data = request.get_json()
-        
-        # Validate input
-        required_fields = ['expertise_level', 'current_workload', 'order_complexity', 
-                          'deadline_days', 'specialization_match', 'customer_priority']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({'error': f'Missing required field: {field}'}), 400
-        
-        # Make prediction
-        result = dt_model.predict(**data)
-        
-        return jsonify({
-            'success': True,
-            'prediction': result
-        })
-    
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/predict/order-delay', methods=['POST'])
-def predict_order_delay():
-    """
-    Predict order delay risk
-    Expected input: {
-        order_complexity: number (1-10),
-        item_count: number (1-10),
-        tailor_availability: number (0-10),
-        material_stock: number (0-100),
-        lead_time: number (1-30),
-        customer_priority: number (1-5),
-        is_rush_order: number (0 or 1)
-    }
-    """
-    try:
-        data = request.get_json()
-        
-        # Validate input
-        required_fields = ['order_complexity', 'item_count', 'tailor_availability',
-                          'material_stock', 'lead_time', 'customer_priority', 'is_rush_order']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({'error': f'Missing required field: {field}'}), 400
-        
-        # Make prediction
-        result = svm_model.predict(**data)
-        
-        return jsonify({
-            'success': True,
-            'prediction': result
-        })
-    
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/predict/customer-satisfaction', methods=['POST'])
-def predict_customer_satisfaction():
-    """
-    Predict customer satisfaction
-    Expected input: {
-        delivery_time: number (1-30 days),
-        order_accuracy: number (50-100%),
-        fabric_quality: number (1-10),
-        tailor_communication: number (1-10),
-        price_fairness: number (1-5)
-    }
-    """
-    try:
-        data = request.get_json()
-        
-        # Validate input
-        required_fields = ['delivery_time', 'order_accuracy', 'fabric_quality',
-                          'tailor_communication', 'price_fairness']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({'error': f'Missing required field: {field}'}), 400
-        
-        # Make prediction
-        result = bpnn_model.predict(**data)
-        
+        if 'error' in result:
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            }), 400
+            
         return jsonify({
             'success': True,
             'prediction': result
@@ -217,33 +121,35 @@ def predict_customer_satisfaction():
 
 @app.route('/models/status', methods=['GET'])
 def get_models_status():
-    """Get status of all models"""
+    """Get status of body estimation models"""
     import os
     from datetime import datetime
     
-    def get_model_info(model, name, default_accuracy):
+    def get_model_info(model, name, path):
         """Helper function to get model information"""
         trained_time = None
-        if os.path.exists(model.model_path):
+        exists = os.path.exists(path)
+        if exists:
             trained_time = datetime.fromtimestamp(
-                os.path.getmtime(model.model_path)
+                os.path.getmtime(path)
             ).isoformat()
         
         return {
             'name': name,
-            'path': model.model_path,
-            'trained': os.path.exists(model.model_path),
-            'accuracy': default_accuracy if os.path.exists(model.model_path) else 0,
-            'lastTrained': trained_time,
-            'predictionCount': 0  # Can track this in a database later
+            'path': path,
+            'trained': exists,
+            'lastTrained': trained_time
         }
     
+    # Use paths from models if available, otherwise default
+    body_ml_path = getattr(body_ml_model, 'model_path', 'body_model.pkl')
+    
     models = {
-        'knn': get_model_info(knn_model, 'Customer Preference (KNN)', 100.0),
-        'naivebayes': get_model_info(nb_model, 'Fabric Recommendation (Naive Bayes)', 93.33),
-        'decisiontree': get_model_info(dt_model, 'Tailor Allocation (Decision Tree)', 95.0),
-        'svm': get_model_info(svm_model, 'Order Delay Detection (SVM)', 91.0),
-        'bpnn': get_model_info(bpnn_model, 'Customer Satisfaction (BPNN)', 88.5)
+        'body_ml': get_model_info(body_ml_model, 'Body Measurement ML', body_ml_path),
+        # 'body_pose': {
+        #     'name': 'Body Pose Estimation (MediaPipe)',
+        #     'status': 'available' if body_pose_model.pose or getattr(body_pose_model, 'pose_landmarker', None) else 'unavailable'
+        # }
     }
     
     return jsonify({
@@ -252,22 +158,22 @@ def get_models_status():
     })
 
 if __name__ == '__main__':
-    print("=" * 60)
-    print("🐍 Python ML API Server")
-    print("=" * 60)
-    print("Starting server on http://localhost:5001")
-    print()
-    print("Available endpoints:")
-    print("  GET  /health")
-    print("  POST /predict/customer-preference")
-    print("  POST /predict/fabric-recommendation")
-    print("  POST /predict/tailor-allocation")
-    print("  POST /predict/order-delay")
-    print("  POST /predict/customer-satisfaction")
-    print("  GET  /models/status")
-    print()
-    print("Press CTRL+C to stop")
-    print("=" * 60)
-    
-    app.run(host='0.0.0.0', port=5001, debug=True)
-
+    try:
+        print("=" * 60)
+        print("🐍 Python Body Estimation API")
+        print("=" * 60)
+        print("Starting server on http://localhost:5001")
+        print()
+        print("Available endpoints:")
+        print("  GET  /health")
+        print("  POST /predict/body-measurement")
+        print("  GET  /models/status")
+        print()
+        print("Press CTRL+C to stop")
+        print("=" * 60)
+        
+        app.run(host='0.0.0.0', port=5001, debug=True)
+    except Exception as e:
+        print(f"FATAL ERROR: {e}")
+        import traceback
+        traceback.print_exc()

@@ -22,8 +22,8 @@ echo Press Ctrl+C to stop the server
 echo ========================================
 echo.
 
-REM Start the server
-npm run server
+REM Start the server (both Node.js and Python ML)
+npm start
 
 
 

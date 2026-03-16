@@ -294,6 +294,38 @@ const mlService = {
   },
 
   // =============================================
+  // 6. Body Measurement - ML Integration
+  // =============================================
+
+  /**
+   * Predict body measurements (Chest, Waist, Hips) using ML
+   * @param {number} height_cm - User height in cm
+   * @param {number} weight_kg - User weight in kg
+   * @param {number} shoulder_width_cm - Detected shoulder width in cm
+   * @param {string} image - Optional base64 image from webcam
+   * @returns {Promise<object>} Measurement prediction result
+   */
+  predictBodyMeasurements: async (height_cm, weight_kg, shoulder_width_cm = null, image = null) => {
+    try {
+      const response = await api.post('/api/ml/body/predict', {
+        height_cm,
+        weight_kg,
+        shoulder_width_cm,
+        image
+      });
+      return {
+        success: true,
+        data: response.data.prediction
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to predict body measurements'
+      };
+    }
+  },
+
+  // =============================================
   // General ML System Functions
   // =============================================
 

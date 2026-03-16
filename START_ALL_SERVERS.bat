@@ -12,18 +12,13 @@ echo Press any key to continue...
 pause >nul
 
 echo.
-echo Starting Backend API...
-start "Backend API" cmd /k "cd backend && npm start"
+echo Starting Backend and ML API...
+start "Backend & ML" cmd /k "cd backend && npm start"
 
 timeout /t 3 >nul
 
 echo Starting Frontend...
 start "Frontend" cmd /k "cd frontend && npm start"
-
-timeout /t 3 >nul
-
-echo Starting Python ML API...
-start "Python ML API" cmd /k "cd backend\ml\python && pip install -r requirements.txt --quiet && python api.py"
 
 echo.
 echo ========================================
@@ -31,9 +26,8 @@ echo  All servers are starting!
 echo ========================================
 echo.
 echo Check the separate windows for each server:
-echo   - Backend API: http://localhost:5000
+echo   - Backend & ML: http://localhost:5000 / http://localhost:5001
 echo   - Frontend: http://localhost:3000
-echo   - Python ML API: http://localhost:5001
 echo.
 echo Close this window to keep servers running.
 echo Close individual server windows to stop them.

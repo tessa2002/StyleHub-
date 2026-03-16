@@ -125,15 +125,40 @@ function FallbackMannequin({ measurements }) {
         <meshStandardMaterial color="#f5e6d3" roughness={0.7} />
       </mesh>
       
-      {/* Arms */}
-      <mesh position={[-proportions.chestRadius - 0.12, 1.8, 0]} rotation={[0, 0, 0.2]} castShadow>
-        <cylinderGeometry args={[0.07, 0.06, 0.7, 16]} />
-        <meshStandardMaterial color="#f5e6d3" roughness={0.7} />
-      </mesh>
-      <mesh position={[proportions.chestRadius + 0.12, 1.8, 0]} rotation={[0, 0, -0.2]} castShadow>
-        <cylinderGeometry args={[0.07, 0.06, 0.7, 16]} />
-        <meshStandardMaterial color="#f5e6d3" roughness={0.7} />
-      </mesh>
+      {/* Arms and Hands */}
+      <group position={[-proportions.chestRadius - 0.12, 1.8, 0]} rotation={[0, 0, 0.2]}>
+        <mesh castShadow>
+          <cylinderGeometry args={[0.07, 0.06, 0.7, 16]} />
+          <meshStandardMaterial color="#f5e6d3" roughness={0.7} />
+        </mesh>
+        {/* Hand - Ellipsoid for more natural shape */}
+         <mesh position={[0, -0.42, 0.02]} rotation={[0.2, 0, 0]} castShadow>
+           <sphereGeometry args={[0.08, 16, 16]} />
+           <meshStandardMaterial color="#f5e6d3" roughness={0.7} />
+         </mesh>
+         {/* Thumb nub */}
+         <mesh position={[0.04, -0.38, 0.05]} castShadow>
+           <sphereGeometry args={[0.03, 8, 8]} />
+           <meshStandardMaterial color="#f5e6d3" roughness={0.7} />
+         </mesh>
+       </group>
+       
+       <group position={[proportions.chestRadius + 0.12, 1.8, 0]} rotation={[0, 0, -0.2]}>
+         <mesh castShadow>
+           <cylinderGeometry args={[0.07, 0.06, 0.7, 16]} />
+           <meshStandardMaterial color="#f5e6d3" roughness={0.7} />
+         </mesh>
+         {/* Hand - Ellipsoid for more natural shape */}
+         <mesh position={[0, -0.42, 0.02]} rotation={[0.2, 0, 0]} castShadow>
+           <sphereGeometry args={[0.08, 16, 16]} />
+           <meshStandardMaterial color="#f5e6d3" roughness={0.7} />
+         </mesh>
+         {/* Thumb nub */}
+         <mesh position={[-0.04, -0.38, 0.05]} castShadow>
+           <sphereGeometry args={[0.03, 8, 8]} />
+           <meshStandardMaterial color="#f5e6d3" roughness={0.7} />
+         </mesh>
+       </group>
       
       {/* Base stand */}
       <mesh position={[0, -0.05, 0]} receiveShadow>

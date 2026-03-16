@@ -165,7 +165,7 @@ function AIRealisticMannequin({ measurements }) {
                 castShadow />
       </group>
       
-      {/* Arms - realistic with joints */}
+      {/* Arms - realistic with joints and hands */}
       <group>
         {/* Left arm */}
         <Cylinder args={[0.07, 0.06, 0.35, 16]} 
@@ -178,6 +178,16 @@ function AIRealisticMannequin({ measurements }) {
                   rotation={[0, 0, 0.15]}
                   material={skinMaterial} 
                   castShadow />
+        {/* Left Hand - Tapered for realism */}
+        <mesh position={[-proportions.chestRadius - 0.32, 1.15, 0]} rotation={[0, 0, 0.2]} castShadow>
+          <sphereGeometry args={[0.075, 16, 16]} />
+          <meshStandardMaterial {...skinMaterial} />
+        </mesh>
+        {/* Left Thumb */}
+        <mesh position={[-proportions.chestRadius - 0.28, 1.2, 0.05]} castShadow>
+          <sphereGeometry args={[0.025, 8, 8]} />
+          <meshStandardMaterial {...skinMaterial} />
+        </mesh>
         
         {/* Right arm */}
         <Cylinder args={[0.07, 0.06, 0.35, 16]} 
@@ -190,6 +200,16 @@ function AIRealisticMannequin({ measurements }) {
                   rotation={[0, 0, -0.15]}
                   material={skinMaterial} 
                   castShadow />
+        {/* Right Hand - Tapered for realism */}
+        <mesh position={[proportions.chestRadius + 0.32, 1.15, 0]} rotation={[0, 0, -0.2]} castShadow>
+          <sphereGeometry args={[0.075, 16, 16]} />
+          <meshStandardMaterial {...skinMaterial} />
+        </mesh>
+        {/* Right Thumb */}
+        <mesh position={[proportions.chestRadius + 0.28, 1.2, 0.05]} castShadow>
+          <sphereGeometry args={[0.025, 8, 8]} />
+          <meshStandardMaterial {...skinMaterial} />
+        </mesh>
       </group>
       
       {/* Legs - realistic proportions */}

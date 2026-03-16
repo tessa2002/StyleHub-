@@ -1,0 +1,146 @@
+/* Enhanced Order Details Styles */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap');
+
+.font-display {
+  font-family: 'Manrope', sans-serif;
+}
+
+.bg-background-light {
+  background-color: #f8f6f6;
+}
+
+/* Primary color utilities */
+.text-primary {
+  color: #ee3a6a !important;
+}
+
+.bg-primary {
+  background-color: #ee3a6a !important;
+}
+
+.border-primary {
+  border-color: #ee3a6a !important;
+}
+
+.bg-primary\/5 {
+  background-color: rgba(238, 58, 106, 0.05) !important;
+}
+
+.bg-primary\/10 {
+  background-color: rgba(238, 58, 106, 0.1) !important;
+}
+
+.bg-primary\/20 {
+  background-color: rgba(238, 58, 106, 0.2) !important;
+}
+
+.border-primary\/5 {
+  border-color: rgba(238, 58, 106, 0.05) !important;
+}
+
+.border-primary\/10 {
+  border-color: rgba(238, 58, 106, 0.1) !important;
+}
+
+.border-primary\/20 {
+  border-color: rgba(238, 58, 106, 0.2) !important;
+}
+
+.text-primary\/60 {
+  color: rgba(238, 58, 106, 0.6) !important;
+}
+
+.text-primary\/70 {
+  color: rgba(238, 58, 106, 0.7) !important;
+}
+
+.hover\:bg-primary\/5:hover {
+  background-color: rgba(238, 58, 106, 0.05) !important;
+}
+
+.hover\:bg-primary\/10:hover {
+  background-color: rgba(238, 58, 106, 0.1) !important;
+}
+
+.hover\:text-primary:hover {
+  color: #ee3a6a !important;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'liga';
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Button styles */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  transform: none !important;
+  filter: none !important;
+}
+
+/* Image hover effects */
+.group:hover img {
+  transform: scale(1.05);
+}
+
+/* Backdrop blur support */
+.backdrop-blur-md {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ee3a6a;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d63359;
+}
+
+/* Focus styles */
+input:focus,
+button:focus {
+  outline: none;
+}
+
+/* Ensure proper spacing for footer */
+main {
+  padding-bottom: 120px;
+}

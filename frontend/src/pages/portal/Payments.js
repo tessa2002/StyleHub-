@@ -383,7 +383,8 @@ const PaymentsPage = () => {
         amount: amount,
         currency: 'INR',
         receipt: `receipt_${billObj._id}_${Date.now()}`,
-        billId: billObj._id
+        billId: billObj._id,
+        orderId: billObj.order?._id || billObj.order
       });
 
       console.log('📋 Razorpay order response:', orderResponse.data);

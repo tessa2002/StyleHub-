@@ -214,6 +214,58 @@ router.put('/orders/:id/status', auth, requireTailor, async (req, res) => {
       return res.status(404).json({ message: 'Order not found or not assigned to you' });
     }
 
+    // Send completion email to customer when marked finished
+    if (status === 'Completed') {
+      try {
+        const fullOrder = await Order.findById(order._id).populate('customer', 'name email');
+        const customerEmail = fullOrder?.customer?.email;
+        if (customerEmail) {
+          const nodemailer = require('nodemailer');
+          const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+          const smtpPort = Number((process.env.SMTP_PORT || '587').toString().trim());
+          const smtpUser = (process.env.SMTP_USER || '').toString().trim();
+          const smtpPass = (process.env.SMTP_PASS || '').toString().replace(/\s/g, '').trim();
+          const fromName = (process.env.MAIL_FROM || 'StyleHub').toString().replace(/<.*?>/, '').trim();
+          const mailFrom = `"${fromName}" <${smtpUser || 'no-reply@stylehub.local'}>`;
+          const portalUrl = process.env.PORTAL_URL || 'http://localhost:3000';
+          
+          if (smtpUser && smtpPass) {
+            const transporter = nodemailer.createTransport({
+              host: smtpHost,
+              port: smtpPort,
+              secure: smtpPort === 465,
+              auth: { user: smtpUser, pass: smtpPass }
+            });
+          
+            const orderIdShort = String(order._id).slice(-6).toUpperCase();
+            const itemType = order.itemType || order.items?.[0]?.name || 'Order';
+            const customerName = fullOrder.customer?.name || 'Customer';
+          
+            await transporter.sendMail({
+              from: mailFrom,
+              to: customerEmail,
+              subject: `Your StyleHub order #${orderIdShort} is finished`,
+              html: `
+                <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111">
+                  <p>Hi ${customerName},</p>
+                  <p>Your ${itemType} (Order #${orderIdShort}) has been marked as <strong>Finished</strong>.</p>
+                  <p>You can review details and arrange pickup or delivery from your portal:</p>
+                  <p><a href="${portalUrl}/portal/orders" style="background:#ee3a6a;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">Open Customer Portal</a></p>
+                  <p style="color:#666">If you did not expect this message, please contact the boutique.</p>
+                  <p>— StyleHub</p>
+                </div>
+              `
+            });
+            console.log('📧 Completion email sent to customer:', customerEmail);
+          } else {
+            console.warn('⚠️ SMTP credentials missing, skipping email send');
+          }
+        }
+      } catch (mailErr) {
+        console.warn('⚠️ Failed to send completion email (non-critical):', mailErr.message);
+      }
+    }
+
     res.json(order);
   } catch (error) {
     console.error('Error updating order status:', error);
