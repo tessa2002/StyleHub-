@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import DashboardLayout from '../../components/DashboardLayout';
 import './Measurements.css';
-import { FaTshirt, FaSlidersH, FaQuestionCircle, FaMagic, FaRuler, FaCheckCircle, FaLock, FaRobot, FaCamera } from 'react-icons/fa';
+import { FaTshirt, FaSlidersH, FaQuestionCircle, FaMagic, FaRuler, FaCheckCircle, FaLock, FaRobot, FaCamera, FaSync } from 'react-icons/fa';
 import { GiTrousers } from 'react-icons/gi';
 import mlService from '../../services/mlService';
 import WebcamBodyScanner from '../../components/WebcamBodyScanner';
