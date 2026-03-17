@@ -160,7 +160,7 @@ def get_models_status():
 if __name__ == '__main__':
     try:
         print("=" * 60)
-        print("🐍 Python Body Estimation API")
+        print("Python Body Estimation API")
         print("=" * 60)
         print("Starting server on http://localhost:5001")
         print()

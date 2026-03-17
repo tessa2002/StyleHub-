@@ -32,6 +32,7 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
+      'https://stylehub-new.onrender.com',
       'http://localhost:3002' // Just in case
     ];
 
